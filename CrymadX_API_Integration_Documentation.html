@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrymadX - Full Stack Developer API Integration Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        @media print {
+            body {
+                padding: 20px;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+
+        h1 {
+            color: #10b981;
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #10b981;
+            padding-bottom: 15px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #1f2937;
+            font-size: 22px;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #10b981;
+        }
+
+        h3 {
+            color: #374151;
+            font-size: 18px;
+            margin-top: 25px;
+            margin-bottom: 12px;
+        }
+
+        h4 {
+            color: #4b5563;
+            font-size: 16px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #10b981;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #e11d48;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            margin: 15px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .highlight {
+            background: #fef3c7;
+            padding: 15px;
+            border-left: 4px solid #f59e0b;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            padding: 15px;
+            border-left: 4px solid #3b82f6;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .success-box {
+            background: #ecfdf5;
+            padding: 15px;
+            border-left: 4px solid #10b981;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        ul, ol {
+            margin: 12px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        .toc {
+            background: #f9fafb;
+            padding: 20px 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            color: #10b981;
+        }
+
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .toc li {
+            padding: 5px 0;
+            border-bottom: 1px dotted #d1d5db;
+        }
+
+        .toc a {
+            color: #374151;
+            text-decoration: none;
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .header-info div {
+            text-align: center;
+        }
+
+        .header-info span {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .header-info strong {
+            color: #10b981;
+            font-size: 16px;
+        }
+
+        .endpoint {
+            background: #f3f4f6;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .method {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .method.get { background: #10b981; color: white; }
+        .method.post { background: #3b82f6; color: white; }
+        .method.put { background: #f59e0b; color: white; }
+        .method.delete { background: #ef4444; color: white; }
+
+        .endpoint-path {
+            font-family: 'Consolas', monospace;
+            color: #1f2937;
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .checklist li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #d1d5db;
+            border-radius: 4px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-text {
+            font-size: 48px;
+            font-weight: bold;
+            color: #10b981;
+            letter-spacing: 3px;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="logo">
+        <div class="logo-text">CRYMADX</div>
+    </div>
+
+    <h1>Full Stack Developer API Integration Guide</h1>
+    <p class="subtitle">Complete documentation for connecting backend APIs to the CrymadX UI</p>
+
+    <div class="header-info">
+        <div>
+            <span>Framework</span>
+            <strong>React 18 + TypeScript</strong>
+        </div>
+        <div>
+            <span>Build Tool</span>
+            <strong>Vite</strong>
+        </div>
+        <div>
+            <span>Screens</span>
+            <strong>12+</strong>
+        </div>
+        <div>
+            <span>Components</span>
+            <strong>23</strong>
+        </div>
+    </div>
+
+    <div class="toc">
+        <h3>Table of Contents</h3>
+        <ul>
+            <li>1. Project Overview & Structure</li>
+            <li>2. Authentication Integration</li>
+            <li>3. Wallet System</li>
+            <li>4. Trading System</li>
+            <li>5. Markets Data</li>
+            <li>6. P2P Trading</li>
+            <li>7. User Profile</li>
+            <li>8. Referral System</li>
+            <li>9. Rewards System</li>
+            <li>10. Savings Vault</li>
+            <li>11. Support Tickets</li>
+            <li>12. API Client Setup</li>
+            <li>13. Integration Checklist</li>
+        </ul>
+    </div>
+
+    <!-- Section 1 -->
+    <h2>1. Project Overview & Structure</h2>
+
+    <p>CrymadX is a cryptocurrency trading platform UI built with modern React. All data is currently <strong>hardcoded/mocked</strong>. Your task is to replace mock data with real API calls.</p>
+
+    <h3>Tech Stack</h3>
+    <ul>
+        <li><strong>React 18.3.1</strong> - UI Framework</li>
+        <li><strong>TypeScript</strong> - Type Safety</li>
+        <li><strong>React Router v6</strong> - Navigation</li>
+        <li><strong>Framer Motion</strong> - Animations</li>
+        <li><strong>Vite</strong> - Build Tool</li>
+        <li><strong>Context API</strong> - State Management</li>
+    </ul>
+
+    <h3>Project Structure</h3>
+    <pre>
+src/
+├── App.tsx              # Main routing
+├── components/          # 23 reusable UI components
+├── screens/             # Page components (modify these)
+├── context/
+│   └── AuthContext.tsx  # Authentication state
+├── theme/               # Dark/Light theme system
+├── types/               # TypeScript types (add here)
+├── hooks/               # Custom hooks (add here)
+└── utils/               # Utilities (add here)</pre>
+
+    <h3>Application Routes</h3>
+    <table>
+        <tr><th>Route</th><th>Screen</th><th>Purpose</th></tr>
+        <tr><td><code>/</code></td><td>HomeScreen</td><td>Landing page</td></tr>
+        <tr><td><code>/login</code></td><td>LoginScreen</td><td>User login</td></tr>
+        <tr><td><code>/register</code></td><td>RegisterScreen</td><td>User registration</td></tr>
+        <tr><td><code>/dashboard</code></td><td>DashboardScreen</td><td>Main dashboard</td></tr>
+        <tr><td><code>/trade/:pair</code></td><td>TradingScreen</td><td>Spot trading</td></tr>
+        <tr><td><code>/wallet</code></td><td>WalletScreen</td><td>Wallet overview</td></tr>
+        <tr><td><code>/wallet/deposit</code></td><td>DepositScreen</td><td>Crypto deposit</td></tr>
+        <tr><td><code>/wallet/withdraw</code></td><td>WithdrawScreen</td><td>Crypto withdrawal</td></tr>
+        <tr><td><code>/markets</code></td><td>MarketsScreen</td><td>Market prices</td></tr>
+        <tr><td><code>/p2p</code></td><td>P2PScreen</td><td>P2P trading</td></tr>
+        <tr><td><code>/profile</code></td><td>ProfileScreen</td><td>User profile</td></tr>
+        <tr><td><code>/referral</code></td><td>ReferralScreen</td><td>Referral program</td></tr>
+        <tr><td><code>/rewards</code></td><td>RewardsScreen</td><td>Rewards system</td></tr>
+        <tr><td><code>/earn</code></td><td>SavingsVaultScreen</td><td>Savings products</td></tr>
+        <tr><td><code>/tickets</code></td><td>TicketsScreen</td><td>Support tickets</td></tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Section 2 -->
+    <h2>2. Authentication Integration</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/context/AuthContext.tsx</code>
+    </div>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/auth/login</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}</pre>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "usr_123456",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "avatar": "https://api.dicebear.com/7.x/lorelei/svg?seed=John"
+  }
+}</pre>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/auth/register</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "name": "John Doe",
+  "email": "user@example.com",
+  "phone": "+1234567890",
+  "password": "securePassword123",
+  "referralCode": "CRYMADX2024"  // optional
+}</pre>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/auth/forgot-password</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/auth/logout</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/auth/me</span>
+    </div>
+
+    <h3>LocalStorage Keys</h3>
+    <table>
+        <tr><th>Key</th><th>Purpose</th></tr>
+        <tr><td><code>crymadx_token</code></td><td>JWT authentication token</td></tr>
+        <tr><td><code>crymadx_user</code></td><td>User object (JSON)</td></tr>
+        <tr><td><code>crymadx_auth</code></td><td>Authentication boolean</td></tr>
+        <tr><td><code>crymadx_avatar</code></td><td>User avatar URL</td></tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Section 3 -->
+    <h2>3. Wallet System</h2>
+
+    <div class="highlight">
+        <strong>Files to modify:</strong><br>
+        <code>src/screens/WalletScreen.tsx</code><br>
+        <code>src/screens/DepositScreen.tsx</code><br>
+        <code>src/screens/WithdrawScreen.tsx</code><br>
+        <code>src/screens/HistoryScreen.tsx</code>
+    </div>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/wallet/assets</span>
+    </div>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "assets": [
+    {
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "spotAvailable": 0.4234,
+      "spotInOrder": 0.0123,
+      "fundingAvailable": 0.1,
+      "price": 43576.00,
+      "change": 2.34
+    },
+    {
+      "symbol": "ETH",
+      "name": "Ethereum",
+      "spotAvailable": 3.2156,
+      "spotInOrder": 0.5,
+      "fundingAvailable": 1.0,
+      "price": 2345.67,
+      "change": -1.23
+    }
+  ],
+  "totalBalanceUSD": 25000.00
+}</pre>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/wallet/deposit/address</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "symbol": "BTC",
+  "network": "Bitcoin"
+}</pre>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+  "network": "Bitcoin",
+  "minDeposit": 0.0001,
+  "confirmations": 3
+}</pre>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/wallet/withdraw</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "symbol": "BTC",
+  "network": "Bitcoin",
+  "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+  "amount": 0.05
+}</pre>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/wallet/history</span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 4 -->
+    <h2>4. Trading System</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/TradingScreen.tsx</code>
+    </div>
+
+    <h3>TypeScript Interfaces</h3>
+    <pre>
+interface TradingPair {
+  symbol: string;       // "BTCUSDT"
+  baseAsset: string;    // "BTC"
+  quoteAsset: string;   // "USDT"
+  price: number;
+  change: number;
+  high: number;
+  low: number;
+  volume: number;
+  quoteVolume: number;
+}
+
+interface OrderBookEntry {
+  price: number;
+  amount: number;
+  total: number;
+}
+
+interface Trade {
+  price: number;
+  amount: number;
+  time: string;
+  side: 'buy' | 'sell';
+}</pre>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/trading/pairs</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/trading/orderbook/:symbol</span>
+    </div>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "bids": [
+    { "price": 43500.00, "amount": 0.5, "total": 21750.00 },
+    { "price": 43490.00, "amount": 1.2, "total": 52188.00 }
+  ],
+  "asks": [
+    { "price": 43510.00, "amount": 0.8, "total": 34808.00 },
+    { "price": 43520.00, "amount": 0.3, "total": 13056.00 }
+  ]
+}</pre>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/trading/trades/:symbol</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/trading/order</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "symbol": "BTCUSDT",
+  "side": "buy",
+  "type": "limit",
+  "price": 43500.00,
+  "amount": 0.01
+}</pre>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/trading/orders</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method delete">DELETE</span>
+        <span class="endpoint-path">/api/trading/order/:id</span>
+    </div>
+
+    <div class="info-box">
+        <strong>WebSocket Recommendation:</strong> For real-time order book and trade updates, implement WebSocket connections at <code>wss://your-api.com/ws/trading/:symbol</code>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 5 -->
+    <h2>5. Markets Data</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/MarketsScreen.tsx</code>
+    </div>
+
+    <h3>TypeScript Interface</h3>
+    <pre>
+interface MarketData {
+  symbol: string;
+  baseAsset: string;
+  name: string;
+  pair: string;
+  price: number;
+  change24h: number;
+  high: number;
+  low: number;
+  volume: number;
+  quoteVolume: number;
+  rank: number;
+}
+
+interface MarketStats {
+  totalMarketCap: number;
+  totalVolume24h: number;
+  btcDominance: number;
+  activeMarkets: number;
+}</pre>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/markets</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/markets/stats</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/markets/:symbol</span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 6 -->
+    <h2>6. P2P Trading</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/P2PScreen.tsx</code>
+    </div>
+
+    <h3>TypeScript Interface</h3>
+    <pre>
+interface P2POrder {
+  id: string;
+  type: 'buy' | 'sell';
+  trader: string;
+  verified: boolean;
+  orders: number;
+  completion: number;      // percentage
+  rating: number;          // 1-5
+  crypto: string;          // "BTC"
+  fiat: string;            // "USD"
+  price: number;
+  available: number;
+  limit: { min: number; max: number };
+  paymentMethods: string[];
+  timeLimit: number;       // minutes
+  online: boolean;
+}</pre>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/p2p/orders?type=buy&crypto=BTC&fiat=USD</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/p2p/order</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/p2p/trade/:orderId</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/p2p/trades</span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 7 -->
+    <h2>7. User Profile</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/ProfileScreen.tsx</code>
+    </div>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/user/profile</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method put">PUT</span>
+        <span class="endpoint-path">/api/user/profile</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "phone": "+1234567890",
+  "country": "United States",
+  "website": "https://johndoe.com"
+}</pre>
+
+    <div class="endpoint">
+        <span class="method put">PUT</span>
+        <span class="endpoint-path">/api/user/avatar</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/user/login-history</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/user/sessions</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method delete">DELETE</span>
+        <span class="endpoint-path">/api/user/session/:id</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/user/2fa/enable</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/user/2fa/disable</span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 8 -->
+    <h2>8. Referral System</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/ReferralScreen.tsx</code>
+    </div>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/referral</span>
+    </div>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "code": "JOHN2024",
+  "link": "https://crymadx.com/register?ref=JOHN2024",
+  "totalReferrals": 15,
+  "activeReferrals": 12,
+  "totalEarnings": 450.00,
+  "pendingEarnings": 25.00,
+  "commissionRate": "20%",
+  "referrals": [
+    {
+      "id": "1",
+      "username": "user***123",
+      "date": "2024-01-15",
+      "status": "active",
+      "earnings": 50.00
+    }
+  ]
+}</pre>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/referral/list</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/referral/generate</span>
+    </div>
+
+    <!-- Section 9 -->
+    <h2>9. Rewards System</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/RewardsScreen.tsx</code>
+    </div>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/rewards</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/rewards/tasks</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/rewards/claim/:taskId</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/rewards/history</span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 10 -->
+    <h2>10. Savings Vault</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/SavingsVaultScreen.tsx</code>
+    </div>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/savings/products</span>
+    </div>
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "products": [
+    {
+      "id": "usdt_flexible",
+      "symbol": "USDT",
+      "name": "Tether",
+      "apr": 5.5,
+      "minAmount": 10,
+      "term": "flexible"
+    },
+    {
+      "id": "btc_30d",
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "apr": 2.5,
+      "minAmount": 0.001,
+      "term": "30days"
+    }
+  ]
+}</pre>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/savings/positions</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/savings/subscribe</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "productId": "usdt_flexible",
+  "amount": 1000
+}</pre>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/savings/redeem</span>
+    </div>
+
+    <!-- Section 11 -->
+    <h2>11. Support Tickets</h2>
+
+    <div class="highlight">
+        <strong>File to modify:</strong> <code>src/screens/TicketsScreen.tsx</code>
+    </div>
+
+    <h3>Required API Endpoints</h3>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/tickets</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="endpoint-path">/api/tickets/:id</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/tickets</span>
+    </div>
+    <p><strong>Request:</strong></p>
+    <pre>{
+  "subject": "Withdrawal issue",
+  "category": "withdrawals",
+  "priority": "high",
+  "message": "My withdrawal has been pending for 24 hours..."
+}</pre>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="endpoint-path">/api/tickets/:id/message</span>
+    </div>
+
+    <div class="endpoint">
+        <span class="method put">PUT</span>
+        <span class="endpoint-path">/api/tickets/:id/close</span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 12 -->
+    <h2>12. API Client Setup</h2>
+
+    <div class="info-box">
+        <strong>Recommendation:</strong> Create a centralized API client for consistent error handling and authentication.
+    </div>
+
+    <h3>Create: src/api/index.ts</h3>
+    <pre>
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+class ApiClient {
+  private baseUrl: string;
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+
+  private getHeaders(): HeadersInit {
+    const token = localStorage.getItem('crymadx_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  }
+
+  async get&lt;T&gt;(endpoint: string): Promise&lt;T&gt; {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: 'GET',
+      headers: this.getHeaders()
+    });
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+    return response.json();
+  }
+
+  async post&lt;T&gt;(endpoint: string, data?: unknown): Promise&lt;T&gt; {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: data ? JSON.stringify(data) : undefined
+    });
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+    return response.json();
+  }
+
+  // Add put, delete methods similarly...
+}
+
+export const api = new ApiClient(API_BASE_URL);</pre>
+
+    <h3>Environment Variables (.env)</h3>
+    <pre>
+VITE_API_URL=http://localhost:3001/api
+VITE_WS_URL=ws://localhost:3001/ws
+VITE_RECAPTCHA_KEY=your_recaptcha_key</pre>
+
+    <div class="page-break"></div>
+
+    <!-- Section 13 -->
+    <h2>13. Integration Checklist</h2>
+
+    <h3>Authentication</h3>
+    <ul class="checklist">
+        <li>Login API integration</li>
+        <li>Register API integration</li>
+        <li>Forgot password API</li>
+        <li>Token refresh logic</li>
+        <li>Logout API</li>
+        <li>Protected route handling</li>
+    </ul>
+
+    <h3>Wallet</h3>
+    <ul class="checklist">
+        <li>Fetch wallet balances</li>
+        <li>Generate deposit addresses</li>
+        <li>Submit withdrawals</li>
+        <li>Transaction history</li>
+    </ul>
+
+    <h3>Trading</h3>
+    <ul class="checklist">
+        <li>Fetch trading pairs</li>
+        <li>Order book data (REST + WebSocket)</li>
+        <li>Recent trades feed</li>
+        <li>Place orders</li>
+        <li>Cancel orders</li>
+        <li>User's open orders</li>
+    </ul>
+
+    <h3>Markets</h3>
+    <ul class="checklist">
+        <li>Market list with prices</li>
+        <li>Market statistics</li>
+        <li>Real-time price updates</li>
+    </ul>
+
+    <h3>P2P Trading</h3>
+    <ul class="checklist">
+        <li>List P2P orders</li>
+        <li>Create P2P order</li>
+        <li>Initiate trade</li>
+        <li>Trade chat/messaging</li>
+    </ul>
+
+    <h3>User Profile</h3>
+    <ul class="checklist">
+        <li>Fetch profile</li>
+        <li>Update profile</li>
+        <li>Change avatar</li>
+        <li>2FA setup</li>
+        <li>Login history</li>
+        <li>Session management</li>
+    </ul>
+
+    <h3>Other Systems</h3>
+    <ul class="checklist">
+        <li>Referral data and list</li>
+        <li>Rewards tasks and claiming</li>
+        <li>Savings products and subscriptions</li>
+        <li>Support ticket system</li>
+    </ul>
+
+    <div class="success-box">
+        <strong>Priority Order:</strong> Start with Authentication → Wallet → Trading → Markets, then proceed with other features.
+    </div>
+
+    <footer>
+        <p><strong>CrymadX</strong> - Cryptocurrency Trading Platform</p>
+        <p>API Integration Documentation v1.0</p>
+        <p>Generated: December 2024</p>
+    </footer>
+
+</body>
+</html>
