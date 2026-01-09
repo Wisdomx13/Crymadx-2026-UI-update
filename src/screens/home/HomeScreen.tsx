@@ -1238,9 +1238,19 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
           0%, 100% { fill: #00D26A; }
           50% { fill: #00ff7f; }
         }
-        @keyframes briefcaseHover {
-          0%, 100% { filter: drop-shadow(0 2px 8px rgba(0,210,106,0.2)); }
-          50% { filter: drop-shadow(0 4px 15px rgba(0,210,106,0.4)); }
+        @keyframes briefcaseBreathing {
+          0%, 100% {
+            transform: scale(1);
+            filter: drop-shadow(0 4px 12px rgba(0,210,106,0.3));
+          }
+          50% {
+            transform: scale(1.03);
+            filter: drop-shadow(0 8px 25px rgba(0,210,106,0.6));
+          }
+        }
+        @keyframes buttonPulse {
+          0%, 100% { opacity: 0.9; }
+          50% { opacity: 1; }
         }
         @keyframes wifiPulse {
           0%, 100% { opacity: 0.3; }
@@ -1248,10 +1258,12 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
         }
         .briefcase-clickable {
           cursor: pointer;
-          transition: transform 0.2s ease;
+          transition: all 0.3s ease;
+          animation: briefcaseBreathing 2.5s ease-in-out infinite;
         }
         .briefcase-clickable:hover {
-          transform: scale(1.02);
+          transform: scale(1.05);
+          filter: drop-shadow(0 10px 30px rgba(0,210,106,0.7));
         }
       `}</style>
 
@@ -1397,51 +1409,55 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
         <path d="M 188 165 L 200 180 L 212 165" fill={isDark ? '#1a1a1a' : '#b0b0b0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1.5" />
         <rect x="196" y="180" width="8" height="15" fill={isDark ? '#1a1a1a' : '#a0a0a0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1" />
 
-        {/* Matching Server-Style Briefcase - Clickable for Login */}
+        {/* Matching Server-Style Briefcase - Clickable Login Button */}
         <g
           className="briefcase-clickable"
-          style={{ animation: 'briefcaseHover 3s ease-in-out infinite', cursor: 'pointer' }}
           onClick={() => navigate('/login')}
         >
-          {/* Briefcase body - matching server colors */}
-          <rect x="120" y="295" width="160" height="100" rx="6" fill="url(#briefcaseBody)" stroke={isDark ? '#4a4a4a' : '#a0a0a0'} strokeWidth="2.5" />
+          {/* Briefcase body - larger for more text space */}
+          <rect x="100" y="285" width="200" height="130" rx="8" fill="url(#briefcaseBody)" stroke={isDark ? '#4a4a4a' : '#a0a0a0'} strokeWidth="3" />
 
           {/* Green accent trim on top */}
-          <rect x="120" y="293" width="160" height="5" rx="2" fill="url(#greenAccent)" />
+          <rect x="100" y="282" width="200" height="6" rx="3" fill="url(#greenAccent)" />
 
           {/* Handle - matching style */}
-          <path d="M 175 285 Q 175 265 200 265 Q 225 265 225 285" fill="none" stroke={isDark ? '#2a2a2a' : '#909090'} strokeWidth="6" strokeLinecap="round" />
-          <path d="M 175 285 Q 175 268 200 268 Q 225 268 225 285" fill="none" stroke="url(#greenAccent)" strokeWidth="3" strokeLinecap="round" />
+          <path d="M 165 272 Q 165 250 200 250 Q 235 250 235 272" fill="none" stroke={isDark ? '#2a2a2a' : '#909090'} strokeWidth="7" strokeLinecap="round" />
+          <path d="M 165 272 Q 165 254 200 254 Q 235 254 235 272" fill="none" stroke="url(#greenAccent)" strokeWidth="4" strokeLinecap="round" />
 
           {/* Briefcase lid separation line */}
-          <line x1="120" y1="325" x2="280" y2="325" stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1.5" />
+          <line x1="100" y1="320" x2="300" y2="320" stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="2" />
 
           {/* Green latches */}
-          <rect x="145" y="318" width="22" height="14" rx="3" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1" />
-          <rect x="233" y="318" width="22" height="14" rx="3" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1" />
-          <circle cx="156" cy="325" r="3" fill="#00A854" />
-          <circle cx="244" cy="325" r="3" fill="#00A854" />
+          <rect x="130" y="312" width="28" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
+          <rect x="242" y="312" width="28" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
+          <circle cx="144" cy="320" r="4" fill="#00A854" />
+          <circle cx="256" cy="320" r="4" fill="#00A854" />
 
           {/* Center coin entry slot - bigger and centered */}
-          <rect x="175" y="298" width="50" height="10" rx="3" fill={isDark ? '#050505' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1" />
+          <rect x="170" y="293" width="60" height="14" rx="4" fill={isDark ? '#050505' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1.5" />
 
-          {/* "Decentral Bank of Crypto" label */}
-          <rect x="135" y="342" width="130" height="42" rx="4" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1" />
-          <text x="200" y="358" textAnchor="middle" fill="#00D26A" fontSize="8" fontWeight="bold" fontFamily="monospace" letterSpacing="0.05em">DECENTRAL BANK</text>
-          <text x="200" y="372" textAnchor="middle" fill="#00D26A" fontSize="7" fontFamily="monospace" letterSpacing="0.03em">of Crypto</text>
+          {/* "Decentral Bank of Crypto" main label area */}
+          <rect x="115" y="335" width="170" height="70" rx="6" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="2" />
+
+          {/* DECENTRAL BANK text - LARGE and BOLD */}
+          <text x="200" y="358" textAnchor="middle" fill="#00D26A" fontSize="14" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.1em">DECENTRAL BANK</text>
+
+          {/* of Crypto text */}
+          <text x="200" y="375" textAnchor="middle" fill="#00D26A" fontSize="11" fontFamily="Arial, sans-serif" fontWeight="600">of Crypto</text>
+
+          {/* LOGIN Button - Prominent breathing button */}
+          <rect x="155" y="385" width="90" height="28" rx="6" fill="#00D26A" stroke="#00ff7f" strokeWidth="1.5" style={{ animation: 'buttonPulse 1.5s ease-in-out infinite' }} />
+          <text x="200" y="404" textAnchor="middle" fill="#000000" fontSize="12" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.1em">LOGIN</text>
 
           {/* Green corner accents */}
-          <path d="M 120 307 L 120 295 L 132 295" fill="none" stroke="#00D26A" strokeWidth="2" />
-          <path d="M 280 307 L 280 295 L 268 295" fill="none" stroke="#00D26A" strokeWidth="2" />
-          <path d="M 120 383 L 120 395 L 132 395" fill="none" stroke="#00D26A" strokeWidth="2" />
-          <path d="M 280 383 L 280 395 L 268 395" fill="none" stroke="#00D26A" strokeWidth="2" />
+          <path d="M 100 300 L 100 285 L 115 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
+          <path d="M 300 300 L 300 285 L 285 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
+          <path d="M 100 400 L 100 415 L 115 415" fill="none" stroke="#00D26A" strokeWidth="2.5" />
+          <path d="M 300 400 L 300 415 L 285 415" fill="none" stroke="#00D26A" strokeWidth="2.5" />
 
           {/* Status LEDs on briefcase */}
-          <circle cx="145" cy="360" r="3" style={{ animation: 'serverBlink 1.2s ease-in-out infinite' }} />
-          <circle cx="255" cy="360" r="3" fill="#F7931A"><animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" /></circle>
-
-          {/* Login hint text */}
-          <text x="200" y="388" textAnchor="middle" fill={isDark ? 'rgba(0,210,106,0.6)' : 'rgba(0,180,90,0.7)'} fontSize="5.5" fontFamily="monospace">CLICK TO LOGIN</text>
+          <circle cx="130" cy="360" r="4" style={{ animation: 'serverBlink 1.2s ease-in-out infinite' }} />
+          <circle cx="270" cy="360" r="4" fill="#F7931A"><animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" /></circle>
         </g>
 
         {/* Animated Coins with different behaviors - bigger coins */}
@@ -2357,20 +2373,20 @@ export const HomeScreen: React.FC = () => {
                 fontWeight: 900,
                 lineHeight: 1.1,
                 marginBottom: '16px',
-                color: isDark ? '#ffffff' : '#0a2540',
+                color: isDark ? '#ffffff' : '#000000',
                 textShadow: isDark
                   ? '0 2px 15px rgba(0,0,0,0.8), 0 0 30px rgba(0, 210, 106, 0.3)'
-                  : '0 2px 8px rgba(255,255,255,1), 0 4px 16px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.5)',
+                  : 'none',
                 letterSpacing: '-1px',
               }}
             >
               Your Gateway to{' '}
               <span style={{
-                color: isDark ? '#00D26A' : '#eab308',
+                color: isDark ? '#00D26A' : '#d97706',
                 fontWeight: 900,
                 textShadow: isDark
                   ? '0 0 20px rgba(0, 210, 106, 0.8), 0 2px 4px rgba(0,0,0,0.5)'
-                  : '0 2px 8px rgba(0,0,0,0.4)',
+                  : 'none',
               }}>
                 Digital Wealth
               </span>
@@ -2383,23 +2399,21 @@ export const HomeScreen: React.FC = () => {
               transition={{ delay: 0.1, duration: 0.3 }}
               style={{
                 fontSize: isMobile ? '15px' : '18px',
-                fontWeight: 800,
-                color: isDark ? 'rgba(255,255,255,0.95)' : '#0a1628',
+                fontWeight: 600,
+                color: isDark ? 'rgba(255,255,255,0.95)' : '#333333',
                 lineHeight: 1.6,
                 marginBottom: '24px',
                 maxWidth: isMobile ? '100%' : '450px',
                 textShadow: isDark
                   ? '0 1px 4px rgba(0,0,0,0.6)'
-                  : '0 1px 3px rgba(255,255,255,0.9), 0 2px 6px rgba(255,255,255,0.7), 0 0 20px rgba(255,255,255,0.5)',
+                  : 'none',
               }}
             >
               Trade 500+ cryptocurrencies with ultra-low fees. Sign up today and claim up to{' '}
               <span style={{
-                color: isDark ? '#00D26A' : '#eab308',
+                color: isDark ? '#00D26A' : '#d97706',
                 fontWeight: 900,
-                textShadow: isDark
-                  ? '0 0 10px rgba(0, 210, 106, 0.5)'
-                  : '0 1px 3px rgba(0,0,0,0.3)',
+                textShadow: 'none',
               }}>
                 5,100 USDT
               </span>{' '}
@@ -2445,7 +2459,7 @@ export const HomeScreen: React.FC = () => {
                     borderRadius: '10px',
                     fontSize: '15px',
                     fontWeight: 500,
-                    color: isDark ? '#ffffff' : '#1a1a2e',
+                    color: isDark ? '#ffffff' : '#000000',
                     outline: 'none',
                   }}
                 />
@@ -2603,7 +2617,7 @@ export const HomeScreen: React.FC = () => {
                 <h3 style={{
                   fontSize: '18px',
                   fontWeight: 700,
-                  color: isDark ? '#ffffff' : '#1a1a1a',
+                  color: isDark ? '#ffffff' : '#000000',
                   marginBottom: '8px',
                   lineHeight: 1.3,
                 }}>
@@ -2613,8 +2627,8 @@ export const HomeScreen: React.FC = () => {
                 {/* Description */}
                 <p style={{
                   fontSize: '14px',
-                  fontWeight: 400,
-                  color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                  fontWeight: 500,
+                  color: isDark ? 'rgba(255,255,255,0.6)' : '#333333',
                   lineHeight: 1.6,
                   marginBottom: '12px',
                 }}>
@@ -2664,35 +2678,35 @@ export const HomeScreen: React.FC = () => {
             <h2 style={{
               fontSize: isMobile ? '26px' : '38px',
               fontWeight: 800,
-              color: isDark ? '#ffffff' : '#0a1628',
+              color: isDark ? '#ffffff' : '#000000',
               marginBottom: '14px',
               display: 'block',
               textShadow: isDark
                 ? '0 3px 12px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.4)'
-                : '0 2px 8px rgba(255,255,255,0.8), 0 4px 16px rgba(255,255,255,0.5)',
+                : 'none',
               letterSpacing: '-0.5px',
             }}>
               Powerful{' '}
               <span style={{
-                color: isDark ? colors.primary[400] : '#0284c7',
+                color: isDark ? colors.primary[400] : '#059669',
                 background: 'transparent',
                 display: 'inline',
                 textShadow: isDark
                   ? `0 0 30px ${colors.primary[400]}50`
-                  : '0 0 25px rgba(2, 132, 199, 0.6), 0 2px 8px rgba(255,255,255,0.8)',
+                  : 'none',
               }}>
                 Platform Features
               </span>
             </h2>
             <p style={{
               fontSize: isMobile ? '15px' : '17px',
-              fontWeight: 700,
-              color: isDark ? 'rgba(255,255,255,0.95)' : '#1e3a5f',
+              fontWeight: 600,
+              color: isDark ? 'rgba(255,255,255,0.95)' : '#333333',
               maxWidth: '550px',
               margin: '0 auto',
               textShadow: isDark
                 ? '0 2px 6px rgba(0,0,0,0.5)'
-                : '0 1px 4px rgba(255,255,255,0.7), 0 2px 8px rgba(255,255,255,0.4)',
+                : 'none',
             }}>
               Everything you need to trade, earn, and grow your digital asset portfolio
             </p>

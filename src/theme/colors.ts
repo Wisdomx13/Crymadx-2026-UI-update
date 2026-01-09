@@ -348,21 +348,21 @@ export const lightColors = {
     shimmerVertical: 'none',
   },
 
-  // Text Colors - DARK with text shadows for readability
+  // Text Colors - PURE BLACK for maximum visibility
   text: {
-    primary: '#1a1a2e',           // Very dark blue-black - maximum readability
-    secondary: '#2d2d44',         // Dark secondary
-    tertiary: '#3d3d5c',          // Dark tertiary
-    muted: '#4a4a6a',             // Muted but still readable
+    primary: '#000000',           // Pure black - maximum visibility
+    secondary: '#111111',         // Near black secondary
+    tertiary: '#222222',          // Dark tertiary
+    muted: '#444444',             // Muted but still readable
     glow: '#047857',              // Dark green for emphasis
     inverse: '#ffffff',           // White on dark
     accent: '#047857',            // Dark green accent
-    dark: '#0a0a1a',              // Deepest dark
+    dark: '#000000',              // Pure black
     black: '#000000',             // Pure black
-    // Card text - Dark with shadow support
-    onCard: '#1a1a2e',
-    onCardSecondary: '#2d2d44',
-    onCardTertiary: '#3d3d5c',
+    // Card text - Pure black for clarity
+    onCard: '#000000',
+    onCardSecondary: '#111111',
+    onCardTertiary: '#222222',
   },
 
   // Trading colors - Vibrant and clear
