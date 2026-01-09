@@ -111,16 +111,16 @@ export const GlassCard: React.FC<GlassCardProps> = ({
         ? 'rgba(24, 26, 32, 0.6)'
         : 'rgba(255,255,255,0.2)',
       border: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255,255,255,0.45)',
-      hoverBorder: isDark ? 'rgba(2, 192, 118, 0.3)' : 'rgba(16,185,129,0.5)',
+      hoverBorder: isDark ? 'rgba(0, 210, 106, 0.3)' : 'rgba(16,185,129,0.5)',
       gradient: isDark ? colors.gradients.liquid3D : 'linear-gradient(145deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.12) 100%)',
     },
   };
 
   // Theme-aware glow colors
   const glowColors = {
-    green: isDark ? 'rgba(2, 192, 118, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+    green: isDark ? 'rgba(0, 210, 106, 0.15)' : 'rgba(16, 185, 129, 0.15)',
     gold: isDark ? 'rgba(240, 185, 11, 0.12)' : 'rgba(217, 119, 6, 0.12)',
-    cyan: isDark ? 'rgba(0, 212, 170, 0.12)' : 'rgba(6, 182, 212, 0.12)',
+    cyan: isDark ? 'rgba(0, 210, 106, 0.12)' : 'rgba(6, 182, 212, 0.12)',
   };
 
   const variantStyles = variants[variant];

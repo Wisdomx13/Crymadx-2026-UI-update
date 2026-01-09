@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Button, CryptoIcon, LuxuryHomeBackground, GlowingSnowBackground } from '../../components';
+import { Button, CryptoIcon } from '../../components';
 import { usePresentationMode } from '../../components/PresentationMode';
 import { LiquidGlassBackground, LiquidOrb, LiquidRing } from '../../components/Glass3D';
 
@@ -124,7 +124,7 @@ const CountingUsersStat: React.FC<{ colors: any; isDark?: boolean }> = ({ colors
       fontWeight: 600,
       textShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.5)',
     }}>
-      <span style={{ color: '#00ff88', filter: isDark ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}><Users size={16} /></span>
+      <span style={{ color: '#00D26A', filter: isDark ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}><Users size={16} /></span>
       <span>{count.toLocaleString()}+ Users</span>
     </div>
   );
@@ -152,7 +152,7 @@ const coreFeatures = [
 
 // Platform features - Curated list (removed NFT, Institutional API, Debit Cards)
 const platformFeatures = [
-  { icon: <Coins size={28} />, title: 'Spot Trading Engine', description: 'Ultra-fast matching engine supporting 100,000+ TPS with instant execution and deep liquidity pools.', color: '#00ff88', lightBg: 'green' },
+  { icon: <Coins size={28} />, title: 'Spot Trading Engine', description: 'Ultra-fast matching engine supporting 100,000+ TPS with instant execution and deep liquidity pools.', color: '#00D26A', lightBg: 'green' },
   { icon: <Layers size={28} />, title: 'Staking Expansion', description: 'Stake 50+ assets with flexible terms. Earn up to 25% APY with our advanced staking protocols.', color: '#00ffd5', lightBg: 'teal' },
   { icon: <Banknote size={28} />, title: 'Fiat On/Off Ramp', description: 'Seamless fiat integration with 50+ currencies. Buy crypto with cards, bank transfers, and more.', color: '#ffd700', lightBg: 'gold' },
   { icon: <UserPlus size={28} />, title: 'Referral System Upgrade', description: 'Earn up to 40% commission on referred trades. Multi-tier rewards with lifetime tracking.', color: '#ff6b6b', lightBg: 'pink' },
@@ -323,15 +323,15 @@ const GreenSparkles: React.FC<{ isDark: boolean; count?: number }> = ({ isDark, 
             borderRadius: '50%',
             background: isDark
               ? sparkle.isBig
-                ? `radial-gradient(circle, #00ff88 0%, #00ff88aa 30%, #00ff8850 60%, transparent 100%)`
-                : `radial-gradient(circle, #00ff88 0%, #00ff8860 50%, transparent 100%)`
+                ? `radial-gradient(circle, #00D26A 0%, #00D26Aaa 30%, #00D26A50 60%, transparent 100%)`
+                : `radial-gradient(circle, #00D26A 0%, #00D26A60 50%, transparent 100%)`
               : sparkle.isBig
                 ? `radial-gradient(circle, #10b981 0%, #10b981cc 30%, #10b98170 60%, transparent 100%)`
                 : `radial-gradient(circle, #10b981 0%, #10b98180 50%, transparent 100%)`,
             boxShadow: isDark
               ? sparkle.isBig
-                ? `0 0 ${sparkle.size * 4}px #00ff88, 0 0 ${sparkle.size * 8}px #00ff88aa, 0 0 ${sparkle.size * 12}px #00ff8860, 0 0 ${sparkle.size * 16}px #00ff8830`
-                : `0 0 ${sparkle.size * 3}px #00ff88, 0 0 ${sparkle.size * 6}px #00ff8880, 0 0 ${sparkle.size * 9}px #00ff8840`
+                ? `0 0 ${sparkle.size * 4}px #00D26A, 0 0 ${sparkle.size * 8}px #00D26Aaa, 0 0 ${sparkle.size * 12}px #00D26A60, 0 0 ${sparkle.size * 16}px #00D26A30`
+                : `0 0 ${sparkle.size * 3}px #00D26A, 0 0 ${sparkle.size * 6}px #00D26A80, 0 0 ${sparkle.size * 9}px #00D26A40`
               : sparkle.isBig
                 ? `0 0 ${sparkle.size * 3}px #10b981, 0 0 ${sparkle.size * 6}px #10b981aa, 0 0 ${sparkle.size * 9}px #10b98170`
                 : `0 0 ${sparkle.size * 2}px #10b981, 0 0 ${sparkle.size * 4}px #10b98180`,
@@ -455,417 +455,581 @@ const SpeedTrainBorder: React.FC<{ color: string; duration?: number; delay?: num
   );
 };
 
-// Feature Carousel Spotlight Component - Interactive 3D Glass Carousel
-interface FeatureCarouselProps {
+// Holographic Glass Newspaper Carousel - Futuristic Feature Display
+interface HologramCarouselProps {
   features: typeof platformFeatures;
   isDark: boolean;
   colors: any;
   isMobile: boolean;
 }
 
-const FeatureCarousel: React.FC<FeatureCarouselProps> = ({ features, isDark, colors, isMobile }) => {
+const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, isMobile }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [direction, setDirection] = useState(1); // 1 for forward, -1 for backward
-
-  // Map colors for light mode - convert greens to blues/purples for better visibility
-  const getLightModeColor = (color: string): string => {
-    const colorMap: Record<string, string> = {
-      '#00ff88': '#0284c7', // green -> sky blue
-      '#00ffd5': '#7c3aed', // teal -> purple
-      '#ffd700': '#ea580c', // gold -> orange
-      '#ff6b6b': '#dc2626', // pink/red -> red
-      '#4dabf7': '#2563eb', // blue -> blue
-      '#20c997': '#0891b2', // teal -> cyan
-      '#f783ac': '#db2777', // pink -> pink
-      '#ffa94d': '#d97706', // orange -> amber
-      '#69db7c': '#059669', // green -> emerald
-    };
-    return colorMap[color] || color;
-  };
-
-  // Get the display color based on mode
-  const getDisplayColor = (color: string): string => {
-    return isDark ? color : getLightModeColor(color);
-  };
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [slideDirection, setSlideDirection] = useState(0); // -1 = left, 1 = right
+  const [isDragging, setIsDragging] = useState(false);
 
   // Auto-advance carousel
-  React.useEffect(() => {
-    if (isPaused) return;
+  useEffect(() => {
+    if (!isAutoPlaying || isDragging) return;
     const interval = setInterval(() => {
-      setDirection(1);
+      setSlideDirection(1);
       setActiveIndex((prev) => (prev + 1) % features.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, [isPaused, features.length]);
+  }, [isAutoPlaying, features.length, isDragging]);
 
-  const goToSlide = (index: number) => {
-    setDirection(index > activeIndex ? 1 : -1);
-    setActiveIndex(index);
+  const activeFeature = features[activeIndex];
+  const featureColor = activeFeature.color;
+
+  // Get next and previous features for preview
+  const prevIndex = (activeIndex - 1 + features.length) % features.length;
+  const nextIndex = (activeIndex + 1) % features.length;
+
+  // Handle drag/swipe navigation
+  const handleDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const threshold = 50;
+    const velocity = info.velocity.x;
+    const offset = info.offset.x;
+
+    setIsDragging(false);
+
+    // Swipe left (next slide) - negative offset
+    if (offset < -threshold || velocity < -500) {
+      setSlideDirection(1);
+      setActiveIndex((prev) => (prev + 1) % features.length);
+    }
+    // Swipe right (previous slide) - positive offset
+    else if (offset > threshold || velocity > 500) {
+      setSlideDirection(-1);
+      setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
+    }
   };
 
-  const goNext = () => {
-    setDirection(1);
-    setActiveIndex((prev) => (prev + 1) % features.length);
-  };
-
-  const goPrev = () => {
-    setDirection(-1);
+  // Navigation functions for prev/next buttons
+  const goToPrev = () => {
+    setSlideDirection(-1);
     setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
   };
 
-  const activeFeature = features[activeIndex];
-  const displayColor = getDisplayColor(activeFeature.color);
-  const lightBg = 'linear-gradient(145deg, rgba(20,40,60,0.85) 0%, rgba(30,50,80,0.75) 50%, rgba(15,35,55,0.8) 100%)';
+  const goToNext = () => {
+    setSlideDirection(1);
+    setActiveIndex((prev) => (prev + 1) % features.length);
+  };
 
+  // Slide animation variants
   const slideVariants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 300 : -300,
+    enter: (direction: number) => ({
+      x: direction > 0 ? 300 : -300,
       opacity: 0,
       scale: 0.9,
+      rotateY: direction > 0 ? -15 : 15,
     }),
     center: {
       x: 0,
       opacity: 1,
       scale: 1,
+      rotateY: 0,
     },
-    exit: (dir: number) => ({
-      x: dir > 0 ? -300 : 300,
+    exit: (direction: number) => ({
+      x: direction > 0 ? -300 : 300,
       opacity: 0,
       scale: 0.9,
+      rotateY: direction > 0 ? 15 : -15,
     }),
   };
 
   return (
     <div
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onMouseEnter={() => setIsAutoPlaying(false)}
+      onMouseLeave={() => setIsAutoPlaying(true)}
       style={{ position: 'relative' }}
     >
-      {/* Main Spotlight Panel */}
-      <div style={{
-        position: 'relative',
-        minHeight: isMobile ? '320px' : '280px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: '32px',
-      }}>
-        {/* Navigation Arrows - Desktop Only */}
+      {/* Main Holographic Display */}
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: isMobile ? '0' : '24px',
+          minHeight: isMobile ? '400px' : '380px',
+          perspective: '1500px',
+        }}
+      >
+        {/* Previous Feature Preview - Desktop Only */}
         {!isMobile && (
-          <>
-            <motion.button
-              whileHover={{ scale: 1.1, background: 'rgba(255,255,255,0.15)' }}
-              whileTap={{ scale: 0.95 }}
-              onClick={goPrev}
-              style={{
-                position: 'absolute',
-                left: '0',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '52px',
-                height: '52px',
-                borderRadius: '50%',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.25)',
-                border: isDark ? '1px solid rgba(255,255,255,0.15)' : '2px solid rgba(255,255,255,0.3)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#ffffff',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                zIndex: 10,
-              }}
-            >
-              <ChevronLeft size={24} />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.1, background: 'rgba(255,255,255,0.15)' }}
-              whileTap={{ scale: 0.95 }}
-              onClick={goNext}
-              style={{
-                position: 'absolute',
-                right: '0',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '52px',
-                height: '52px',
-                borderRadius: '50%',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.25)',
-                border: isDark ? '1px solid rgba(255,255,255,0.15)' : '2px solid rgba(255,255,255,0.3)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#ffffff',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                zIndex: 10,
-              }}
-            >
-              <ChevronRight size={24} />
-            </motion.button>
-          </>
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 0.4, x: 0 }}
+            whileHover={{ opacity: 0.7, scale: 0.9 }}
+            onClick={goToPrev}
+            style={{
+              width: '180px',
+              height: '280px',
+              background: isDark
+                ? 'linear-gradient(145deg, rgba(20, 20, 20, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%)'
+                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.3) 0%, rgba(245, 245, 245, 0.4) 100%)',
+              borderRadius: '16px',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              padding: '20px',
+              cursor: 'pointer',
+              transform: 'rotateY(15deg) scale(0.85)',
+              transformOrigin: 'right center',
+              transition: 'all 0.4s ease',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+            }}
+          >
+            <div style={{ color: features[prevIndex].color, opacity: 0.7 }}>
+              {React.cloneElement(features[prevIndex].icon, { size: 32 })}
+            </div>
+            <span style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+              textAlign: 'center',
+            }}>
+              {features[prevIndex].title}
+            </span>
+          </motion.div>
         )}
 
-        {/* Spotlight Card */}
-        <AnimatePresence mode="wait" custom={direction}>
+        {/* Main Holographic Card - Swipeable */}
+        <AnimatePresence mode="wait" custom={slideDirection}>
           <motion.div
             key={activeIndex}
-            custom={direction}
+            custom={slideDirection}
             variants={slideVariants}
             initial="enter"
             animate="center"
             exit="exit"
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEnd}
             style={{
-              width: isMobile ? '100%' : '85%',
-              maxWidth: '900px',
-              background: isDark
-                ? 'linear-gradient(145deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 50%, rgba(0,0,0,0.2) 100%)'
-                : lightBg,
-              borderRadius: '28px',
-              padding: isMobile ? '28px' : '40px 48px',
-              border: isDark
-                ? '2px solid rgba(255,255,255,0.15)'
-                : `2px solid ${displayColor}50`,
-              boxShadow: isDark
-                ? `0 25px 50px rgba(0,0,0,0.5), 0 15px 30px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15)`
-                : `0 30px 60px rgba(0,20,40,0.5), 0 15px 35px rgba(0,30,60,0.4), inset 0 2px 0 rgba(255,255,255,0.2), 0 0 50px ${displayColor}20`,
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
               position: 'relative',
+              width: isMobile ? '100%' : '600px',
+              minHeight: isMobile ? '380px' : '340px',
+              background: isDark
+                ? 'linear-gradient(145deg, rgba(15, 15, 15, 0.95) 0%, rgba(5, 5, 5, 0.98) 100%)'
+                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 250, 0.95) 100%)',
+              borderRadius: '24px',
               overflow: 'hidden',
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: 'center',
-              gap: isMobile ? '24px' : '40px',
+              transformStyle: 'preserve-3d',
+              cursor: 'grab',
+              touchAction: 'pan-y',
             }}
+            whileTap={{ cursor: 'grabbing' }}
           >
-            {/* Decorative Glow */}
-            <div style={{
-              position: 'absolute',
-              top: '-40%',
-              right: '-10%',
-              width: '300px',
-              height: '300px',
-              borderRadius: '50%',
-              background: `radial-gradient(circle, ${displayColor}30 0%, transparent 70%)`,
-              filter: 'blur(40px)',
-              pointerEvents: 'none',
-            }} />
-
-            {/* Top Accent Line */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: `linear-gradient(90deg, transparent, ${displayColor}, transparent)`,
-              borderRadius: '28px 28px 0 0',
-            }} />
-
-            {/* Glass Shine */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '40%',
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 100%)',
-              borderRadius: '26px 26px 0 0',
-              pointerEvents: 'none',
-            }} />
-
-            {/* Icon Container */}
-            <motion.div
-              initial={{ scale: 0.8, rotate: -10 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
+            {/* Holographic Scan Lines Effect */}
+            <div
               style={{
-                width: isMobile ? '90px' : '120px',
-                height: isMobile ? '90px' : '120px',
-                borderRadius: '24px',
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `repeating-linear-gradient(
+                  0deg,
+                  transparent,
+                  transparent 2px,
+                  ${isDark ? 'rgba(0, 210, 106, 0.03)' : 'rgba(0, 210, 106, 0.02)'} 2px,
+                  ${isDark ? 'rgba(0, 210, 106, 0.03)' : 'rgba(0, 210, 106, 0.02)'} 4px
+                )`,
+                pointerEvents: 'none',
+                zIndex: 3,
+              }}
+            />
+
+            {/* Top Glowing Border */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: `linear-gradient(90deg, transparent, ${featureColor}, ${featureColor}, transparent)`,
+                boxShadow: `0 0 20px ${featureColor}, 0 0 40px ${featureColor}50`,
+              }}
+            />
+
+            {/* Left Accent Bar */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '20px',
+                bottom: '20px',
+                left: 0,
+                width: '4px',
+                background: `linear-gradient(180deg, transparent, ${featureColor}, ${featureColor}, transparent)`,
+                boxShadow: `0 0 15px ${featureColor}80`,
+              }}
+            />
+
+            {/* Corner Hologram Triangles */}
+            <div style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              width: '40px',
+              height: '40px',
+              borderTop: `2px solid ${featureColor}60`,
+              borderRight: `2px solid ${featureColor}60`,
+              borderRadius: '0 8px 0 0',
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: '12px',
+              left: '12px',
+              width: '40px',
+              height: '40px',
+              borderBottom: `2px solid ${featureColor}60`,
+              borderLeft: `2px solid ${featureColor}60`,
+              borderRadius: '0 0 0 8px',
+            }} />
+
+            {/* Glass Reflection */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '50%',
                 background: isDark
-                  ? `linear-gradient(145deg, ${displayColor}30, ${displayColor}15)`
-                  : `linear-gradient(145deg, ${displayColor}45, ${displayColor}25)`,
-                border: `3px solid ${displayColor}60`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: displayColor,
-                boxShadow: `0 15px 40px ${displayColor}40, inset 0 2px 0 rgba(255,255,255,0.3), 0 0 35px ${displayColor}25`,
+                  ? 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%)'
+                  : 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%)',
+                pointerEvents: 'none',
+                zIndex: 2,
+              }}
+            />
+
+            {/* Content Layout - Newspaper Style */}
+            <div
+              style={{
                 position: 'relative',
                 zIndex: 1,
-                flexShrink: 0,
+                padding: isMobile ? '28px 24px' : '36px 40px',
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: isMobile ? '24px' : '36px',
+                alignItems: 'center',
+                height: '100%',
               }}
             >
-              {React.cloneElement(activeFeature.icon, { size: isMobile ? 42 : 56 })}
-            </motion.div>
-
-            {/* Content */}
-            <div style={{ flex: 1, position: 'relative', zIndex: 1, textAlign: isMobile ? 'center' : 'left' }}>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.15 }}
+              {/* Left Side - Icon & Visual */}
+              <div
                 style={{
-                  display: 'inline-block',
-                  padding: '6px 14px',
-                  background: `${displayColor}25`,
-                  borderRadius: '20px',
-                  marginBottom: '14px',
-                  border: `1px solid ${displayColor}40`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '16px',
                 }}
               >
-                <span style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: displayColor,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                }}>
-                  Feature {activeIndex + 1} of {features.length}
-                </span>
-              </motion.div>
+                {/* Floating Icon with Hologram Effect */}
+                <motion.div
+                  animate={{
+                    y: [0, -8, 0],
+                    boxShadow: [
+                      `0 10px 30px ${featureColor}30, 0 0 60px ${featureColor}20`,
+                      `0 20px 40px ${featureColor}40, 0 0 80px ${featureColor}30`,
+                      `0 10px 30px ${featureColor}30, 0 0 60px ${featureColor}20`,
+                    ],
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    width: isMobile ? '100px' : '120px',
+                    height: isMobile ? '100px' : '120px',
+                    borderRadius: '24px',
+                    background: `linear-gradient(145deg, ${featureColor}25, ${featureColor}10)`,
+                    border: `2px solid ${featureColor}50`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: featureColor,
+                    position: 'relative',
+                  }}
+                >
+                  {/* Inner glow ring */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '8px',
+                      borderRadius: '16px',
+                      border: `1px solid ${featureColor}30`,
+                    }}
+                  />
+                  {React.cloneElement(activeFeature.icon, { size: isMobile ? 48 : 56 })}
+                </motion.div>
 
-              <motion.h3
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-                style={{
-                  fontSize: isMobile ? '24px' : '32px',
-                  fontWeight: 800,
-                  color: '#ffffff',
-                  marginBottom: '14px',
-                  textShadow: '0 3px 12px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.4)',
-                  letterSpacing: '-0.3px',
-                }}
-              >
-                {activeFeature.title}
-              </motion.h3>
+                {/* Feature Number Badge */}
+                <div
+                  style={{
+                    padding: '6px 16px',
+                    background: `${featureColor}20`,
+                    border: `1px solid ${featureColor}40`,
+                    borderRadius: '20px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: featureColor,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                    }}
+                  >
+                    Feature {activeIndex + 1} / {features.length}
+                  </span>
+                </div>
+              </div>
 
-              <motion.p
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.25 }}
-                style={{
-                  fontSize: isMobile ? '15px' : '17px',
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.95)',
-                  lineHeight: 1.7,
-                  textShadow: '0 2px 6px rgba(0,0,0,0.5)',
-                  maxWidth: '500px',
-                }}
-              >
-                {activeFeature.description}
-              </motion.p>
+              {/* Right Side - Text Content */}
+              <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+                {/* Headline */}
+                <motion.h3
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  style={{
+                    fontSize: isMobile ? '26px' : '32px',
+                    fontWeight: 800,
+                    color: isDark ? '#ffffff' : '#0a1628',
+                    marginBottom: '16px',
+                    lineHeight: 1.2,
+                    letterSpacing: '-0.5px',
+                  }}
+                >
+                  {activeFeature.title}
+                </motion.h3>
+
+                {/* Description */}
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  style={{
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: 500,
+                    color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)',
+                    lineHeight: 1.7,
+                    marginBottom: '24px',
+                    maxWidth: '400px',
+                  }}
+                >
+                  {activeFeature.description}
+                </motion.p>
+
+                {/* CTA Button */}
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  whileHover={{ scale: 1.02, boxShadow: `0 8px 30px ${featureColor}40` }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '14px 28px',
+                    background: `linear-gradient(135deg, ${featureColor}, ${featureColor}cc)`,
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: '#000000',
+                    cursor: 'pointer',
+                    boxShadow: `0 4px 20px ${featureColor}30`,
+                  }}
+                >
+                  Explore Feature
+                  <ArrowRight size={16} />
+                </motion.button>
+              </div>
             </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
 
-      {/* Feature Thumbnails - Mini Cards Navigation */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: isMobile ? '8px' : '12px',
-        flexWrap: 'wrap',
-        padding: '0 16px',
-      }}>
-        {features.map((feature, index) => {
-          const isActive = index === activeIndex;
-          const thumbColor = getDisplayColor(feature.color);
-          return (
-            <motion.button
-              key={feature.title}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => goToSlide(index)}
+            {/* Bottom Data Strip - Newspaper Style */}
+            <div
               style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '12px 24px',
+                background: isDark
+                  ? 'linear-gradient(90deg, rgba(0,0,0,0.8), rgba(0,0,0,0.6), rgba(0,0,0,0.8))'
+                  : 'linear-gradient(90deg, rgba(0,0,0,0.05), rgba(0,0,0,0.02), rgba(0,0,0,0.05))',
+                borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '8px',
-                padding: isMobile ? '10px 14px' : '12px 18px',
-                background: isActive
-                  ? isDark
-                    ? `linear-gradient(135deg, ${thumbColor}25, ${thumbColor}10)`
-                    : `linear-gradient(135deg, ${thumbColor}35, ${thumbColor}20)`
-                  : isDark
-                    ? 'rgba(255,255,255,0.06)'
-                    : 'rgba(0,0,0,0.25)',
-                border: isActive
-                  ? `2px solid ${thumbColor}60`
-                  : isDark
-                    ? '1px solid rgba(255,255,255,0.1)'
-                    : '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '14px',
-                cursor: 'pointer',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                boxShadow: isActive
-                  ? `0 8px 24px ${thumbColor}30, inset 0 1px 0 rgba(255,255,255,0.15)`
-                  : '0 4px 12px rgba(0,0,0,0.2)',
-                transition: 'all 0.2s ease',
               }}
             >
               <span style={{
-                color: isActive ? thumbColor : 'rgba(255,255,255,0.7)',
-                display: 'flex',
-                filter: isActive ? `drop-shadow(0 0 6px ${thumbColor})` : 'none',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
               }}>
-                {React.cloneElement(feature.icon, { size: isMobile ? 16 : 18 })}
+                CrymadX Platform
               </span>
-              {!isMobile && (
-                <span style={{
-                  fontSize: '13px',
-                  fontWeight: isActive ? 700 : 600,
-                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.8)',
-                  textShadow: isActive ? '0 2px 6px rgba(0,0,0,0.5)' : 'none',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {feature.title.split(' ').slice(0, 2).join(' ')}
-                </span>
-              )}
-            </motion.button>
-          );
-        })}
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: featureColor,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}>
+                {activeFeature.lightBg?.toUpperCase()} EDITION
+              </span>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Next Feature Preview - Desktop Only */}
+        {!isMobile && (
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 0.4, x: 0 }}
+            whileHover={{ opacity: 0.7, scale: 0.9 }}
+            onClick={goToNext}
+            style={{
+              width: '180px',
+              height: '280px',
+              background: isDark
+                ? 'linear-gradient(145deg, rgba(20, 20, 20, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%)'
+                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.3) 0%, rgba(245, 245, 245, 0.4) 100%)',
+              borderRadius: '16px',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              padding: '20px',
+              cursor: 'pointer',
+              transform: 'rotateY(-15deg) scale(0.85)',
+              transformOrigin: 'left center',
+              transition: 'all 0.4s ease',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+            }}
+          >
+            <div style={{ color: features[nextIndex].color, opacity: 0.7 }}>
+              {React.cloneElement(features[nextIndex].icon, { size: 32 })}
+            </div>
+            <span style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+              textAlign: 'center',
+            }}>
+              {features[nextIndex].title}
+            </span>
+          </motion.div>
+        )}
+
+        {/* Side Navigation Arrows */}
+        <motion.button
+          whileHover={{ scale: 1.1, backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }}
+          whileTap={{ scale: 0.9 }}
+          onClick={goToPrev}
+          style={{
+            position: 'absolute',
+            left: isMobile ? '8px' : '0',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: isMobile ? '36px' : '40px',
+            height: isMobile ? '36px' : '40px',
+            borderRadius: '50%',
+            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
+            fontSize: '18px',
+            fontWeight: 300,
+            backdropFilter: 'blur(8px)',
+            zIndex: 10,
+          }}
+        >
+          ‹
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.1, backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }}
+          whileTap={{ scale: 0.9 }}
+          onClick={goToNext}
+          style={{
+            position: 'absolute',
+            right: isMobile ? '8px' : '0',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: isMobile ? '36px' : '40px',
+            height: isMobile ? '36px' : '40px',
+            borderRadius: '50%',
+            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
+            fontSize: '18px',
+            fontWeight: 300,
+            backdropFilter: 'blur(8px)',
+            zIndex: 10,
+          }}
+        >
+          ›
+        </motion.button>
       </div>
 
-      {/* Progress Dots - Mobile */}
-      {isMobile && (
-        <div style={{
+      {/* Navigation Dots */}
+      <div
+        style={{
           display: 'flex',
           justifyContent: 'center',
-          gap: '8px',
-          marginTop: '20px',
-        }}>
-          {features.map((feature, index) => {
-            const dotColor = getDisplayColor(feature.color);
-            return (
-              <motion.button
-                key={index}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => goToSlide(index)}
-                style={{
-                  width: index === activeIndex ? '24px' : '8px',
-                  height: '8px',
-                  borderRadius: '4px',
-                  background: index === activeIndex ? dotColor : 'rgba(255,255,255,0.3)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: index === activeIndex ? `0 0 10px ${dotColor}` : 'none',
-                }}
-              />
-            );
-          })}
-        </div>
-      )}
+          gap: '10px',
+          marginTop: '28px',
+        }}
+      >
+        {features.map((feature, index) => (
+          <motion.button
+            key={index}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setSlideDirection(index > activeIndex ? 1 : -1);
+              setActiveIndex(index);
+            }}
+            style={{
+              width: index === activeIndex ? '32px' : '10px',
+              height: '10px',
+              borderRadius: '5px',
+              background: index === activeIndex
+                ? feature.color
+                : isDark
+                  ? 'rgba(255,255,255,0.2)'
+                  : 'rgba(0,0,0,0.15)',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: index === activeIndex ? `0 0 15px ${feature.color}60` : 'none',
+            }}
+          />
+        ))}
+      </div>
+
     </div>
   );
 };
@@ -958,7 +1122,7 @@ const GlassPanel: React.FC<{
   glow?: boolean;
   isDark?: boolean;
   glowColor?: string;
-}> = ({ children, style, hover = false, glow = false, isDark = true, glowColor = '#00ff88' }) => {
+}> = ({ children, style, hover = false, glow = false, isDark = true, glowColor = '#00D26A' }) => {
   // Bold 3D Glass - Deep depth with strong shadows
   const glassBg = isDark
     ? 'linear-gradient(145deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 50%, rgba(0,0,0,0.15) 100%)'
@@ -996,6 +1160,316 @@ const GlassPanel: React.FC<{
     >
       {children}
     </motion.div>
+  );
+};
+
+// ============================================
+// BLOCKCHAIN NETWORK RIG - Animated Vector Illustration
+// Shows blockchain network nodes producing coins into briefcase
+// ============================================
+const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isDark, isMobile }) => {
+  const navigate = useNavigate();
+  const size = isMobile ? 300 : 400;
+
+  // Coins with different animation types - some enter, some bounce, some miss
+  const coins = [
+    { id: 'btc', color: '#F7931A', symbol: 'B', delay: 0, type: 'enter' },
+    { id: 'eth', color: '#627EEA', symbol: 'E', delay: 2, type: 'bounce' },
+    { id: 'sol', color: '#9945FF', symbol: 'S', delay: 4, type: 'enter' },
+    { id: 'usdt', color: '#26A17B', symbol: 'U', delay: 6, type: 'missLeft' },
+    { id: 'doge', color: '#C2A633', symbol: 'D', delay: 8, type: 'bounce' },
+    { id: 'bnb', color: '#F0B90B', symbol: 'B', delay: 10, type: 'enter' },
+    { id: 'ltc', color: '#345D9D', symbol: 'L', delay: 12, type: 'missRight' },
+  ];
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size * 1.05, margin: '0 auto' }}>
+      {/* CSS Animations - Exciting coin behaviors */}
+      <style>{`
+        @keyframes coinEnter {
+          0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0; }
+          8% { opacity: 1; }
+          45% { transform: translateY(70px) rotate(180deg) scale(1); opacity: 1; }
+          75% { transform: translateY(105px) rotate(300deg) scale(1); opacity: 1; }
+          90% { transform: translateY(115px) rotate(340deg) scale(0.9); opacity: 1; }
+          100% { transform: translateY(125px) rotate(360deg) scale(0); opacity: 0; }
+        }
+        @keyframes coinBounce {
+          0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+          8% { opacity: 1; }
+          40% { transform: translateY(80px) translateX(0) rotate(180deg); opacity: 1; }
+          55% { transform: translateY(100px) translateX(0) rotate(220deg); opacity: 1; }
+          65% { transform: translateY(85px) translateX(5px) rotate(260deg); opacity: 1; }
+          80% { transform: translateY(105px) translateX(0) rotate(320deg); opacity: 1; }
+          95% { transform: translateY(120px) translateX(0) rotate(355deg) scale(0.8); opacity: 0.8; }
+          100% { transform: translateY(125px) translateX(0) rotate(360deg) scale(0); opacity: 0; }
+        }
+        @keyframes coinMissLeft {
+          0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+          8% { opacity: 1; }
+          40% { transform: translateY(70px) translateX(-5px) rotate(150deg); opacity: 1; }
+          60% { transform: translateY(100px) translateX(-15px) rotate(250deg); opacity: 1; }
+          75% { transform: translateY(115px) translateX(-35px) rotate(320deg); opacity: 1; }
+          85% { transform: translateY(100px) translateX(-55px) rotate(400deg); opacity: 0.8; }
+          100% { transform: translateY(130px) translateX(-80px) rotate(500deg); opacity: 0; }
+        }
+        @keyframes coinMissRight {
+          0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+          8% { opacity: 1; }
+          40% { transform: translateY(70px) translateX(5px) rotate(-150deg); opacity: 1; }
+          60% { transform: translateY(100px) translateX(15px) rotate(-250deg); opacity: 1; }
+          75% { transform: translateY(115px) translateX(35px) rotate(-320deg); opacity: 1; }
+          85% { transform: translateY(100px) translateX(55px) rotate(-400deg); opacity: 0.8; }
+          100% { transform: translateY(130px) translateX(80px) rotate(-500deg); opacity: 0; }
+        }
+        @keyframes networkPulse {
+          0%, 100% { filter: drop-shadow(0 0 6px rgba(0, 210, 106, 0.25)); }
+          50% { filter: drop-shadow(0 0 12px rgba(0, 210, 106, 0.4)); }
+        }
+        @keyframes nodeGlow {
+          0%, 100% { opacity: 0.65; }
+          50% { opacity: 1; }
+        }
+        @keyframes dataFlow {
+          0% { stroke-dashoffset: 20; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes serverBlink {
+          0%, 100% { fill: #00D26A; }
+          50% { fill: #00ff7f; }
+        }
+        @keyframes briefcaseHover {
+          0%, 100% { filter: drop-shadow(0 2px 8px rgba(0,210,106,0.2)); }
+          50% { filter: drop-shadow(0 4px 15px rgba(0,210,106,0.4)); }
+        }
+        @keyframes wifiPulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.7; }
+        }
+        .briefcase-clickable {
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+        .briefcase-clickable:hover {
+          transform: scale(1.02);
+        }
+      `}</style>
+
+      <svg
+        width={size}
+        height={size * 1.05}
+        viewBox="0 0 400 420"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ animation: 'networkPulse 4s ease-in-out infinite' }}
+      >
+        {/* Definitions */}
+        <defs>
+          <radialGradient id="networkGlow" cx="50%" cy="35%" r="50%">
+            <stop offset="0%" stopColor={isDark ? 'rgba(0,210,106,0.12)' : 'rgba(0,210,106,0.08)'} />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+          <linearGradient id="serverBody" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={isDark ? '#2d2d2d' : '#e8e8e8'} />
+            <stop offset="50%" stopColor={isDark ? '#1a1a1a' : '#d5d5d5'} />
+            <stop offset="100%" stopColor={isDark ? '#0d0d0d' : '#c2c2c2'} />
+          </linearGradient>
+          <linearGradient id="briefcaseBody" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={isDark ? '#2d2d2d' : '#d8d8d8'} />
+            <stop offset="50%" stopColor={isDark ? '#1a1a1a' : '#c5c5c5'} />
+            <stop offset="100%" stopColor={isDark ? '#0d0d0d' : '#b2b2b2'} />
+          </linearGradient>
+          <linearGradient id="greenAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#00A854" />
+            <stop offset="50%" stopColor="#00D26A" />
+            <stop offset="100%" stopColor="#00A854" />
+          </linearGradient>
+          <linearGradient id="metalAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={isDark ? '#5a5a5a' : '#909090'} />
+            <stop offset="50%" stopColor={isDark ? '#7a7a7a' : '#b0b0b0'} />
+            <stop offset="100%" stopColor={isDark ? '#5a5a5a' : '#909090'} />
+          </linearGradient>
+          <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="coinGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.4" />
+          </filter>
+        </defs>
+
+        {/* Background glow */}
+        <ellipse cx="200" cy="130" rx="170" ry="110" fill="url(#networkGlow)" />
+
+        {/* Network Connection Lines - animated data flow */}
+        <g stroke="#00D26A" strokeWidth="1.5" strokeDasharray="4,4" style={{ animation: 'dataFlow 2.5s linear infinite' }}>
+          <line x1="200" y1="120" x2="95" y2="55" opacity="0.35" />
+          <line x1="200" y1="120" x2="305" y2="55" opacity="0.35" />
+          <line x1="200" y1="120" x2="55" y2="140" opacity="0.35" />
+          <line x1="200" y1="120" x2="345" y2="140" opacity="0.35" />
+          <line x1="200" y1="120" x2="75" y2="220" opacity="0.35" />
+          <line x1="200" y1="120" x2="325" y2="220" opacity="0.35" />
+        </g>
+
+        {/* Central Server Hub */}
+        <g filter="url(#glowFilter)">
+          <rect x="155" y="75" width="90" height="90" rx="6" fill="url(#serverBody)" stroke={isDark ? '#4a4a4a' : '#a0a0a0'} strokeWidth="2" />
+          <rect x="163" y="83" width="74" height="16" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1" />
+          <rect x="163" y="105" width="74" height="16" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1" />
+          <rect x="163" y="127" width="74" height="16" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1" />
+          <circle cx="172" cy="91" r="3" style={{ animation: 'serverBlink 1.5s ease-in-out infinite' }} />
+          <circle cx="185" cy="91" r="3" fill="#F7931A"><animate attributeName="opacity" values="1;0.4;1" dur="1.2s" repeatCount="indefinite" /></circle>
+          <circle cx="172" cy="113" r="3" style={{ animation: 'serverBlink 1.8s ease-in-out infinite' }} />
+          <circle cx="185" cy="113" r="3" fill="#627EEA"><animate attributeName="opacity" values="0.4;1;0.4" dur="1.4s" repeatCount="indefinite" /></circle>
+          <circle cx="172" cy="135" r="3" style={{ animation: 'serverBlink 1.6s ease-in-out infinite' }} />
+          <circle cx="185" cy="135" r="3" fill="#9945FF"><animate attributeName="opacity" values="1;0.5;1" dur="1.1s" repeatCount="indefinite" /></circle>
+          <line x1="205" y1="88" x2="230" y2="88" stroke={isDark ? '#3a3a3a' : '#808080'} strokeWidth="1.5" />
+          <line x1="205" y1="94" x2="230" y2="94" stroke={isDark ? '#3a3a3a' : '#808080'} strokeWidth="1.5" />
+          <line x1="205" y1="110" x2="230" y2="110" stroke={isDark ? '#3a3a3a' : '#808080'} strokeWidth="1.5" />
+          <line x1="205" y1="116" x2="230" y2="116" stroke={isDark ? '#3a3a3a' : '#808080'} strokeWidth="1.5" />
+          <line x1="205" y1="132" x2="230" y2="132" stroke={isDark ? '#3a3a3a' : '#808080'} strokeWidth="1.5" />
+          <line x1="205" y1="138" x2="230" y2="138" stroke={isDark ? '#3a3a3a' : '#808080'} strokeWidth="1.5" />
+          <rect x="155" y="70" width="90" height="5" rx="2" fill="#00D26A" />
+        </g>
+
+        {/* Left Top Node - Mobile Device */}
+        <g style={{ animation: 'nodeGlow 3.5s ease-in-out infinite' }}>
+          <rect x="70" y="30" width="30" height="48" rx="4" fill="url(#serverBody)" stroke={isDark ? '#4a4a4a' : '#909090'} strokeWidth="1.5" />
+          <rect x="74" y="36" width="22" height="30" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} />
+          <circle cx="85" cy="72" r="2.5" fill={isDark ? '#3a3a3a' : '#707070'} />
+          <rect x="76" y="39" width="18" height="24" rx="1" fill="#00D26A" opacity="0.25" />
+        </g>
+
+        {/* Right Top Node - Mobile Device */}
+        <g style={{ animation: 'nodeGlow 3.5s ease-in-out infinite', animationDelay: '1s' }}>
+          <rect x="300" y="30" width="30" height="48" rx="4" fill="url(#serverBody)" stroke={isDark ? '#4a4a4a' : '#909090'} strokeWidth="1.5" />
+          <rect x="304" y="36" width="22" height="30" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} />
+          <circle cx="315" cy="72" r="2.5" fill={isDark ? '#3a3a3a' : '#707070'} />
+          <rect x="306" y="39" width="18" height="24" rx="1" fill="#00D26A" opacity="0.25" />
+        </g>
+
+        {/* Left Side Node - Server Block */}
+        <g style={{ animation: 'nodeGlow 3.5s ease-in-out infinite', animationDelay: '1.8s' }}>
+          <rect x="30" y="120" width="45" height="42" rx="5" fill="url(#serverBody)" stroke={isDark ? '#4a4a4a' : '#909090'} strokeWidth="1.5" />
+          <rect x="36" y="126" width="33" height="9" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="0.8" />
+          <rect x="36" y="139" width="33" height="9" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="0.8" />
+          <circle cx="40" cy="130" r="2" style={{ animation: 'serverBlink 1.4s ease-in-out infinite' }} />
+          <circle cx="40" cy="143" r="2" style={{ animation: 'serverBlink 1.7s ease-in-out infinite' }} />
+        </g>
+
+        {/* Right Side Node - Server Block */}
+        <g style={{ animation: 'nodeGlow 3.5s ease-in-out infinite', animationDelay: '2.5s' }}>
+          <rect x="325" y="120" width="45" height="42" rx="5" fill="url(#serverBody)" stroke={isDark ? '#4a4a4a' : '#909090'} strokeWidth="1.5" />
+          <rect x="331" y="126" width="33" height="9" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="0.8" />
+          <rect x="331" y="139" width="33" height="9" rx="2" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="0.8" />
+          <circle cx="335" cy="130" r="2" style={{ animation: 'serverBlink 1.3s ease-in-out infinite' }} />
+          <circle cx="335" cy="143" r="2" style={{ animation: 'serverBlink 1.6s ease-in-out infinite' }} />
+        </g>
+
+        {/* Bottom Left Node - Router/Switch */}
+        <g style={{ animation: 'nodeGlow 3.5s ease-in-out infinite', animationDelay: '0.6s' }}>
+          <rect x="48" y="200" width="54" height="35" rx="4" fill="url(#serverBody)" stroke={isDark ? '#4a4a4a' : '#909090'} strokeWidth="1.5" />
+          <circle cx="58" cy="213" r="2.5" style={{ animation: 'serverBlink 1s ease-in-out infinite' }} />
+          <circle cx="68" cy="213" r="2.5" fill="#F7931A"><animate attributeName="opacity" values="1;0.3;1" dur="0.9s" repeatCount="indefinite" /></circle>
+          <circle cx="78" cy="213" r="2.5" style={{ animation: 'serverBlink 1.2s ease-in-out infinite' }} />
+          <circle cx="88" cy="213" r="2.5" fill="#627EEA"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" repeatCount="indefinite" /></circle>
+          <line x1="75" y1="200" x2="75" y2="187" stroke={isDark ? '#5a5a5a' : '#808080'} strokeWidth="1.5" />
+          <circle cx="75" cy="184" r="3" fill="#00D26A" opacity="0.7" />
+          <path d="M 67 182 Q 75 174 83 182" fill="none" stroke="#00D26A" strokeWidth="1" opacity="0.4" style={{ animation: 'wifiPulse 2.5s ease-in-out infinite' }} />
+        </g>
+
+        {/* Bottom Right Node - Router/Switch */}
+        <g style={{ animation: 'nodeGlow 3.5s ease-in-out infinite', animationDelay: '1.4s' }}>
+          <rect x="298" y="200" width="54" height="35" rx="4" fill="url(#serverBody)" stroke={isDark ? '#4a4a4a' : '#909090'} strokeWidth="1.5" />
+          <circle cx="308" cy="213" r="2.5" style={{ animation: 'serverBlink 1.1s ease-in-out infinite' }} />
+          <circle cx="318" cy="213" r="2.5" fill="#9945FF"><animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" /></circle>
+          <circle cx="328" cy="213" r="2.5" style={{ animation: 'serverBlink 1.3s ease-in-out infinite' }} />
+          <circle cx="338" cy="213" r="2.5" fill="#F0B90B"><animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" /></circle>
+          <line x1="325" y1="200" x2="325" y2="187" stroke={isDark ? '#5a5a5a' : '#808080'} strokeWidth="1.5" />
+          <circle cx="325" cy="184" r="3" fill="#00D26A" opacity="0.7" />
+          <path d="M 317 182 Q 325 174 333 182" fill="none" stroke="#00D26A" strokeWidth="1" opacity="0.4" style={{ animation: 'wifiPulse 2.5s ease-in-out infinite', animationDelay: '0.5s' }} />
+        </g>
+
+        {/* Coin output chute from central server */}
+        <path d="M 188 165 L 200 180 L 212 165" fill={isDark ? '#1a1a1a' : '#b0b0b0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1.5" />
+        <rect x="196" y="180" width="8" height="15" fill={isDark ? '#1a1a1a' : '#a0a0a0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1" />
+
+        {/* Matching Server-Style Briefcase - Clickable for Login */}
+        <g
+          className="briefcase-clickable"
+          style={{ animation: 'briefcaseHover 3s ease-in-out infinite', cursor: 'pointer' }}
+          onClick={() => navigate('/login')}
+        >
+          {/* Briefcase body - matching server colors */}
+          <rect x="120" y="295" width="160" height="100" rx="6" fill="url(#briefcaseBody)" stroke={isDark ? '#4a4a4a' : '#a0a0a0'} strokeWidth="2.5" />
+
+          {/* Green accent trim on top */}
+          <rect x="120" y="293" width="160" height="5" rx="2" fill="url(#greenAccent)" />
+
+          {/* Handle - matching style */}
+          <path d="M 175 285 Q 175 265 200 265 Q 225 265 225 285" fill="none" stroke={isDark ? '#2a2a2a' : '#909090'} strokeWidth="6" strokeLinecap="round" />
+          <path d="M 175 285 Q 175 268 200 268 Q 225 268 225 285" fill="none" stroke="url(#greenAccent)" strokeWidth="3" strokeLinecap="round" />
+
+          {/* Briefcase lid separation line */}
+          <line x1="120" y1="325" x2="280" y2="325" stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1.5" />
+
+          {/* Green latches */}
+          <rect x="145" y="318" width="22" height="14" rx="3" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1" />
+          <rect x="233" y="318" width="22" height="14" rx="3" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1" />
+          <circle cx="156" cy="325" r="3" fill="#00A854" />
+          <circle cx="244" cy="325" r="3" fill="#00A854" />
+
+          {/* Center coin entry slot - bigger and centered */}
+          <rect x="175" y="298" width="50" height="10" rx="3" fill={isDark ? '#050505' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1" />
+
+          {/* "Decentral Bank of Crypto" label */}
+          <rect x="135" y="342" width="130" height="42" rx="4" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1" />
+          <text x="200" y="358" textAnchor="middle" fill="#00D26A" fontSize="8" fontWeight="bold" fontFamily="monospace" letterSpacing="0.05em">DECENTRAL BANK</text>
+          <text x="200" y="372" textAnchor="middle" fill="#00D26A" fontSize="7" fontFamily="monospace" letterSpacing="0.03em">of Crypto</text>
+
+          {/* Green corner accents */}
+          <path d="M 120 307 L 120 295 L 132 295" fill="none" stroke="#00D26A" strokeWidth="2" />
+          <path d="M 280 307 L 280 295 L 268 295" fill="none" stroke="#00D26A" strokeWidth="2" />
+          <path d="M 120 383 L 120 395 L 132 395" fill="none" stroke="#00D26A" strokeWidth="2" />
+          <path d="M 280 383 L 280 395 L 268 395" fill="none" stroke="#00D26A" strokeWidth="2" />
+
+          {/* Status LEDs on briefcase */}
+          <circle cx="145" cy="360" r="3" style={{ animation: 'serverBlink 1.2s ease-in-out infinite' }} />
+          <circle cx="255" cy="360" r="3" fill="#F7931A"><animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" /></circle>
+
+          {/* Login hint text */}
+          <text x="200" y="388" textAnchor="middle" fill={isDark ? 'rgba(0,210,106,0.6)' : 'rgba(0,180,90,0.7)'} fontSize="5.5" fontFamily="monospace">CLICK TO LOGIN</text>
+        </g>
+
+        {/* Animated Coins with different behaviors - bigger coins */}
+        {coins.map((coin) => {
+          const animName = coin.type === 'enter' ? 'coinEnter' :
+                          coin.type === 'bounce' ? 'coinBounce' :
+                          coin.type === 'missLeft' ? 'coinMissLeft' : 'coinMissRight';
+          return (
+            <g key={coin.id} style={{
+              animation: `${animName} 14s ease-in-out infinite`,
+              animationDelay: `${coin.delay}s`,
+            }}>
+              <g transform="translate(200, 195)" filter="url(#coinGlow)">
+                <circle r="12" fill={coin.color} />
+                <circle r="8" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                <text y="4" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">{coin.symbol}</text>
+              </g>
+            </g>
+          );
+        })}
+
+        {/* Sparkle effects */}
+        <circle cx="45" cy="95" r="2" fill="#00D26A" style={{ animation: 'nodeGlow 4s ease-in-out infinite' }} />
+        <circle cx="355" cy="95" r="2" fill="#00D26A" style={{ animation: 'nodeGlow 4s ease-in-out infinite', animationDelay: '1.2s' }} />
+        <circle cx="25" cy="175" r="1.5" fill="#F7931A" style={{ animation: 'nodeGlow 4s ease-in-out infinite', animationDelay: '0.7s' }} />
+        <circle cx="375" cy="175" r="1.5" fill="#627EEA" style={{ animation: 'nodeGlow 4s ease-in-out infinite', animationDelay: '2s' }} />
+      </svg>
+    </div>
   );
 };
 
@@ -1271,73 +1745,59 @@ const CryptoPriceCard: React.FC<{
 
 // Live Ticker Component - VISIBLE Glass Style with Theme Support
 const LiveTicker: React.FC<{ colors: any; isDark: boolean }> = ({ colors, isDark }) => {
-  const tickerItems = [...cryptoPrices, ...cryptoPrices, ...cryptoPrices];
-
-  // Strong text shadow for visibility in light mode
-  const tickerTextShadow = isDark ? 'none' : '0 0 8px rgba(255,255,255,0.9), 0 0 15px rgba(255,255,255,0.5), 0 2px 6px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.6)';
-  const priceTextShadow = isDark ? 'none' : '0 0 10px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,1)';
+  // Duplicate items for seamless loop
+  const tickerItems = [...cryptoPrices, ...cryptoPrices];
 
   return (
     <div style={{
-      background: isDark
-        ? 'linear-gradient(180deg, rgba(5, 10, 18, 0.6) 0%, rgba(5, 10, 18, 0.4) 100%)'
-        : 'linear-gradient(180deg, rgba(10, 35, 65, 0.85) 0%, rgba(5, 25, 50, 0.8) 100%)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      borderBottom: `1px solid ${isDark ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 255, 255, 0.3)'}`,
-      borderTop: isDark ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
+      background: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(10, 35, 65, 0.85)',
+      borderBottom: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.2)' : 'rgba(255, 255, 255, 0.3)'}`,
       overflow: 'hidden',
-      padding: '14px 0',
-      boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.3)',
+      padding: '12px 0',
     }}>
-      <motion.div
-        animate={{ x: ['0%', '-33.33%'] }}
-        transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-        style={{ display: 'flex', gap: '48px', width: 'fit-content' }}
+      <div
+        className="ticker-scroll"
+        style={{
+          display: 'flex',
+          gap: '48px',
+          width: 'fit-content',
+          animation: 'tickerMove 40s linear infinite',
+        }}
       >
         {tickerItems.map((item, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap' }}>
-            <CryptoIcon symbol={item.symbol} size={22} />
-            <span style={{
-              fontWeight: 700,
-              color: '#ffffff',
-              fontSize: '14px',
-              textShadow: tickerTextShadow,
-            }}>{item.symbol}</span>
-            <span style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontWeight: 700,
-              color: '#ffffff',
-              fontSize: '14px',
-              textShadow: priceTextShadow,
-            }}>
+            <CryptoIcon symbol={item.symbol} size={20} />
+            <span style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>{item.symbol}</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>
               ${item.price < 1 ? item.price.toFixed(4) : item.price.toLocaleString()}
             </span>
             <span style={{
-              fontSize: '13px',
-              fontWeight: 700,
-              color: item.change >= 0 ? '#00ff88' : '#ff4757',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: item.change >= 0 ? '#00D26A' : '#f6465d',
               display: 'flex',
               alignItems: 'center',
               gap: '2px',
-              textShadow: item.change >= 0
-                ? '0 0 8px rgba(0,255,136,0.8), 0 2px 6px rgba(0,0,0,0.8)'
-                : '0 0 8px rgba(255,71,87,0.8), 0 2px 6px rgba(0,0,0,0.8)',
-              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
             }}>
-              {item.change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+              {item.change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
               {Math.abs(item.change)}%
             </span>
           </div>
         ))}
-      </motion.div>
+      </div>
+      <style>{`
+        @keyframes tickerMove {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   );
 };
 
 // Quick Actions data
 const quickActions = [
-  { icon: <CreditCard size={20} />, label: 'Buy Crypto', description: 'Instant purchase', color: '#00ff88', path: '/trade', action: 'buy crypto', lightBg: 'green' },
+  { icon: <CreditCard size={20} />, label: 'Buy Crypto', description: 'Instant purchase', color: '#00D26A', path: '/trade', action: 'buy crypto', lightBg: 'green' },
   { icon: <Repeat size={20} />, label: 'Swap', description: 'Zero fees', color: '#00ffd5', path: '/trade', action: 'swap tokens', lightBg: 'teal' },
   { icon: <Gift size={20} />, label: 'Earn', description: 'Up to 12% APY', color: '#ffd700', path: '/rewards', action: 'earn rewards', lightBg: 'gold' },
   { icon: <Layers size={20} />, label: 'Stake', description: 'Flexible terms', color: '#9945FF', path: '/rewards', action: 'stake crypto', lightBg: 'purple' },
@@ -1411,27 +1871,20 @@ export const HomeScreen: React.FC = () => {
       zIndex: 5,
       transition: 'background-color 0.3s ease',
     }}>
-      {/* Bull/Bear background moved to hero section for light mode - see hero section below */}
-
-      {/* GLOWING SNOWY Background - ENTIRE PAGE behind content (Light Mode Only) */}
-      <GlowingSnowBackground
-        show={!isDark}
-        backgroundImage="/main-bg.jpg"
-        intensity="high"
-        showTopFade={true}
-      />
-
-      {/* Premium Liquid Glass 3D Background - Dark mode only */}
-      {isDark && (
-        <LiquidGlassBackground
-          intensity={isMobile ? 'low' : 'high'}
-          showOrbs={true}
-          showRings={!isMobile}
-          showCubes={!isMobile}
-        />
+      {/* Plain white background for light mode */}
+      {!isDark && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#ffffff',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }} />
       )}
 
-      {/* Navigation - Glass Style - TRANSPARENT to show hero image */}
+      {/* 3D Background removed for performance */}
+
+      {/* Navigation */}
       <nav style={{
         position: 'sticky',
         top: 0,
@@ -1442,17 +1895,12 @@ export const HomeScreen: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: isMobile ? '0 16px' : '0 32px',
-        background: isDark
-          ? 'linear-gradient(180deg, rgba(5, 10, 18, 0.85) 0%, rgba(5, 10, 18, 0.7) 100%)'
-          : 'linear-gradient(180deg, rgba(20, 60, 100, 0.5) 0%, rgba(20, 60, 100, 0.35) 100%)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: `1px solid ${isDark ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 255, 255, 0.25)'}`,
-        boxShadow: isDark
-          ? '0 4px 30px rgba(0, 255, 136, 0.1)'
-          : '0 4px 30px rgba(0, 50, 100, 0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+        background: isDark ? 'rgba(0, 0, 0, 0.9)' : '#ffffff',
+        backdropFilter: isDark ? 'blur(12px)' : 'none',
+        WebkitBackdropFilter: isDark ? 'blur(12px)' : 'none',
+        borderBottom: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.2)' : '#e5e7eb'}`,
+        boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
         zIndex: 100,
-        transition: 'all 0.3s ease',
       }}>
         {/* Logo - with visibility filter for light mode */}
         <motion.div
@@ -1467,7 +1915,7 @@ export const HomeScreen: React.FC = () => {
               height: isMobile ? '41px' : '51px',
               width: 'auto',
               objectFit: 'contain',
-              filter: isDark ? 'none' : 'drop-shadow(0 0 8px rgba(0,0,0,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.4)) brightness(1.1) contrast(1.1)',
+              filter: 'none',
             }}
           />
         </motion.div>
@@ -1484,7 +1932,7 @@ export const HomeScreen: React.FC = () => {
               >
                 <motion.button
                   onClick={() => !link.hasDropdown && navigate(link.href)}
-                  whileHover={{ color: '#00ff88', background: 'rgba(255,255,255,0.1)' }}
+                  whileHover={{ color: '#00D26A', background: 'rgba(255,255,255,0.1)' }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1773,7 +2221,7 @@ export const HomeScreen: React.FC = () => {
                       <span style={{
                         color: colors.primary[400],
                         padding: '10px',
-                        background: 'rgba(0, 255, 136, 0.1)',
+                        background: 'rgba(0, 210, 106, 0.1)',
                         borderRadius: '10px',
                         display: 'flex',
                       }}>
@@ -1821,225 +2269,33 @@ export const HomeScreen: React.FC = () => {
         paddingBottom: isMobile ? '32px' : '48px',
         overflow: 'hidden',
       }}>
-        {/* Dark mode: Snow background with dark treatment and green glow */}
-        {isDark && (
-          <>
-            {/* Base dark gradient for dark mode */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 0,
-              background: 'linear-gradient(180deg, #050a12 0%, #0a1525 50%, #050a12 100%)',
-            }} />
-            {/* Snow background - darker treatment */}
-            <div style={{
-              position: 'absolute',
-              inset: '-10%',
-              zIndex: 1,
-              backgroundImage: 'url(/hero-snow-bg.jpg)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center center',
-              backgroundRepeat: 'no-repeat',
-              opacity: 0.25,
-              filter: 'brightness(0.3) saturate(0.6) contrast(1.2) hue-rotate(180deg)',
-            }} />
-            {/* Green glow overlay for dark mode */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 2,
-              background: `
-                radial-gradient(ellipse 60% 50% at 30% 40%, rgba(0, 255, 136, 0.08) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 40% at 70% 60%, rgba(16, 185, 129, 0.06) 0%, transparent 60%)
-              `,
-              pointerEvents: 'none',
-            }} />
-          </>
-        )}
-
-        {/* LIGHT MODE: Snowy Background - Contained within hero section */}
-        {!isDark && (
-          <>
-            {/* Base cool blue gradient */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 0,
-              background: 'linear-gradient(180deg, #c8dff5 0%, #e8f4fc 30%, #f0f8ff 100%)',
-            }} />
-
-            {/* The Snowy Background Image */}
-            <div style={{
-              position: 'absolute',
-              inset: '-5%',
-              zIndex: 1,
-              backgroundImage: 'url(/hero-snow-bg.jpg)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center center',
-              backgroundRepeat: 'no-repeat',
-              filter: 'brightness(1.05) saturate(1.1) contrast(1.02)',
-            }} />
-
-            {/* Soft blue vignette for depth */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 1,
-              background: `
-                radial-gradient(ellipse 100% 80% at 0% 30%,
-                  rgba(30, 80, 150, 0.25) 0%,
-                  rgba(30, 80, 150, 0.1) 40%,
-                  transparent 70%
-                )
-              `,
-            }} />
-
-            {/* Ambient cool color effects */}
-            <div style={{
-              position: 'absolute',
-              top: '5%',
-              left: '-10%',
-              width: '50%',
-              height: '60%',
-              zIndex: 1,
-              background: 'radial-gradient(ellipse at center, rgba(100, 180, 255, 0.15) 0%, transparent 60%)',
-              filter: 'blur(40px)',
-            }} />
-            <div style={{
-              position: 'absolute',
-              top: '10%',
-              right: '-5%',
-              width: '45%',
-              height: '50%',
-              zIndex: 1,
-              background: 'radial-gradient(ellipse at center, rgba(180, 220, 255, 0.2) 0%, transparent 60%)',
-              filter: 'blur(50px)',
-            }} />
-          </>
-        )}
-
-        {/* Light mode: Subtle overlay for text readability - Snowy theme */}
-        {!isDark && (
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 2,
-            pointerEvents: 'none',
-          }}>
-            {/* Left side - Soft blue frost for text readability */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              bottom: 0,
-              width: '55%',
-              background: `
-                radial-gradient(ellipse 120% 100% at 0% 50%,
-                  rgba(20, 60, 120, 0.35) 0%,
-                  rgba(30, 80, 150, 0.15) 40%,
-                  transparent 70%
-                )
-              `,
-            }} />
-
-            {/* Right side - Cool white glow enhancement */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: '40%',
-              background: `
-                radial-gradient(ellipse 100% 120% at 100% 50%,
-                  rgba(200, 230, 255, 0.15) 0%,
-                  transparent 60%
-                )
-              `,
-            }} />
-          </div>
-        )}
-
-        {/* LAYER 2 Dark Mode: Elegant dark integration */}
+        {/* Dark mode: Pure black background */}
         {isDark && (
           <div style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 2,
-            pointerEvents: 'none',
-          }}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: `
-                radial-gradient(ellipse 100% 80% at 0% 50%,
-                  rgba(10, 14, 20, 0.9) 0%,
-                  rgba(10, 14, 20, 0.6) 40%,
-                  transparent 70%
-                )
-              `,
-            }} />
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '60px',
-              background: 'linear-gradient(180deg, rgba(10, 14, 20, 0.95) 0%, transparent 100%)',
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '80px',
-              background: 'linear-gradient(0deg, rgba(10, 14, 20, 0.98) 0%, transparent 100%)',
-            }} />
-          </div>
+            zIndex: 0,
+            background: '#000000',
+          }} />
         )}
 
-        {/* LAYER 3: Ambient lighting effects - Snowy theme glow */}
+        {/* LIGHT MODE: Plain white Background */}
         {!isDark && (
           <div style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 3,
-            pointerEvents: 'none',
-          }}>
-            {/* Cool blue ambient left */}
-            <div style={{
-              position: 'absolute',
-              top: '10%',
-              left: '-10%',
-              width: '50%',
-              height: '80%',
-              background: 'radial-gradient(ellipse at center, rgba(100, 160, 230, 0.15) 0%, transparent 60%)',
-              filter: 'blur(40px)',
-            }} />
-            {/* Soft white ambient right */}
-            <div style={{
-              position: 'absolute',
-              top: '20%',
-              right: '-5%',
-              width: '45%',
-              height: '70%',
-              background: 'radial-gradient(ellipse at center, rgba(220, 240, 255, 0.2) 0%, transparent 60%)',
-              filter: 'blur(50px)',
-            }} />
-            {/* Central energy - green accent for brand color */}
-            <div style={{
-              position: 'absolute',
-              top: '30%',
-              left: '40%',
-              width: '30%',
-              height: '40%',
-              background: 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.12) 0%, transparent 70%)',
-              filter: 'blur(30px)',
-            }} />
-          </div>
+            zIndex: 0,
+            background: '#ffffff',
+          }} />
         )}
 
-        {/* Green Sparkles - Glowing particles for both modes */}
-        <GreenSparkles isDark={isDark} count={isMobile ? 25 : 45} />
+        {/* Light mode: No decorative overlay needed - plain white */}
+
+        {/* Dark mode overlay removed for cleaner look */}
+
+        {/* Light mode: No ambient effects needed - plain white */}
+
+        {/* Green Sparkles removed for performance */}
 
         <div style={{
           width: '100%',
@@ -2103,17 +2359,17 @@ export const HomeScreen: React.FC = () => {
                 marginBottom: '16px',
                 color: isDark ? '#ffffff' : '#0a2540',
                 textShadow: isDark
-                  ? '0 2px 15px rgba(0,0,0,0.8), 0 0 30px rgba(0, 255, 136, 0.3)'
+                  ? '0 2px 15px rgba(0,0,0,0.8), 0 0 30px rgba(0, 210, 106, 0.3)'
                   : '0 2px 8px rgba(255,255,255,1), 0 4px 16px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.5)',
                 letterSpacing: '-1px',
               }}
             >
               Your Gateway to{' '}
               <span style={{
-                color: isDark ? '#00ff88' : '#eab308',
+                color: isDark ? '#00D26A' : '#eab308',
                 fontWeight: 900,
                 textShadow: isDark
-                  ? '0 0 20px rgba(0, 255, 136, 0.8), 0 2px 4px rgba(0,0,0,0.5)'
+                  ? '0 0 20px rgba(0, 210, 106, 0.8), 0 2px 4px rgba(0,0,0,0.5)'
                   : '0 2px 8px rgba(0,0,0,0.4)',
               }}>
                 Digital Wealth
@@ -2139,10 +2395,10 @@ export const HomeScreen: React.FC = () => {
             >
               Trade 500+ cryptocurrencies with ultra-low fees. Sign up today and claim up to{' '}
               <span style={{
-                color: isDark ? '#00ff88' : '#eab308',
+                color: isDark ? '#00D26A' : '#eab308',
                 fontWeight: 900,
                 textShadow: isDark
-                  ? '0 0 10px rgba(0, 255, 136, 0.5)'
+                  ? '0 0 10px rgba(0, 210, 106, 0.5)'
                   : '0 1px 3px rgba(0,0,0,0.3)',
               }}>
                 5,100 USDT
@@ -2254,16 +2510,16 @@ export const HomeScreen: React.FC = () => {
                   gap: '8px',
                   padding: '10px 18px',
                   background: isDark
-                    ? 'linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%)'
+                    ? 'linear-gradient(135deg, rgba(0, 210, 106, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%)'
                     : 'linear-gradient(135deg, rgba(5, 20, 40, 0.75) 0%, rgba(10, 30, 55, 0.65) 100%)',
                   backdropFilter: 'blur(16px)',
                   WebkitBackdropFilter: 'blur(16px)',
                   borderRadius: '50px',
                   border: isDark
-                    ? '1px solid rgba(0, 255, 136, 0.25)'
+                    ? '1px solid rgba(0, 210, 106, 0.25)'
                     : '2px solid rgba(255, 255, 255, 0.3)',
                   boxShadow: isDark
-                    ? '0 4px 20px rgba(0, 255, 136, 0.15)'
+                    ? '0 4px 20px rgba(0, 210, 106, 0.15)'
                     : '0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
                   color: '#ffffff',
                   fontSize: '14px',
@@ -2272,182 +2528,124 @@ export const HomeScreen: React.FC = () => {
                     ? '0 1px 3px rgba(0,0,0,0.5)'
                     : '0 2px 4px rgba(0,0,0,0.6)',
                 }}>
-                  <span style={{ color: '#00ff88', filter: 'drop-shadow(0 0 4px rgba(0, 255, 136, 0.5))' }}>{item.icon}</span>
+                  <span style={{ color: '#00D26A', filter: 'drop-shadow(0 0 4px rgba(0, 210, 106, 0.5))' }}>{item.icon}</span>
                   <span>{item.text}</span>
                 </div>
               ))}
             </motion.div>
           </div>
 
-          {/* Right Content - Crypto Price Cards Grid */}
+          {/* Right Content - Crypto Mining Rig Animation */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1, duration: 0.3 }}
+            initial={{ opacity: 0, x: 20, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.5, ease: 'easeOut' }}
             style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-              gap: isMobile ? '10px' : '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {cryptoPrices.map((crypto, index) => (
-              <CryptoPriceCard
-                key={crypto.symbol}
-                symbol={crypto.symbol}
-                name={crypto.name}
-                price={crypto.price}
-                change={crypto.change}
-                delay={0.05 + index * 0.03}
-                isMobile={isMobile}
-                colors={colors}
-                isDark={isDark}
-                isRotating={rotatingIndices.includes(index)}
-              />
-            ))}
+            <CryptoMiningRig isDark={isDark} isMobile={isMobile} />
           </motion.div>
         </div>
       </section>
 
-      {/* Quick Actions Section - Glass Cards with Sequential Animations */}
+      {/* Quick Actions Section - MetaAPI Style Clean List */}
       <section style={{
-        padding: isMobile ? '32px 16px' : '48px 32px',
+        padding: isMobile ? '40px 20px' : '60px 48px',
         position: 'relative',
       }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-            gap: isMobile ? '10px' : '16px',
-          }}>
-            {quickActions.map((action, i) => {
-              // Get the appropriate animated icon based on index - BIGGER ICONS
-              const getAnimatedIcon = () => {
-                const iconSize = isMobile ? 26 : 32; // Bigger icons
-                const animationDelay = i * 0.1; // Faster sequential delay
-                switch (i) {
-                  case 0: return <BuyCryptoIcon size={iconSize} color={action.color} animationDelay={animationDelay} />;
-                  case 1: return <SwapIcon size={iconSize} color={action.color} animationDelay={animationDelay} />;
-                  case 2: return <EarnIcon size={iconSize} color={action.color} animationDelay={animationDelay} />;
-                  case 3: return <StakeIcon size={iconSize} color={action.color} animationDelay={animationDelay} />;
-                  default: return React.cloneElement(action.icon, { size: iconSize });
-                }
-              };
+        <div style={{
+          maxWidth: '900px',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+          gap: isMobile ? '40px' : '48px 80px',
+        }}>
+          {quickActions.map((action, i) => (
+            <motion.div
+              key={action.label}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              onClick={() => handleProtectedAction(action.action, action.path)}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '20px',
+                cursor: 'pointer',
+              }}
+            >
+              {/* Large Circular Icon */}
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  minWidth: '64px',
+                  borderRadius: '50%',
+                  background: `${action.color}20`,
+                  border: `2px solid ${action.color}40`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: action.color,
+                }}
+              >
+                {React.cloneElement(action.icon, { size: 28 })}
+              </motion.div>
 
-              // Bold 3D Glass - Deep blue-tinted glass for light mode
-              const lightBg = 'linear-gradient(145deg, rgba(20,40,60,0.8) 0%, rgba(30,50,80,0.7) 50%, rgba(15,35,55,0.75) 100%)';
+              {/* Text Content */}
+              <div style={{ flex: 1 }}>
+                {/* Title */}
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: isDark ? '#ffffff' : '#1a1a1a',
+                  marginBottom: '8px',
+                  lineHeight: 1.3,
+                }}>
+                  {action.label}
+                </h3>
 
-              return (
-                <div
-                  key={action.label}
-                  onClick={() => handleProtectedAction(action.action, action.path)}
+                {/* Description */}
+                <p style={{
+                  fontSize: '14px',
+                  fontWeight: 400,
+                  color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                  lineHeight: 1.6,
+                  marginBottom: '12px',
+                }}>
+                  {action.label === 'Buy Crypto' && 'Purchase cryptocurrency instantly with multiple payment methods including cards and bank transfers.'}
+                  {action.label === 'Swap' && 'Exchange between cryptocurrencies with zero fees and competitive rates across all pairs.'}
+                  {action.label === 'Earn' && 'Grow your portfolio passively with flexible savings and high-yield earning programs.'}
+                  {action.label === 'Stake' && 'Lock your assets to earn rewards with flexible or fixed staking terms available.'}
+                </p>
+
+                {/* Action Link */}
+                <motion.span
+                  whileHover={{ x: 4 }}
                   style={{
-                    background: isDark
-                      ? 'linear-gradient(145deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 50%, rgba(0,0,0,0.2) 100%)'
-                      : lightBg,
-                    borderRadius: '18px',
-                    padding: isMobile ? '20px' : '28px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: action.color,
                     cursor: 'pointer',
-                    border: isDark
-                      ? '2px solid rgba(255,255,255,0.15)'
-                      : `2px solid ${action.color}50`,
-                    boxShadow: isDark
-                      ? `0 20px 40px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(0,0,0,0.2)`
-                      : `0 20px 50px rgba(0,20,40,0.5), 0 8px 20px rgba(0,30,60,0.35), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,40,80,0.3), 0 0 30px ${action.color}20`,
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
                   }}
                 >
-                  {/* Speed Train Border Animation - Very slow, one at a time */}
-                  <SpeedTrainBorder color={action.color} duration={10} delay={i * 12} />
-
-                  {/* Decorative background glow */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '-40%',
-                    right: '-30%',
-                    width: '140px',
-                    height: '140px',
-                    borderRadius: '50%',
-                    background: `radial-gradient(circle, ${action.color}30 0%, transparent 70%)`,
-                    filter: 'blur(20px)',
-                    pointerEvents: 'none',
-                  }} />
-
-                  {/* Top accent line - THICKER */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '4px',
-                    background: `linear-gradient(90deg, transparent, ${action.color}, transparent)`,
-                    borderRadius: '18px 18px 0 0',
-                  }} />
-
-                  {/* Glass shine effect */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '50%',
-                    background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%)',
-                    borderRadius: '16px 16px 0 0',
-                    pointerEvents: 'none',
-                  }} />
-
-                  {/* BIGGER Icon container */}
-                  <div style={{
-                    width: isMobile ? '56px' : '68px',
-                    height: isMobile ? '56px' : '68px',
-                    borderRadius: '16px',
-                    background: isDark
-                      ? `linear-gradient(145deg, ${action.color}25, ${action.color}12)`
-                      : `linear-gradient(145deg, ${action.color}35, ${action.color}18)`,
-                    border: `2px solid ${action.color}50`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: action.color,
-                    marginBottom: '18px',
-                    boxShadow: `0 8px 25px ${action.color}30, inset 0 2px 0 rgba(255,255,255,0.2), 0 0 20px ${action.color}15`,
-                    position: 'relative',
-                    zIndex: 1,
-                  }}>
-                    {getAnimatedIcon()}
-                  </div>
-                  {/* BIGGER, BOLDER Text */}
-                  <h3 style={{
-                    fontSize: isMobile ? '18px' : '20px',
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    marginBottom: '6px',
-                    position: 'relative',
-                    zIndex: 1,
-                    textShadow: '0 2px 8px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.4)',
-                    letterSpacing: '0.3px',
-                  }}>
-                    {action.label}
-                  </h3>
-                  <p style={{
-                    fontSize: isMobile ? '14px' : '15px',
-                    fontWeight: 600,
-                    color: 'rgba(255,255,255,0.95)',
-                    position: 'relative',
-                    zIndex: 1,
-                    textShadow: '0 1px 4px rgba(0,0,0,0.5)',
-                  }}>
-                    {action.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+                  {action.label === 'Buy Crypto' && 'Buy now'}
+                  {action.label === 'Swap' && 'Swap tokens'}
+                  {action.label === 'Earn' && 'Start earning'}
+                  {action.label === 'Stake' && 'Stake now'}
+                  <span style={{ fontSize: '12px' }}>→</span>
+                </motion.span>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
@@ -2500,8 +2698,8 @@ export const HomeScreen: React.FC = () => {
             </p>
           </motion.div>
 
-          {/* Feature Carousel Spotlight */}
-          <FeatureCarousel features={platformFeatures} isDark={isDark} colors={colors} isMobile={isMobile} />
+          {/* Holographic Glass Carousel Features Section */}
+          <HologramCarousel features={platformFeatures} isDark={isDark} colors={colors} isMobile={isMobile} />
         </div>
       </section>
 
@@ -2680,11 +2878,11 @@ export const HomeScreen: React.FC = () => {
                     </span>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <motion.button
-                        whileHover={{ scale: 1.05, boxShadow: '0 4px 20px rgba(0, 255, 136, 0.4)' }}
+                        whileHover={{ scale: 1.05, boxShadow: '0 4px 20px rgba(0, 210, 106, 0.4)' }}
                         whileTap={{ scale: 0.95 }}
                         style={{
                           padding: '10px 20px',
-                          background: 'linear-gradient(135deg, #00ff88 0%, #00e67a 100%)',
+                          background: 'linear-gradient(135deg, #00D26A 0%, #00e67a 100%)',
                           border: 'none',
                           borderRadius: '10px',
                           fontSize: '13px',
@@ -2725,7 +2923,7 @@ export const HomeScreen: React.FC = () => {
             }}>
               Why Traders Choose{' '}
               <span style={{
-                color: '#00ff88',
+                color: '#00D26A',
                 textShadow: '0 0 20px rgba(0,255,136,0.5), 0 2px 4px rgba(0,0,0,0.3)',
               }}>
                 CrymadX
@@ -2761,14 +2959,14 @@ export const HomeScreen: React.FC = () => {
                     width: '56px',
                     height: '56px',
                     borderRadius: '16px',
-                    background: 'rgba(0, 255, 136, 0.1)',
-                    border: '1px solid rgba(0, 255, 136, 0.2)',
+                    background: 'rgba(0, 210, 106, 0.1)',
+                    border: '1px solid rgba(0, 210, 106, 0.2)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: colors.primary[400],
                     marginBottom: '20px',
-                    boxShadow: '0 0 30px rgba(0, 255, 136, 0.15)',
+                    boxShadow: '0 0 30px rgba(0, 210, 106, 0.15)',
                   }}>
                     {feature.icon}
                   </div>
@@ -2892,7 +3090,7 @@ export const HomeScreen: React.FC = () => {
                   >
                     Trade Anywhere,{' '}
                     <span style={{
-                      background: 'linear-gradient(135deg, #00ff88 0%, #00ffd5 100%)',
+                      background: 'linear-gradient(135deg, #00D26A 0%, #00ffd5 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}>
@@ -3051,8 +3249,8 @@ export const HomeScreen: React.FC = () => {
                       borderRadius: '44px',
                       padding: '12px',
                       boxShadow: isDark
-                        ? '0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(0, 255, 136, 0.1), inset 0 1px 0 rgba(255,255,255,0.1)'
-                        : '0 40px 80px rgba(0,0,0,0.2), 0 0 60px rgba(0, 255, 136, 0.05)',
+                        ? '0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(0, 210, 106, 0.1), inset 0 1px 0 rgba(255,255,255,0.1)'
+                        : '0 40px 80px rgba(0,0,0,0.2), 0 0 60px rgba(0, 210, 106, 0.05)',
                       border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
                     }}>
                       {/* Notch */}
@@ -3121,7 +3319,7 @@ export const HomeScreen: React.FC = () => {
                         <div style={{
                           margin: '0 20px 16px',
                           height: '80px',
-                          background: isDark ? 'rgba(0, 255, 136, 0.05)' : 'rgba(0, 204, 108, 0.05)',
+                          background: isDark ? 'rgba(0, 210, 106, 0.05)' : 'rgba(0, 204, 108, 0.05)',
                           borderRadius: '12px',
                           display: 'flex',
                           alignItems: 'flex-end',
@@ -3316,7 +3514,7 @@ export const HomeScreen: React.FC = () => {
                 size={isMobile ? 'md' : 'lg'}
                 rightIcon={<ArrowRight size={18} />}
                 onClick={() => navigate('/register')}
-                style={{ boxShadow: '0 4px 25px rgba(0, 255, 136, 0.5)' }}
+                style={{ boxShadow: '0 4px 25px rgba(0, 210, 106, 0.5)' }}
               >
                 Create Free Account
               </Button>
@@ -3343,16 +3541,16 @@ export const HomeScreen: React.FC = () => {
         </motion.div>
       </section>
 
-      {/* Footer - Transparent Glass 3D for light mode */}
+      {/* Footer - Plain white for light mode */}
       <footer style={{
         padding: isMobile ? '40px 20px 28px' : '72px 48px 40px',
-        borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.3)'}`,
+        borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}`,
         background: isDark
           ? 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%)'
-          : 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.2) 100%)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: isDark ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.4), 0 -4px 20px rgba(0,0,0,0.1)',
+          : '#ffffff',
+        backdropFilter: isDark ? 'blur(20px)' : 'none',
+        WebkitBackdropFilter: isDark ? 'blur(20px)' : 'none',
+        boxShadow: isDark ? 'none' : 'none',
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {!isMobile && (
@@ -3406,8 +3604,8 @@ export const HomeScreen: React.FC = () => {
                           width: '42px',
                           height: '42px',
                           borderRadius: '12px',
-                          background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
-                          border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.5)',
+                          background: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6',
+                          border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e5e7eb',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',

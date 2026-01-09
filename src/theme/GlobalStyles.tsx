@@ -55,7 +55,7 @@ const createGlobalStyles = (colors: any) => `
   }
 
   ::selection {
-    background: ${colors.mode === 'dark' ? 'rgba(0, 255, 136, 0.2)' : 'rgba(0, 204, 108, 0.2)'};
+    background: ${colors.mode === 'dark' ? 'rgba(0, 210, 106, 0.2)' : 'rgba(0, 210, 106, 0.2)'};
     color: ${colors.text.primary};
   }
 
@@ -150,8 +150,8 @@ const createGlobalStyles = (colors: any) => `
 
   /* Animation Keyframes */
   @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px ${colors.mode === 'dark' ? 'rgba(0, 255, 136, 0.2)' : 'rgba(0, 204, 108, 0.15)'}; }
-    50% { box-shadow: 0 0 40px ${colors.mode === 'dark' ? 'rgba(0, 255, 136, 0.4)' : 'rgba(0, 204, 108, 0.3)'}; }
+    0%, 100% { box-shadow: 0 0 20px ${colors.mode === 'dark' ? 'rgba(0, 210, 106, 0.2)' : 'rgba(0, 210, 106, 0.15)'}; }
+    50% { box-shadow: 0 0 40px ${colors.mode === 'dark' ? 'rgba(0, 210, 106, 0.4)' : 'rgba(0, 210, 106, 0.3)'}; }
   }
 
   @keyframes shimmer {
@@ -175,8 +175,8 @@ const createGlobalStyles = (colors: any) => `
   }
 
   @keyframes glowPulse {
-    0%, 100% { text-shadow: 0 0 10px ${colors.mode === 'dark' ? 'rgba(0, 255, 136, 0.5)' : 'rgba(0, 204, 108, 0.4)'}; }
-    50% { text-shadow: 0 0 20px ${colors.mode === 'dark' ? 'rgba(0, 255, 136, 0.8)' : 'rgba(0, 204, 108, 0.6)'}, 0 0 30px ${colors.mode === 'dark' ? 'rgba(0, 255, 136, 0.4)' : 'rgba(0, 204, 108, 0.3)'}; }
+    0%, 100% { text-shadow: 0 0 10px ${colors.mode === 'dark' ? 'rgba(0, 210, 106, 0.5)' : 'rgba(0, 210, 106, 0.4)'}; }
+    50% { text-shadow: 0 0 20px ${colors.mode === 'dark' ? 'rgba(0, 210, 106, 0.8)' : 'rgba(0, 210, 106, 0.6)'}, 0 0 30px ${colors.mode === 'dark' ? 'rgba(0, 210, 106, 0.4)' : 'rgba(0, 210, 106, 0.3)'}; }
   }
 
   @keyframes tickerScroll {

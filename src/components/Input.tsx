@@ -45,7 +45,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
     : 'rgba(255, 255, 255, 0.95)';
 
   const focusShadow = isDark
-    ? `0 0 0 3px rgba(2, 192, 118, 0.1), ${colors.shadows.glow}`
+    ? `0 0 0 3px rgba(0, 210, 106, 0.1), ${colors.shadows.glow}`
     : `0 0 0 3px rgba(16, 185, 129, 0.15), ${colors.shadows.glow}`;
 
   return (
@@ -219,7 +219,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   ...props
 }) => {
   const { colors, isDark } = useThemeMode();
-  const controlBg = isDark ? 'rgba(2, 192, 118, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+  const controlBg = isDark ? 'rgba(0, 210, 106, 0.1)' : 'rgba(16, 185, 129, 0.1)';
 
   return (
     <div style={{ position: 'relative' }}>

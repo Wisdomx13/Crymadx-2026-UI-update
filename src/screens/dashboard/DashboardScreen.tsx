@@ -25,7 +25,7 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
-import { CryptoIcon, ResponsiveLayout, GlassCard, Button, GlowingSnowBackground } from '../../components';
+import { CryptoIcon, ResponsiveLayout, GlassCard, Button } from '../../components';
 import { usePresentationMode } from '../../components/PresentationMode';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { LiquidGlassBackground } from '../../components/Glass3D';
@@ -61,7 +61,7 @@ const LiquidShimmer: React.FC<{ isDark?: boolean }> = ({ isDark = true }) => {
 };
 
 // Premium liquid wave for card backgrounds - enhanced for light mode
-const LiquidWave: React.FC<{ delay?: number; color?: string; isDark?: boolean }> = ({ delay = 0, color = 'rgba(2, 192, 118, 0.06)', isDark = true }) => {
+const LiquidWave: React.FC<{ delay?: number; color?: string; isDark?: boolean }> = ({ delay = 0, color = 'rgba(0, 210, 106, 0.06)', isDark = true }) => {
   const lightColor = color.includes('118') ? 'rgba(16, 185, 129, 0.04)' : 'rgba(14, 165, 233, 0.03)';
 
   return (
@@ -286,20 +286,20 @@ export const DashboardScreen: React.FC = () => {
 
   // Theme-aware liquid colors - Premium frosted glass for light mode
   const liquidColors = {
-    primary: isDark ? 'rgba(2, 192, 118, 0.08)' : 'rgba(16, 185, 129, 0.06)',
-    secondary: isDark ? 'rgba(0, 212, 170, 0.06)' : 'rgba(14, 165, 233, 0.05)',
+    primary: isDark ? 'rgba(0, 210, 106, 0.08)' : 'rgba(16, 185, 129, 0.06)',
+    secondary: isDark ? 'rgba(0, 210, 106, 0.06)' : 'rgba(14, 165, 233, 0.05)',
     gold: isDark ? 'rgba(240, 185, 11, 0.05)' : 'rgba(245, 158, 11, 0.05)',
     shimmer: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(16, 185, 129, 0.08)',
-    // Light mode card backgrounds
+    // Light mode card backgrounds - plain white
     cardBg: isDark
       ? colors.background.card
-      : 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,255,252,0.9) 100%)',
+      : '#ffffff',
     cardBorder: isDark
       ? colors.glass.border
-      : 'rgba(16, 185, 129, 0.12)',
+      : '#e5e7eb',
     cardShadow: isDark
       ? 'none'
-      : '0 4px 20px rgba(16, 185, 129, 0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
+      : '0 1px 3px rgba(0,0,0,0.05)',
   };
 
   const filteredMarkets = marketsData.filter(
@@ -337,12 +337,16 @@ export const DashboardScreen: React.FC = () => {
         />
       )}
 
-      {/* Glowing Snow Background - Light mode */}
-      <GlowingSnowBackground
-        show={!isDark}
-        backgroundImage="/main-bg.jpg"
-        intensity="high"
-      />
+      {/* Plain white Background - Light mode */}
+      {!isDark && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#ffffff',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }} />
+      )}
 
       {/* Welcome Hero Banner with CrymadX Logo - Compact */}
       <motion.div

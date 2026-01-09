@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Phone, ArrowRight, Check, Shield, Zap, Globe, ChevronLeft, Gift, Award } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
-import { Button, Input, GlassCard, GlowingSnowBackground } from '../../components';
+import { Button, Input, GlassCard } from '../../components';
 
 // Floating particles for auth pages
 const AuthParticles: React.FC<{ secondaryColor: string }> = ({ secondaryColor }) => {
@@ -175,12 +175,12 @@ export const RegisterScreen: React.FC = () => {
           </>
         ) : (
           <>
-            {/* Light mode - Glowing Snow Background */}
-            <GlowingSnowBackground
-              show={true}
-              backgroundImage="/main-bg.jpg"
-              intensity="high"
-            />
+            {/* Light mode - Plain white background */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: '#ffffff',
+            }} />
           </>
         )}
       </div>
@@ -197,11 +197,11 @@ export const RegisterScreen: React.FC = () => {
           zIndex: 10,
           background: isDark
             ? 'rgba(10, 14, 20, 0.9)'
-            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderBottom: isDark ? `1px solid ${colors.glass.border}` : '1px solid rgba(16, 185, 129, 0.1)',
-          boxShadow: isDark ? 'none' : '0 4px 20px rgba(16, 185, 129, 0.05)',
+            : '#ffffff',
+          backdropFilter: isDark ? 'blur(20px) saturate(180%)' : 'none',
+          WebkitBackdropFilter: isDark ? 'blur(20px) saturate(180%)' : 'none',
+          borderBottom: isDark ? `1px solid ${colors.glass.border}` : '1px solid #e5e7eb',
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
         }}>
           <motion.button
             whileTap={{ scale: 0.9 }}

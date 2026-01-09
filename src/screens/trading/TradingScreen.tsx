@@ -136,7 +136,7 @@ export const TradingScreen: React.FC = () => {
   const colors = {
     bg: isDark ? '#0b0e11' : '#ffffff',
     cardBg: isDark ? '#1e2329' : '#ffffff',
-    panelBg: isDark ? '#181a20' : '#fafafa',
+    panelBg: isDark ? '#0f0f0f' : '#fafafa',
     border: isDark ? '#2b3139' : '#eaecef',
     text: isDark ? '#eaecef' : '#1e2329',
     textSecondary: isDark ? '#848e9c' : '#707a8a',

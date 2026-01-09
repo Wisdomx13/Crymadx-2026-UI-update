@@ -31,13 +31,13 @@ export const LiquidOrb: React.FC<LiquidOrbProps> = ({
   // Dark mode: glowing neon orbs | Light mode: frosted water droplets
   const darkColorMap = {
     green: {
-      gradient: 'radial-gradient(circle at 30% 30%, rgba(2, 192, 118, 0.4) 0%, rgba(2, 192, 118, 0.15) 40%, rgba(2, 192, 118, 0.05) 70%, transparent 100%)',
-      glow: 'rgba(2, 192, 118, 0.3)',
+      gradient: 'radial-gradient(circle at 30% 30%, rgba(0, 210, 106, 0.4) 0%, rgba(0, 210, 106, 0.15) 40%, rgba(0, 210, 106, 0.05) 70%, transparent 100%)',
+      glow: 'rgba(0, 210, 106, 0.3)',
       highlight: 'rgba(255, 255, 255, 0.3)',
     },
     cyan: {
-      gradient: 'radial-gradient(circle at 30% 30%, rgba(0, 212, 170, 0.35) 0%, rgba(0, 212, 170, 0.12) 40%, rgba(0, 212, 170, 0.04) 70%, transparent 100%)',
-      glow: 'rgba(0, 212, 170, 0.25)',
+      gradient: 'radial-gradient(circle at 30% 30%, rgba(0, 210, 106, 0.35) 0%, rgba(0, 210, 106, 0.12) 40%, rgba(0, 210, 106, 0.04) 70%, transparent 100%)',
+      glow: 'rgba(0, 210, 106, 0.25)',
       highlight: 'rgba(255, 255, 255, 0.25)',
     },
     gold: {
@@ -139,8 +139,8 @@ export const LiquidCube: React.FC<LiquidCubeProps> = ({
   const isDark = mode === 'dark';
 
   const darkColorMap = {
-    green: 'rgba(2, 192, 118, 0.15)',
-    cyan: 'rgba(0, 212, 170, 0.12)',
+    green: 'rgba(0, 210, 106, 0.15)',
+    cyan: 'rgba(0, 210, 106, 0.12)',
     gold: 'rgba(240, 185, 11, 0.12)',
   };
 
@@ -207,8 +207,8 @@ export const LiquidRing: React.FC<LiquidRingProps> = ({
   const isDark = mode === 'dark';
 
   const darkColorMap = {
-    green: 'rgba(2, 192, 118, 0.4)',
-    cyan: 'rgba(0, 212, 170, 0.35)',
+    green: 'rgba(0, 210, 106, 0.4)',
+    cyan: 'rgba(0, 210, 106, 0.35)',
     gold: 'rgba(240, 185, 11, 0.3)',
   };
 
@@ -444,17 +444,17 @@ export const Glass3DCard: React.FC<Glass3DCardProps> = ({
   // Dark mode: neon glass | Light mode: frosted water glass
   const darkDepthStyles = {
     1: {
-      background: `linear-gradient(135deg, rgba(26, 143, 255, 0.04) 0%, rgba(0, 212, 170, 0.02) 100%)`,
+      background: `linear-gradient(135deg, rgba(26, 143, 255, 0.04) 0%, rgba(0, 210, 106, 0.02) 100%)`,
       blur: '12px',
       shadow: themeColors.shadows.sm,
     },
     2: {
-      background: `linear-gradient(135deg, rgba(26, 143, 255, 0.06) 0%, rgba(0, 212, 170, 0.03) 100%)`,
+      background: `linear-gradient(135deg, rgba(26, 143, 255, 0.06) 0%, rgba(0, 210, 106, 0.03) 100%)`,
       blur: '16px',
       shadow: themeColors.shadows.float,
     },
     3: {
-      background: `linear-gradient(135deg, rgba(26, 143, 255, 0.1) 0%, rgba(0, 212, 170, 0.05) 100%)`,
+      background: `linear-gradient(135deg, rgba(26, 143, 255, 0.1) 0%, rgba(0, 210, 106, 0.05) 100%)`,
       blur: '24px',
       shadow: themeColors.shadows.floatHover,
     },

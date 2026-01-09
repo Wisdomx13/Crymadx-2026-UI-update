@@ -378,7 +378,7 @@ export const MarketsScreen: React.FC = () => {
                 width: 40,
                 height: 40,
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.15), rgba(0, 212, 170, 0.1))',
+                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.15), rgba(0, 210, 106, 0.1))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -421,7 +421,7 @@ export const MarketsScreen: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
                 style={{
                   padding: isMobile ? '12px' : '16px',
-                  background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.05), rgba(0, 212, 170, 0.03))',
+                  background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.05), rgba(0, 210, 106, 0.03))',
                   borderRadius: '12px',
                   border: `1px solid ${colors.glass.border}`,
                 }}
@@ -513,7 +513,7 @@ export const MarketsScreen: React.FC = () => {
                 onClick={() => handleTrade(market.symbol)}
                 style={{
                   padding: isMobile ? '12px' : '16px',
-                  background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.05), rgba(0, 212, 170, 0.03))',
+                  background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.05), rgba(0, 210, 106, 0.03))',
                   borderRadius: '12px',
                   border: `1px solid ${colors.glass.border}`,
                   cursor: 'pointer',
@@ -683,7 +683,7 @@ export const MarketsScreen: React.FC = () => {
                     fontSize: isMobile ? '11px' : '12px',
                     fontWeight: 600,
                     background: activeCategory === cat.id
-                      ? 'linear-gradient(135deg, rgba(26, 143, 255, 0.15), rgba(0, 212, 170, 0.1))'
+                      ? 'linear-gradient(135deg, rgba(26, 143, 255, 0.15), rgba(0, 210, 106, 0.1))'
                       : 'transparent',
                     color: activeCategory === cat.id ? colors.primary[400] : colors.text.tertiary,
                     border: activeCategory === cat.id ? `1px solid rgba(26, 143, 255, 0.3)` : '1px solid transparent',
@@ -710,7 +710,7 @@ export const MarketsScreen: React.FC = () => {
                 display: 'grid',
                 gridTemplateColumns: '40px 2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px',
                 padding: '14px 20px',
-                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.03), rgba(0, 212, 170, 0.02))',
+                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.03), rgba(0, 210, 106, 0.02))',
                 borderBottom: `1px solid ${colors.glass.border}`,
                 fontSize: '11px',
                 fontWeight: 600,
@@ -939,7 +939,7 @@ export const MarketsScreen: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '10px 12px',
-                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.03), rgba(0, 212, 170, 0.02))',
+                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.03), rgba(0, 210, 106, 0.02))',
                 borderBottom: `1px solid ${colors.glass.border}`,
                 fontSize: '10px',
                 fontWeight: 600,

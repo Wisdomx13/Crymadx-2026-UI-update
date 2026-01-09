@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Mail, ArrowRight, ChevronLeft, Shield, CheckCircle, Lock, KeyRound } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
-import { Button, Input, GlassCard, GlowingSnowBackground } from '../../components';
+import { Button, Input, GlassCard } from '../../components';
 
 // Floating particles for auth pages
 const AuthParticles: React.FC<{ primaryColor: string }> = ({ primaryColor }) => {
@@ -405,7 +405,7 @@ export const ForgotPasswordScreen: React.FC = () => {
               inset: 0,
               background: `
                 radial-gradient(ellipse 80% 60% at 10% 20%, rgba(26, 143, 255, 0.18) 0%, transparent 50%),
-                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(0, 212, 170, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(0, 210, 106, 0.12) 0%, transparent 50%),
                 radial-gradient(ellipse 40% 30% at 50% 50%, rgba(26, 143, 255, 0.08) 0%, transparent 50%)
               `,
             }} />
@@ -440,18 +440,18 @@ export const ForgotPasswordScreen: React.FC = () => {
                 width: isMobile ? '200px' : '400px',
                 height: isMobile ? '200px' : '400px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(0, 212, 170, 0.15) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(0, 210, 106, 0.15) 0%, transparent 70%)',
                 filter: 'blur(50px)',
               }}
             />
             <AuthParticles primaryColor={colors.primary[400]} />
           </>
         ) : (
-          <GlowingSnowBackground
-            show={true}
-            backgroundImage="/main-bg.jpg"
-            intensity="high"
-          />
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: '#ffffff',
+          }} />
         )}
       </div>
 
