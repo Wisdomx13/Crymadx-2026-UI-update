@@ -1238,32 +1238,17 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
           0%, 100% { fill: #00D26A; }
           50% { fill: #00ff7f; }
         }
-        @keyframes briefcaseBreathing {
-          0%, 100% {
-            transform: scale(1);
-            filter: drop-shadow(0 4px 12px rgba(0,210,106,0.3));
-          }
-          50% {
-            transform: scale(1.03);
-            filter: drop-shadow(0 8px 25px rgba(0,210,106,0.6));
-          }
-        }
-        @keyframes buttonPulse {
-          0%, 100% { opacity: 0.9; }
-          50% { opacity: 1; }
-        }
         @keyframes wifiPulse {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 0.7; }
         }
         .briefcase-clickable {
           cursor: pointer;
-          transition: all 0.3s ease;
-          animation: briefcaseBreathing 2.5s ease-in-out infinite;
+          transition: all 0.2s ease;
+          filter: drop-shadow(0 4px 12px rgba(0,210,106,0.3));
         }
         .briefcase-clickable:hover {
-          transform: scale(1.05);
-          filter: drop-shadow(0 10px 30px rgba(0,210,106,0.7));
+          filter: drop-shadow(0 6px 20px rgba(0,210,106,0.5));
         }
       `}</style>
 
@@ -1409,55 +1394,63 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
         <path d="M 188 165 L 200 180 L 212 165" fill={isDark ? '#1a1a1a' : '#b0b0b0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1.5" />
         <rect x="196" y="180" width="8" height="15" fill={isDark ? '#1a1a1a' : '#a0a0a0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1" />
 
+        {/* "Crypto Bank" text on top of the rig */}
+        <text x="200" y="62" textAnchor="middle" fill="#00D26A" fontSize="18" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.15em">CRYPTO BANK</text>
+
         {/* Matching Server-Style Briefcase - Clickable Login Button */}
         <g
           className="briefcase-clickable"
           onClick={() => navigate('/login')}
         >
-          {/* Briefcase body - larger for more text space */}
-          <rect x="100" y="285" width="200" height="130" rx="8" fill="url(#briefcaseBody)" stroke={isDark ? '#4a4a4a' : '#a0a0a0'} strokeWidth="3" />
+          {/* Briefcase body */}
+          <rect x="115" y="285" width="170" height="115" rx="8" fill="url(#briefcaseBody)" stroke={isDark ? '#4a4a4a' : '#a0a0a0'} strokeWidth="3" />
 
           {/* Green accent trim on top */}
-          <rect x="100" y="282" width="200" height="6" rx="3" fill="url(#greenAccent)" />
+          <rect x="115" y="282" width="170" height="6" rx="3" fill="url(#greenAccent)" />
 
           {/* Handle - matching style */}
-          <path d="M 165 272 Q 165 250 200 250 Q 235 250 235 272" fill="none" stroke={isDark ? '#2a2a2a' : '#909090'} strokeWidth="7" strokeLinecap="round" />
-          <path d="M 165 272 Q 165 254 200 254 Q 235 254 235 272" fill="none" stroke="url(#greenAccent)" strokeWidth="4" strokeLinecap="round" />
+          <path d="M 165 272 Q 165 252 200 252 Q 235 252 235 272" fill="none" stroke={isDark ? '#2a2a2a' : '#909090'} strokeWidth="7" strokeLinecap="round" />
+          <path d="M 165 272 Q 165 256 200 256 Q 235 256 235 272" fill="none" stroke="url(#greenAccent)" strokeWidth="4" strokeLinecap="round" />
 
           {/* Briefcase lid separation line */}
-          <line x1="100" y1="320" x2="300" y2="320" stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="2" />
+          <line x1="115" y1="318" x2="285" y2="318" stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="2" />
 
           {/* Green latches */}
-          <rect x="130" y="312" width="28" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
-          <rect x="242" y="312" width="28" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
-          <circle cx="144" cy="320" r="4" fill="#00A854" />
-          <circle cx="256" cy="320" r="4" fill="#00A854" />
+          <rect x="140" y="310" width="26" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
+          <rect x="234" y="310" width="26" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
+          <circle cx="153" cy="318" r="4" fill="#00A854" />
+          <circle cx="247" cy="318" r="4" fill="#00A854" />
 
-          {/* Center coin entry slot - bigger and centered */}
-          <rect x="170" y="293" width="60" height="14" rx="4" fill={isDark ? '#050505' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1.5" />
+          {/* Center coin entry slot */}
+          <rect x="172" y="292" width="56" height="14" rx="4" fill={isDark ? '#050505' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1.5" />
 
-          {/* "Decentral Bank of Crypto" main label area */}
-          <rect x="115" y="335" width="170" height="70" rx="6" fill={isDark ? '#0a0a0a' : '#1a1a1a'} stroke="#00D26A" strokeWidth="2" />
+          {/* Large LOGIN Button with Key Icon */}
+          <rect x="130" y="335" width="140" height="50" rx="10" fill="#00D26A" stroke="#00ff7f" strokeWidth="2" />
 
-          {/* DECENTRAL BANK text - LARGE and BOLD */}
-          <text x="200" y="358" textAnchor="middle" fill="#00D26A" fontSize="14" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.1em">DECENTRAL BANK</text>
+          {/* Key Icon inside button */}
+          <g transform="translate(152, 352)">
+            {/* Key head (circle) */}
+            <circle cx="0" cy="8" r="7" fill="none" stroke="#000000" strokeWidth="2.5" />
+            <circle cx="0" cy="8" r="3" fill="#000000" />
+            {/* Key shaft */}
+            <rect x="6" y="6" width="18" height="4" rx="1" fill="#000000" />
+            {/* Key teeth */}
+            <rect x="16" y="10" width="3" height="5" fill="#000000" />
+            <rect x="21" y="10" width="3" height="4" fill="#000000" />
+          </g>
 
-          {/* of Crypto text */}
-          <text x="200" y="375" textAnchor="middle" fill="#00D26A" fontSize="11" fontFamily="Arial, sans-serif" fontWeight="600">of Crypto</text>
-
-          {/* LOGIN Button - Prominent breathing button */}
-          <rect x="155" y="385" width="90" height="28" rx="6" fill="#00D26A" stroke="#00ff7f" strokeWidth="1.5" style={{ animation: 'buttonPulse 1.5s ease-in-out infinite' }} />
-          <text x="200" y="404" textAnchor="middle" fill="#000000" fontSize="12" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.1em">LOGIN</text>
+          {/* LOGIN text */}
+          <text x="220" y="367" textAnchor="middle" fill="#000000" fontSize="16" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.1em">LOGIN</text>
 
           {/* Green corner accents */}
-          <path d="M 100 300 L 100 285 L 115 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
-          <path d="M 300 300 L 300 285 L 285 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
-          <path d="M 100 400 L 100 415 L 115 415" fill="none" stroke="#00D26A" strokeWidth="2.5" />
-          <path d="M 300 400 L 300 415 L 285 415" fill="none" stroke="#00D26A" strokeWidth="2.5" />
+          <path d="M 115 300 L 115 285 L 130 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
+          <path d="M 285 300 L 285 285 L 270 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
+          <path d="M 115 385 L 115 400 L 130 400" fill="none" stroke="#00D26A" strokeWidth="2.5" />
+          <path d="M 285 385 L 285 400 L 270 400" fill="none" stroke="#00D26A" strokeWidth="2.5" />
 
           {/* Status LEDs on briefcase */}
-          <circle cx="130" cy="360" r="4" style={{ animation: 'serverBlink 1.2s ease-in-out infinite' }} />
-          <circle cx="270" cy="360" r="4" fill="#F7931A"><animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" /></circle>
+          <circle cx="128" cy="395" r="3" style={{ animation: 'serverBlink 1.2s ease-in-out infinite' }} />
+          <circle cx="272" cy="395" r="3" fill="#F7931A"><animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" /></circle>
         </g>
 
         {/* Animated Coins with different behaviors - bigger coins */}
