@@ -483,499 +483,251 @@ interface HologramCarouselProps {
 const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, isMobile }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [slideDirection, setSlideDirection] = useState(0); // -1 = left, 1 = right
-  const [isDragging, setIsDragging] = useState(false);
 
   // Auto-advance carousel
   useEffect(() => {
-    if (!isAutoPlaying || isDragging) return;
+    if (!isAutoPlaying) return;
     const interval = setInterval(() => {
-      setSlideDirection(1);
       setActiveIndex((prev) => (prev + 1) % features.length);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
-  }, [isAutoPlaying, features.length, isDragging]);
+  }, [isAutoPlaying, features.length]);
 
   const activeFeature = features[activeIndex];
-  const featureColor = activeFeature.color;
 
-  // Get next and previous features for preview
-  const prevIndex = (activeIndex - 1 + features.length) % features.length;
-  const nextIndex = (activeIndex + 1) % features.length;
-
-  // Handle drag/swipe navigation
-  const handleDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const threshold = 50;
-    const velocity = info.velocity.x;
-    const offset = info.offset.x;
-
-    setIsDragging(false);
-
-    // Swipe left (next slide) - negative offset
-    if (offset < -threshold || velocity < -500) {
-      setSlideDirection(1);
-      setActiveIndex((prev) => (prev + 1) % features.length);
-    }
-    // Swipe right (previous slide) - positive offset
-    else if (offset > threshold || velocity > 500) {
-      setSlideDirection(-1);
-      setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
-    }
-  };
-
-  // Navigation functions for prev/next buttons
-  const goToPrev = () => {
-    setSlideDirection(-1);
-    setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
-  };
-
-  const goToNext = () => {
-    setSlideDirection(1);
-    setActiveIndex((prev) => (prev + 1) % features.length);
-  };
-
-  // Slide animation variants
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 300 : -300,
-      opacity: 0,
-      scale: 0.9,
-      rotateY: direction > 0 ? -15 : 15,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      rotateY: 0,
-    },
-    exit: (direction: number) => ({
-      x: direction > 0 ? -300 : 300,
-      opacity: 0,
-      scale: 0.9,
-      rotateY: direction > 0 ? 15 : -15,
-    }),
-  };
+  const goToPrev = () => setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
+  const goToNext = () => setActiveIndex((prev) => (prev + 1) % features.length);
 
   return (
     <div
       onMouseEnter={() => setIsAutoPlaying(false)}
       onMouseLeave={() => setIsAutoPlaying(true)}
-      style={{ position: 'relative' }}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        minHeight: isMobile ? '500px' : '550px',
+      }}
     >
-      {/* Main Holographic Display */}
-      <div
-        style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: isMobile ? '0' : '24px',
-          minHeight: isMobile ? '400px' : '380px',
-          perspective: '1500px',
-        }}
-      >
-        {/* Previous Feature Preview - Desktop Only */}
-        {!isMobile && (
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 0.4, x: 0 }}
-            whileHover={{ opacity: 0.7, scale: 0.9 }}
-            onClick={goToPrev}
-            style={{
-              width: '180px',
-              height: '280px',
-              background: isDark
-                ? 'linear-gradient(145deg, rgba(20, 20, 20, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%)'
-                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.3) 0%, rgba(245, 245, 245, 0.4) 100%)',
-              borderRadius: '16px',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              padding: '20px',
-              cursor: 'pointer',
-              transform: 'rotateY(15deg) scale(0.85)',
-              transformOrigin: 'right center',
-              transition: 'all 0.4s ease',
-              backdropFilter: 'blur(10px)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-            }}
-          >
-            <div style={{ color: features[prevIndex].color, opacity: 0.7 }}>
-              {React.cloneElement(features[prevIndex].icon, { size: 32 })}
-            </div>
-            <span style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-              textAlign: 'center',
-            }}>
-              {features[prevIndex].title}
-            </span>
-          </motion.div>
-        )}
+      {/* Hologram Projection Container */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: isMobile ? '100%' : '800px',
+        height: isMobile ? '380px' : '420px',
+      }}>
+        {/* Hologram Beam - Trapezoid Light Effect */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: isMobile ? '120px' : '160px',
+          height: '100%',
+          background: `linear-gradient(
+            to top,
+            rgba(0, 200, 255, 0.4) 0%,
+            rgba(0, 200, 255, 0.2) 20%,
+            rgba(0, 200, 255, 0.08) 50%,
+            rgba(0, 200, 255, 0.02) 80%,
+            transparent 100%
+          )`,
+          clipPath: 'polygon(30% 100%, 70% 100%, 100% 0%, 0% 0%)',
+          filter: 'blur(8px)',
+          zIndex: 0,
+        }} />
 
-        {/* Main Holographic Card - Swipeable */}
-        <AnimatePresence mode="wait" custom={slideDirection}>
+        {/* Secondary wider beam */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: isMobile ? '200px' : '280px',
+          height: '100%',
+          background: `linear-gradient(
+            to top,
+            rgba(0, 210, 255, 0.25) 0%,
+            rgba(0, 210, 255, 0.1) 30%,
+            rgba(0, 210, 255, 0.03) 60%,
+            transparent 100%
+          )`,
+          clipPath: 'polygon(25% 100%, 75% 100%, 100% 0%, 0% 0%)',
+          filter: 'blur(15px)',
+          zIndex: 0,
+        }} />
+
+        {/* Floating Hologram Content */}
+        <AnimatePresence mode="wait">
           <motion.div
             key={activeIndex}
-            custom={slideDirection}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={handleDragEnd}
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.9 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
             style={{
-              position: 'relative',
-              width: isMobile ? '100%' : '600px',
-              minHeight: isMobile ? '380px' : '340px',
-              background: isDark
-                ? 'linear-gradient(145deg, rgba(15, 15, 15, 0.95) 0%, rgba(5, 5, 5, 0.98) 100%)'
-                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 250, 0.95) 100%)',
-              borderRadius: '24px',
-              overflow: 'hidden',
-              transformStyle: 'preserve-3d',
-              cursor: 'grab',
-              touchAction: 'pan-y',
+              position: 'absolute',
+              top: isMobile ? '20px' : '30px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: isMobile ? '90%' : '85%',
+              maxWidth: '650px',
+              zIndex: 2,
             }}
-            whileTap={{ cursor: 'grabbing' }}
           >
-            {/* Holographic Scan Lines Effect */}
-            <div
+            {/* Holographic Card - Floating in the beam */}
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               style={{
+                background: isDark
+                  ? 'linear-gradient(180deg, rgba(0, 40, 60, 0.85) 0%, rgba(0, 20, 40, 0.9) 100%)'
+                  : 'linear-gradient(180deg, rgba(0, 60, 80, 0.75) 0%, rgba(0, 40, 60, 0.85) 100%)',
+                borderRadius: '16px',
+                border: '1px solid rgba(0, 200, 255, 0.3)',
+                boxShadow: `
+                  0 0 30px rgba(0, 200, 255, 0.3),
+                  0 0 60px rgba(0, 200, 255, 0.15),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1)
+                `,
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              {/* Scan lines effect */}
+              <div style={{
                 position: 'absolute',
                 inset: 0,
                 backgroundImage: `repeating-linear-gradient(
                   0deg,
                   transparent,
                   transparent 2px,
-                  ${isDark ? 'rgba(0, 210, 106, 0.03)' : 'rgba(0, 210, 106, 0.02)'} 2px,
-                  ${isDark ? 'rgba(0, 210, 106, 0.03)' : 'rgba(0, 210, 106, 0.02)'} 4px
+                  rgba(0, 200, 255, 0.03) 2px,
+                  rgba(0, 200, 255, 0.03) 4px
                 )`,
                 pointerEvents: 'none',
-                zIndex: 3,
-              }}
-            />
+                zIndex: 10,
+              }} />
 
-            {/* Top Glowing Border */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: `linear-gradient(90deg, transparent, ${featureColor}, ${featureColor}, transparent)`,
-                boxShadow: `0 0 20px ${featureColor}, 0 0 40px ${featureColor}50`,
-              }}
-            />
-
-            {/* Left Accent Bar */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '20px',
-                bottom: '20px',
-                left: 0,
-                width: '4px',
-                background: `linear-gradient(180deg, transparent, ${featureColor}, ${featureColor}, transparent)`,
-                boxShadow: `0 0 15px ${featureColor}80`,
-              }}
-            />
-
-            {/* Corner Hologram Triangles */}
-            <div style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              width: '40px',
-              height: '40px',
-              borderTop: `2px solid ${featureColor}60`,
-              borderRight: `2px solid ${featureColor}60`,
-              borderRadius: '0 8px 0 0',
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '12px',
-              left: '12px',
-              width: '40px',
-              height: '40px',
-              borderBottom: `2px solid ${featureColor}60`,
-              borderLeft: `2px solid ${featureColor}60`,
-              borderRadius: '0 0 0 8px',
-            }} />
-
-            {/* Glass Reflection */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '50%',
-                background: isDark
-                  ? 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%)'
-                  : 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%)',
-                pointerEvents: 'none',
-                zIndex: 2,
-              }}
-            />
-
-            {/* Content Layout - Newspaper Style */}
-            <div
-              style={{
-                position: 'relative',
-                zIndex: 1,
-                padding: isMobile ? '28px 24px' : '36px 40px',
+              {/* Content */}
+              <div style={{
+                padding: isMobile ? '24px 20px' : '32px 36px',
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
-                gap: isMobile ? '24px' : '36px',
+                gap: isMobile ? '20px' : '32px',
                 alignItems: 'center',
-                height: '100%',
-              }}
-            >
-              {/* Left Side - Icon & Visual */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '16px',
-                }}
-              >
-                {/* Floating Icon with Hologram Effect */}
+              }}>
+                {/* Icon */}
                 <motion.div
                   animate={{
-                    y: [0, -8, 0],
                     boxShadow: [
-                      `0 10px 30px ${featureColor}30, 0 0 60px ${featureColor}20`,
-                      `0 20px 40px ${featureColor}40, 0 0 80px ${featureColor}30`,
-                      `0 10px 30px ${featureColor}30, 0 0 60px ${featureColor}20`,
+                      '0 0 20px rgba(0, 200, 255, 0.4)',
+                      '0 0 40px rgba(0, 200, 255, 0.6)',
+                      '0 0 20px rgba(0, 200, 255, 0.4)',
                     ],
                   }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  transition={{ duration: 2, repeat: Infinity }}
                   style={{
-                    width: isMobile ? '100px' : '120px',
-                    height: isMobile ? '100px' : '120px',
-                    borderRadius: '24px',
-                    background: `linear-gradient(145deg, ${featureColor}25, ${featureColor}10)`,
-                    border: `2px solid ${featureColor}50`,
+                    width: isMobile ? '80px' : '100px',
+                    height: isMobile ? '80px' : '100px',
+                    borderRadius: '20px',
+                    background: 'linear-gradient(135deg, rgba(0, 200, 255, 0.2) 0%, rgba(0, 150, 200, 0.1) 100%)',
+                    border: '1px solid rgba(0, 200, 255, 0.4)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: featureColor,
-                    position: 'relative',
+                    color: '#00d4ff',
+                    flexShrink: 0,
                   }}
                 >
-                  {/* Inner glow ring */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: '8px',
-                      borderRadius: '16px',
-                      border: `1px solid ${featureColor}30`,
-                    }}
-                  />
-                  {React.cloneElement(activeFeature.icon, { size: isMobile ? 48 : 56 })}
+                  {React.cloneElement(activeFeature.icon, { size: isMobile ? 40 : 48 })}
                 </motion.div>
 
-                {/* Feature Number Badge */}
-                <div
-                  style={{
-                    padding: '6px 16px',
-                    background: `${featureColor}20`,
-                    border: `1px solid ${featureColor}40`,
-                    borderRadius: '20px',
-                  }}
-                >
-                  <span
+                {/* Text Content */}
+                <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+                  <h3 style={{
+                    fontSize: isMobile ? '22px' : '28px',
+                    fontWeight: 800,
+                    color: '#ffffff',
+                    marginBottom: '12px',
+                    textShadow: '0 0 20px rgba(0, 200, 255, 0.5)',
+                  }}>
+                    {activeFeature.title}
+                  </h3>
+                  <p style={{
+                    fontSize: isMobile ? '14px' : '15px',
+                    color: 'rgba(200, 230, 255, 0.9)',
+                    lineHeight: 1.6,
+                    marginBottom: '20px',
+                  }}>
+                    {activeFeature.description}
+                  </p>
+                  <motion.button
+                    whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(0, 200, 255, 0.5)' }}
+                    whileTap={{ scale: 0.97 }}
                     style={{
-                      fontSize: '11px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '12px 24px',
+                      background: 'linear-gradient(135deg, #00d4ff 0%, #00a0cc 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '14px',
                       fontWeight: 700,
-                      color: featureColor,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
+                      color: '#000',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 20px rgba(0, 200, 255, 0.4)',
                     }}
                   >
-                    Feature {activeIndex + 1} / {features.length}
-                  </span>
+                    Explore Feature
+                    <ArrowRight size={16} />
+                  </motion.button>
                 </div>
               </div>
 
-              {/* Right Side - Text Content */}
-              <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
-                {/* Headline */}
-                <motion.h3
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  style={{
-                    fontSize: isMobile ? '26px' : '32px',
-                    fontWeight: 800,
-                    color: isDark ? '#ffffff' : '#0a1628',
-                    marginBottom: '16px',
-                    lineHeight: 1.2,
-                    letterSpacing: '-0.5px',
-                  }}
-                >
-                  {activeFeature.title}
-                </motion.h3>
-
-                {/* Description */}
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  style={{
-                    fontSize: isMobile ? '15px' : '16px',
-                    fontWeight: 500,
-                    color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)',
-                    lineHeight: 1.7,
-                    marginBottom: '24px',
-                    maxWidth: '400px',
-                  }}
-                >
-                  {activeFeature.description}
-                </motion.p>
-
-                {/* CTA Button */}
-                <motion.button
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  whileHover={{ scale: 1.02, boxShadow: `0 8px 30px ${featureColor}40` }}
-                  whileTap={{ scale: 0.98 }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '14px 28px',
-                    background: `linear-gradient(135deg, ${featureColor}, ${featureColor}cc)`,
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: '#000000',
-                    cursor: 'pointer',
-                    boxShadow: `0 4px 20px ${featureColor}30`,
-                  }}
-                >
-                  Explore Feature
-                  <ArrowRight size={16} />
-                </motion.button>
-              </div>
-            </div>
-
-            {/* Bottom Data Strip - Newspaper Style */}
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                padding: '12px 24px',
-                background: isDark
-                  ? 'linear-gradient(90deg, rgba(0,0,0,0.8), rgba(0,0,0,0.6), rgba(0,0,0,0.8))'
-                  : 'linear-gradient(90deg, rgba(0,0,0,0.05), rgba(0,0,0,0.02), rgba(0,0,0,0.05))',
-                borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+              {/* Feature indicator */}
+              <div style={{
+                padding: '10px 20px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderTop: '1px solid rgba(0, 200, 255, 0.2)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-              }}
-            >
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 600,
-                color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
               }}>
-                CrymadX Platform
-              </span>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 600,
-                color: featureColor,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-              }}>
-                {activeFeature.lightBg?.toUpperCase()} EDITION
-              </span>
-            </div>
+                <span style={{ fontSize: '11px', color: 'rgba(0, 200, 255, 0.7)', fontWeight: 600, letterSpacing: '0.1em' }}>
+                  FEATURE {activeIndex + 1} / {features.length}
+                </span>
+                <span style={{ fontSize: '11px', color: activeFeature.color, fontWeight: 600, letterSpacing: '0.1em' }}>
+                  {activeFeature.lightBg?.toUpperCase()}
+                </span>
+              </div>
+            </motion.div>
           </motion.div>
         </AnimatePresence>
 
-        {/* Next Feature Preview - Desktop Only */}
-        {!isMobile && (
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 0.4, x: 0 }}
-            whileHover={{ opacity: 0.7, scale: 0.9 }}
-            onClick={goToNext}
-            style={{
-              width: '180px',
-              height: '280px',
-              background: isDark
-                ? 'linear-gradient(145deg, rgba(20, 20, 20, 0.6) 0%, rgba(10, 10, 10, 0.8) 100%)'
-                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.3) 0%, rgba(245, 245, 245, 0.4) 100%)',
-              borderRadius: '16px',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              padding: '20px',
-              cursor: 'pointer',
-              transform: 'rotateY(-15deg) scale(0.85)',
-              transformOrigin: 'left center',
-              transition: 'all 0.4s ease',
-              backdropFilter: 'blur(10px)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-            }}
-          >
-            <div style={{ color: features[nextIndex].color, opacity: 0.7 }}>
-              {React.cloneElement(features[nextIndex].icon, { size: 32 })}
-            </div>
-            <span style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-              textAlign: 'center',
-            }}>
-              {features[nextIndex].title}
-            </span>
-          </motion.div>
-        )}
-
-        {/* Side Navigation Arrows */}
+        {/* Navigation Arrows */}
         <motion.button
-          whileHover={{ scale: 1.1, backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }}
+          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.2)' }}
           whileTap={{ scale: 0.9 }}
           onClick={goToPrev}
           style={{
             position: 'absolute',
-            left: isMobile ? '8px' : '0',
+            left: isMobile ? '5px' : '20px',
             top: '50%',
             transform: 'translateY(-50%)',
-            width: isMobile ? '36px' : '40px',
-            height: isMobile ? '36px' : '40px',
+            width: '44px',
+            height: '44px',
             borderRadius: '50%',
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+            background: 'rgba(0, 200, 255, 0.1)',
+            border: '1px solid rgba(0, 200, 255, 0.3)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
-            fontSize: '18px',
-            fontWeight: 300,
-            backdropFilter: 'blur(8px)',
+            color: '#00d4ff',
+            fontSize: '20px',
             zIndex: 10,
           }}
         >
@@ -983,27 +735,25 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         </motion.button>
 
         <motion.button
-          whileHover={{ scale: 1.1, backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }}
+          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.2)' }}
           whileTap={{ scale: 0.9 }}
           onClick={goToNext}
           style={{
             position: 'absolute',
-            right: isMobile ? '8px' : '0',
+            right: isMobile ? '5px' : '20px',
             top: '50%',
             transform: 'translateY(-50%)',
-            width: isMobile ? '36px' : '40px',
-            height: isMobile ? '36px' : '40px',
+            width: '44px',
+            height: '44px',
             borderRadius: '50%',
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+            background: 'rgba(0, 200, 255, 0.1)',
+            border: '1px solid rgba(0, 200, 255, 0.3)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
-            fontSize: '18px',
-            fontWeight: 300,
-            backdropFilter: 'blur(8px)',
+            color: '#00d4ff',
+            fontSize: '20px',
             zIndex: 10,
           }}
         >
@@ -1011,42 +761,95 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         </motion.button>
       </div>
 
-      {/* Navigation Dots */}
-      <div
-        style={{
+      {/* Projector Base */}
+      <div style={{
+        position: 'relative',
+        marginTop: '-20px',
+        zIndex: 5,
+      }}>
+        {/* Projector glow */}
+        <div style={{
+          position: 'absolute',
+          top: '-30px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100px',
+          height: '60px',
+          background: 'radial-gradient(ellipse, rgba(0, 200, 255, 0.6) 0%, transparent 70%)',
+          filter: 'blur(10px)',
+        }} />
+
+        {/* Projector device */}
+        <div style={{
+          width: isMobile ? '120px' : '140px',
+          height: isMobile ? '35px' : '40px',
+          background: isDark
+            ? 'linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 50%, #0a0a0a 100%)'
+            : 'linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+          borderRadius: '8px 8px 12px 12px',
+          border: '1px solid rgba(0, 200, 255, 0.3)',
+          boxShadow: `
+            0 4px 20px rgba(0, 0, 0, 0.5),
+            0 0 30px rgba(0, 200, 255, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1)
+          `,
           display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
-          gap: '10px',
-          marginTop: '28px',
-        }}
-      >
+          gap: '8px',
+        }}>
+          {/* Projector lens */}
+          <motion.div
+            animate={{
+              boxShadow: [
+                '0 0 10px rgba(0, 200, 255, 0.8), inset 0 0 10px rgba(0, 200, 255, 0.3)',
+                '0 0 20px rgba(0, 200, 255, 1), inset 0 0 15px rgba(0, 200, 255, 0.5)',
+                '0 0 10px rgba(0, 200, 255, 0.8), inset 0 0 10px rgba(0, 200, 255, 0.3)',
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+            style={{
+              width: '16px',
+              height: '16px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, #00ffff 0%, #00a0cc 100%)',
+              border: '2px solid rgba(0, 200, 255, 0.5)',
+            }}
+          />
+          {/* Status lights */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff00', boxShadow: '0 0 6px #00ff00' }} />
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 6px #00d4ff' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Dots */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '10px',
+        marginTop: '24px',
+      }}>
         {features.map((feature, index) => (
           <motion.button
             key={index}
             whileHover={{ scale: 1.2 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              setSlideDirection(index > activeIndex ? 1 : -1);
-              setActiveIndex(index);
-            }}
+            onClick={() => setActiveIndex(index)}
             style={{
-              width: index === activeIndex ? '32px' : '10px',
+              width: index === activeIndex ? '28px' : '10px',
               height: '10px',
               borderRadius: '5px',
-              background: index === activeIndex
-                ? feature.color
-                : isDark
-                  ? 'rgba(255,255,255,0.2)'
-                  : 'rgba(0,0,0,0.15)',
+              background: index === activeIndex ? '#00d4ff' : 'rgba(0, 200, 255, 0.3)',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-              boxShadow: index === activeIndex ? `0 0 15px ${feature.color}60` : 'none',
+              boxShadow: index === activeIndex ? '0 0 15px rgba(0, 200, 255, 0.6)' : 'none',
             }}
           />
         ))}
       </div>
-
     </div>
   );
 };
