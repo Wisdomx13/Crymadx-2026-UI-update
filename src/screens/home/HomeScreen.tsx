@@ -484,19 +484,27 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  // Auto-advance carousel
   useEffect(() => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % features.length);
-    }, 5000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [isAutoPlaying, features.length]);
 
-  const activeFeature = features[activeIndex];
-
   const goToPrev = () => setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
   const goToNext = () => setActiveIndex((prev) => (prev + 1) % features.length);
+
+  // Get visible features for 3D newspaper effect
+  const getVisibleFeatures = () => {
+    const prev = (activeIndex - 1 + features.length) % features.length;
+    const next = (activeIndex + 1) % features.length;
+    return [
+      { feature: features[prev], position: 'left' as const },
+      { feature: features[activeIndex], position: 'center' as const },
+      { feature: features[next], position: 'right' as const },
+    ];
+  };
 
   return (
     <div
@@ -507,345 +515,268 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        minHeight: isMobile ? '500px' : '550px',
+        minHeight: isMobile ? '400px' : '450px',
       }}
     >
-      {/* Hologram Projection Container */}
+      {/* Hologram Container */}
       <div style={{
         position: 'relative',
         width: '100%',
-        maxWidth: isMobile ? '100%' : '800px',
-        height: isMobile ? '380px' : '420px',
+        maxWidth: '900px',
+        height: isMobile ? '300px' : '350px',
       }}>
-        {/* Hologram Beam - Trapezoid Light Effect */}
+        {/* Wide Hologram Beam */}
         <div style={{
           position: 'absolute',
           bottom: 0,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: isMobile ? '120px' : '160px',
+          width: isMobile ? '85%' : '75%',
           height: '100%',
-          background: `linear-gradient(
-            to top,
-            rgba(0, 200, 255, 0.4) 0%,
-            rgba(0, 200, 255, 0.2) 20%,
-            rgba(0, 200, 255, 0.08) 50%,
-            rgba(0, 200, 255, 0.02) 80%,
-            transparent 100%
-          )`,
-          clipPath: 'polygon(30% 100%, 70% 100%, 100% 0%, 0% 0%)',
-          filter: 'blur(8px)',
+          background: `linear-gradient(to top, rgba(0, 180, 220, 0.3) 0%, rgba(0, 180, 220, 0.15) 20%, rgba(0, 180, 220, 0.05) 50%, transparent 100%)`,
+          clipPath: 'polygon(10% 100%, 90% 100%, 100% 0%, 0% 0%)',
           zIndex: 0,
         }} />
 
-        {/* Secondary wider beam */}
+        {/* Inner beam */}
         <div style={{
           position: 'absolute',
           bottom: 0,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: isMobile ? '200px' : '280px',
+          width: isMobile ? '55%' : '45%',
           height: '100%',
-          background: `linear-gradient(
-            to top,
-            rgba(0, 210, 255, 0.25) 0%,
-            rgba(0, 210, 255, 0.1) 30%,
-            rgba(0, 210, 255, 0.03) 60%,
-            transparent 100%
-          )`,
-          clipPath: 'polygon(25% 100%, 75% 100%, 100% 0%, 0% 0%)',
-          filter: 'blur(15px)',
+          background: `linear-gradient(to top, rgba(0, 200, 255, 0.4) 0%, rgba(0, 200, 255, 0.15) 30%, transparent 70%)`,
+          clipPath: 'polygon(15% 100%, 85% 100%, 100% 0%, 0% 0%)',
           zIndex: 0,
         }} />
 
-        {/* Floating Hologram Content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeIndex}
-            initial={{ opacity: 0, y: 30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -30, scale: 0.9 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            style={{
-              position: 'absolute',
-              top: isMobile ? '20px' : '30px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: isMobile ? '90%' : '85%',
-              maxWidth: '650px',
-              zIndex: 2,
-            }}
-          >
-            {/* Holographic Card - Floating in the beam */}
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              style={{
-                background: isDark
-                  ? 'linear-gradient(180deg, rgba(0, 40, 60, 0.85) 0%, rgba(0, 20, 40, 0.9) 100%)'
-                  : 'linear-gradient(180deg, rgba(0, 60, 80, 0.75) 0%, rgba(0, 40, 60, 0.85) 100%)',
-                borderRadius: '16px',
-                border: '1px solid rgba(0, 200, 255, 0.3)',
-                boxShadow: `
-                  0 0 30px rgba(0, 200, 255, 0.3),
-                  0 0 60px rgba(0, 200, 255, 0.15),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.1)
-                `,
-                overflow: 'hidden',
-                position: 'relative',
-              }}
-            >
-              {/* Scan lines effect */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: `repeating-linear-gradient(
-                  0deg,
-                  transparent,
-                  transparent 2px,
-                  rgba(0, 200, 255, 0.03) 2px,
-                  rgba(0, 200, 255, 0.03) 4px
-                )`,
-                pointerEvents: 'none',
-                zIndex: 10,
-              }} />
+        {/* Floating Newspaper Cards */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          perspective: '1200px',
+        }}>
+          {getVisibleFeatures().map(({ feature, position }) => {
+            const isCenter = position === 'center';
+            const isLeft = position === 'left';
 
-              {/* Content */}
-              <div style={{
-                padding: isMobile ? '24px 20px' : '32px 36px',
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: isMobile ? '20px' : '32px',
-                alignItems: 'center',
-              }}>
-                {/* Icon */}
-                <motion.div
-                  animate={{
-                    boxShadow: [
-                      '0 0 20px rgba(0, 200, 255, 0.4)',
-                      '0 0 40px rgba(0, 200, 255, 0.6)',
-                      '0 0 20px rgba(0, 200, 255, 0.4)',
-                    ],
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  style={{
-                    width: isMobile ? '80px' : '100px',
-                    height: isMobile ? '80px' : '100px',
-                    borderRadius: '20px',
-                    background: 'linear-gradient(135deg, rgba(0, 200, 255, 0.2) 0%, rgba(0, 150, 200, 0.1) 100%)',
-                    border: '1px solid rgba(0, 200, 255, 0.4)',
+            return (
+              <motion.div
+                key={`${feature.title}-${position}`}
+                initial={false}
+                animate={{
+                  opacity: isCenter ? 1 : 0.5,
+                  scale: isCenter ? 1 : 0.7,
+                  x: isLeft ? (isMobile ? -70 : -160) : isCenter ? 0 : (isMobile ? 70 : 160),
+                  y: isCenter ? [0, -5, 0] : 10,
+                  rotateY: isLeft ? 30 : isCenter ? 0 : -30,
+                  z: isCenter ? 100 : 0,
+                }}
+                transition={{
+                  duration: 0.4,
+                  y: isCenter ? { duration: 3, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.4 }
+                }}
+                onClick={() => !isCenter && setActiveIndex(isLeft ? (activeIndex - 1 + features.length) % features.length : (activeIndex + 1) % features.length)}
+                style={{
+                  position: 'absolute',
+                  width: isMobile ? '180px' : '240px',
+                  cursor: isCenter ? 'default' : 'pointer',
+                  zIndex: isCenter ? 10 : 5,
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+                {/* Lightweight Newspaper Card */}
+                <div style={{
+                  background: 'linear-gradient(180deg, rgba(230, 245, 255, 0.92) 0%, rgba(210, 235, 250, 0.88) 100%)',
+                  borderRadius: '6px',
+                  padding: isMobile ? '12px' : '16px',
+                  boxShadow: isCenter
+                    ? '0 8px 32px rgba(0, 150, 200, 0.35), 0 0 40px rgba(0, 200, 255, 0.15)'
+                    : '0 4px 16px rgba(0, 100, 150, 0.15)',
+                  border: '1px solid rgba(0, 180, 220, 0.25)',
+                  position: 'relative',
+                }}>
+                  {/* Scan lines */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(0, 150, 200, 0.03) 4px, rgba(0, 150, 200, 0.03) 8px)',
+                    pointerEvents: 'none',
+                    borderRadius: '6px',
+                  }} />
+
+                  {/* Header */}
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#00d4ff',
-                    flexShrink: 0,
-                  }}
-                >
-                  {React.cloneElement(activeFeature.icon, { size: isMobile ? 40 : 48 })}
-                </motion.div>
-
-                {/* Text Content */}
-                <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
-                  <h3 style={{
-                    fontSize: isMobile ? '22px' : '28px',
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    marginBottom: '12px',
-                    textShadow: '0 0 20px rgba(0, 200, 255, 0.5)',
+                    gap: '10px',
+                    marginBottom: '10px',
+                    paddingBottom: '10px',
+                    borderBottom: '1.5px solid rgba(0, 150, 200, 0.15)',
                   }}>
-                    {activeFeature.title}
-                  </h3>
-                  <p style={{
-                    fontSize: isMobile ? '14px' : '15px',
-                    color: 'rgba(200, 230, 255, 0.9)',
-                    lineHeight: 1.6,
-                    marginBottom: '20px',
-                  }}>
-                    {activeFeature.description}
-                  </p>
-                  <motion.button
-                    whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(0, 200, 255, 0.5)' }}
-                    whileTap={{ scale: 0.97 }}
-                    style={{
-                      display: 'inline-flex',
+                    <div style={{
+                      width: isMobile ? '28px' : '36px',
+                      height: isMobile ? '28px' : '36px',
+                      borderRadius: '6px',
+                      background: 'linear-gradient(135deg, rgba(0, 180, 220, 0.25) 0%, rgba(0, 150, 200, 0.15) 100%)',
+                      display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '12px 24px',
-                      background: 'linear-gradient(135deg, #00d4ff 0%, #00a0cc 100%)',
-                      border: 'none',
-                      borderRadius: '10px',
-                      fontSize: '14px',
+                      justifyContent: 'center',
+                      color: '#0088aa',
+                    }}>
+                      {React.cloneElement(feature.icon, { size: isMobile ? 16 : 20 })}
+                    </div>
+                    <span style={{
+                      fontSize: isMobile ? '11px' : '13px',
                       fontWeight: 700,
-                      color: '#000',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 20px rgba(0, 200, 255, 0.4)',
-                    }}
-                  >
-                    Explore Feature
-                    <ArrowRight size={16} />
-                  </motion.button>
+                      color: '#006688',
+                      flex: 1,
+                      lineHeight: 1.2,
+                    }}>
+                      {feature.title}
+                    </span>
+                  </div>
+
+                  {/* Content lines */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '10px' }}>
+                    <div style={{ height: '7px', background: 'rgba(0, 100, 140, 0.12)', borderRadius: '3px', width: '100%' }} />
+                    <div style={{ height: '7px', background: 'rgba(0, 100, 140, 0.09)', borderRadius: '3px', width: '80%' }} />
+                    <div style={{ height: '7px', background: 'rgba(0, 100, 140, 0.06)', borderRadius: '3px', width: '60%' }} />
+                  </div>
+
+                  {/* Footer */}
+                  <div style={{
+                    paddingTop: '8px',
+                    borderTop: '1px solid rgba(0, 150, 200, 0.1)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ fontSize: '8px', color: '#0099bb', fontWeight: 600, letterSpacing: '0.05em' }}>CRYMADX</span>
+                    <span style={{ fontSize: '8px', color: feature.color, fontWeight: 700 }}>{feature.lightBg?.toUpperCase()}</span>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
+            );
+          })}
+        </div>
 
-              {/* Feature indicator */}
-              <div style={{
-                padding: '10px 20px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                borderTop: '1px solid rgba(0, 200, 255, 0.2)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}>
-                <span style={{ fontSize: '11px', color: 'rgba(0, 200, 255, 0.7)', fontWeight: 600, letterSpacing: '0.1em' }}>
-                  FEATURE {activeIndex + 1} / {features.length}
-                </span>
-                <span style={{ fontSize: '11px', color: activeFeature.color, fontWeight: 600, letterSpacing: '0.1em' }}>
-                  {activeFeature.lightBg?.toUpperCase()}
-                </span>
-              </div>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Navigation Arrows */}
+        {/* Nav Arrows */}
         <motion.button
-          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.2)' }}
+          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.12)' }}
           whileTap={{ scale: 0.9 }}
           onClick={goToPrev}
           style={{
             position: 'absolute',
-            left: isMobile ? '5px' : '20px',
+            left: '8px',
             top: '50%',
             transform: 'translateY(-50%)',
-            width: '44px',
-            height: '44px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
-            background: 'rgba(0, 200, 255, 0.1)',
-            border: '1px solid rgba(0, 200, 255, 0.3)',
+            background: 'rgba(0, 200, 255, 0.06)',
+            border: '1px solid rgba(0, 200, 255, 0.2)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#00d4ff',
-            fontSize: '20px',
-            zIndex: 10,
+            color: '#00c8ff',
+            fontSize: '16px',
+            zIndex: 20,
           }}
         >
           ‹
         </motion.button>
 
         <motion.button
-          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.2)' }}
+          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.12)' }}
           whileTap={{ scale: 0.9 }}
           onClick={goToNext}
           style={{
             position: 'absolute',
-            right: isMobile ? '5px' : '20px',
+            right: '8px',
             top: '50%',
             transform: 'translateY(-50%)',
-            width: '44px',
-            height: '44px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
-            background: 'rgba(0, 200, 255, 0.1)',
-            border: '1px solid rgba(0, 200, 255, 0.3)',
+            background: 'rgba(0, 200, 255, 0.06)',
+            border: '1px solid rgba(0, 200, 255, 0.2)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#00d4ff',
-            fontSize: '20px',
-            zIndex: 10,
+            color: '#00c8ff',
+            fontSize: '16px',
+            zIndex: 20,
           }}
         >
           ›
         </motion.button>
       </div>
 
-      {/* Projector Base */}
-      <div style={{
-        position: 'relative',
-        marginTop: '-20px',
-        zIndex: 5,
-      }}>
-        {/* Projector glow */}
+      {/* Projector */}
+      <div style={{ position: 'relative', marginTop: '-8px', zIndex: 15 }}>
         <div style={{
           position: 'absolute',
-          top: '-30px',
+          top: '-15px',
           left: '50%',
           transform: 'translateX(-50%)',
-          width: '100px',
-          height: '60px',
-          background: 'radial-gradient(ellipse, rgba(0, 200, 255, 0.6) 0%, transparent 70%)',
-          filter: 'blur(10px)',
+          width: '60px',
+          height: '30px',
+          background: 'radial-gradient(ellipse, rgba(0, 200, 255, 0.45) 0%, transparent 70%)',
+          filter: 'blur(6px)',
         }} />
-
-        {/* Projector device */}
         <div style={{
-          width: isMobile ? '120px' : '140px',
-          height: isMobile ? '35px' : '40px',
-          background: isDark
-            ? 'linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 50%, #0a0a0a 100%)'
-            : 'linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-          borderRadius: '8px 8px 12px 12px',
-          border: '1px solid rgba(0, 200, 255, 0.3)',
-          boxShadow: `
-            0 4px 20px rgba(0, 0, 0, 0.5),
-            0 0 30px rgba(0, 200, 255, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1)
-          `,
+          width: isMobile ? '90px' : '100px',
+          height: '28px',
+          background: 'linear-gradient(180deg, #2a2a2a 0%, #151515 100%)',
+          borderRadius: '5px 5px 8px 8px',
+          border: '1px solid rgba(0, 200, 255, 0.2)',
+          boxShadow: '0 3px 12px rgba(0, 0, 0, 0.35)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px',
+          gap: '5px',
         }}>
-          {/* Projector lens */}
           <motion.div
-            animate={{
-              boxShadow: [
-                '0 0 10px rgba(0, 200, 255, 0.8), inset 0 0 10px rgba(0, 200, 255, 0.3)',
-                '0 0 20px rgba(0, 200, 255, 1), inset 0 0 15px rgba(0, 200, 255, 0.5)',
-                '0 0 10px rgba(0, 200, 255, 0.8), inset 0 0 10px rgba(0, 200, 255, 0.3)',
-              ],
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
             style={{
-              width: '16px',
-              height: '16px',
+              width: '10px',
+              height: '10px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, #00ffff 0%, #00a0cc 100%)',
-              border: '2px solid rgba(0, 200, 255, 0.5)',
+              background: 'radial-gradient(circle, #00ffff 0%, #0099cc 100%)',
+              boxShadow: '0 0 8px #00ffff',
             }}
           />
-          {/* Status lights */}
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff00', boxShadow: '0 0 6px #00ff00' }} />
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 6px #00d4ff' }} />
+          <div style={{ display: 'flex', gap: '2px' }}>
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 3px #00ff88' }} />
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00ccff', boxShadow: '0 0 3px #00ccff' }} />
           </div>
         </div>
       </div>
 
-      {/* Navigation Dots */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '10px',
-        marginTop: '24px',
-      }}>
-        {features.map((feature, index) => (
+      {/* Dots */}
+      <div style={{ display: 'flex', gap: '6px', marginTop: '16px' }}>
+        {features.map((_, index) => (
           <motion.button
             key={index}
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.15 }}
             onClick={() => setActiveIndex(index)}
             style={{
-              width: index === activeIndex ? '28px' : '10px',
-              height: '10px',
-              borderRadius: '5px',
-              background: index === activeIndex ? '#00d4ff' : 'rgba(0, 200, 255, 0.3)',
+              width: index === activeIndex ? '20px' : '7px',
+              height: '7px',
+              borderRadius: '3.5px',
+              background: index === activeIndex ? '#00d4ff' : 'rgba(0, 200, 255, 0.2)',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-              boxShadow: index === activeIndex ? '0 0 15px rgba(0, 200, 255, 0.6)' : 'none',
+              boxShadow: index === activeIndex ? '0 0 8px rgba(0, 200, 255, 0.5)' : 'none',
             }}
           />
         ))}
