@@ -483,304 +483,592 @@ interface HologramCarouselProps {
 const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, isMobile }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
+  // Auto-play rotation
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlaying || isDragging) return;
     const interval = setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => setIsTransitioning(false), 600);
       setActiveIndex((prev) => (prev + 1) % features.length);
-    }, 4000);
+    }, 3500);
     return () => clearInterval(interval);
-  }, [isAutoPlaying, features.length]);
+  }, [isAutoPlaying, isDragging, features.length]);
 
-  const goToPrev = () => setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
-  const goToNext = () => setActiveIndex((prev) => (prev + 1) % features.length);
-
-  // Get visible features for 3D newspaper effect
-  const getVisibleFeatures = () => {
-    const prev = (activeIndex - 1 + features.length) % features.length;
-    const next = (activeIndex + 1) % features.length;
-    return [
-      { feature: features[prev], position: 'left' as const },
-      { feature: features[activeIndex], position: 'center' as const },
-      { feature: features[next], position: 'right' as const },
-    ];
+  const goToPrev = () => {
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 600);
+    setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
   };
+
+  const goToNext = () => {
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 600);
+    setActiveIndex((prev) => (prev + 1) % features.length);
+  };
+
+  // Mouse drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setIsAutoPlaying(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const diff = e.clientX - dragStartX;
+    if (Math.abs(diff) > 60) {
+      if (diff > 0) goToPrev();
+      else goToNext();
+      setDragStartX(e.clientX);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setTimeout(() => setIsAutoPlaying(true), 2000);
+  };
+
+  // Touch handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    setDragStartX(e.touches[0].clientX);
+    setIsAutoPlaying(false);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientX - dragStartX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) goToPrev();
+      else goToNext();
+      setDragStartX(e.touches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setTimeout(() => setIsAutoPlaying(true), 2000);
+  };
+
+  // Calculate position for each card in 3D carousel
+  const getCardStyle = (index: number) => {
+    const total = features.length;
+    const diff = index - activeIndex;
+    const normalizedDiff = ((diff + total + Math.floor(total / 2)) % total) - Math.floor(total / 2);
+
+    const angle = normalizedDiff * (360 / total);
+    const radius = isMobile ? 140 : 200;
+    const radian = (angle * Math.PI) / 180;
+
+    const x = Math.sin(radian) * radius;
+    const z = Math.cos(radian) * radius - radius;
+    const rotateY = -angle;
+
+    const isActive = normalizedDiff === 0;
+    const isVisible = Math.abs(normalizedDiff) <= 2;
+
+    return {
+      x,
+      z,
+      rotateY,
+      opacity: isActive ? 1 : isVisible ? 0.4 + (1 - Math.abs(normalizedDiff) * 0.2) : 0,
+      scale: isActive ? 1 : 0.75 - Math.abs(normalizedDiff) * 0.08,
+      isActive,
+      isVisible,
+    };
+  };
+
+  const currentFeature = features[activeIndex];
 
   return (
     <div
-      onMouseEnter={() => setIsAutoPlaying(false)}
-      onMouseLeave={() => setIsAutoPlaying(true)}
+      ref={containerRef}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        minHeight: isMobile ? '400px' : '450px',
+        minHeight: isMobile ? '420px' : '480px',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
       }}
     >
-      {/* Hologram Container */}
+      {/* Movie Projector Light Beam */}
       <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: '900px',
-        height: isMobile ? '300px' : '350px',
+        position: 'absolute',
+        bottom: '60px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: isMobile ? '90%' : '80%',
+        height: isMobile ? '320px' : '380px',
+        background: `linear-gradient(to top,
+          rgba(0, 210, 255, 0.35) 0%,
+          rgba(0, 180, 220, 0.2) 15%,
+          rgba(0, 150, 200, 0.1) 40%,
+          rgba(0, 120, 180, 0.03) 70%,
+          transparent 100%)`,
+        clipPath: 'polygon(20% 100%, 80% 100%, 95% 0%, 5% 0%)',
+        zIndex: 0,
       }}>
-        {/* Wide Hologram Beam */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: isMobile ? '85%' : '75%',
-          height: '100%',
-          background: `linear-gradient(to top, rgba(0, 180, 220, 0.3) 0%, rgba(0, 180, 220, 0.15) 20%, rgba(0, 180, 220, 0.05) 50%, transparent 100%)`,
-          clipPath: 'polygon(10% 100%, 90% 100%, 100% 0%, 0% 0%)',
-          zIndex: 0,
-        }} />
-
-        {/* Inner beam */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: isMobile ? '55%' : '45%',
-          height: '100%',
-          background: `linear-gradient(to top, rgba(0, 200, 255, 0.4) 0%, rgba(0, 200, 255, 0.15) 30%, transparent 70%)`,
-          clipPath: 'polygon(15% 100%, 85% 100%, 100% 0%, 0% 0%)',
-          zIndex: 0,
-        }} />
-
-        {/* Floating Newspaper Cards */}
+        {/* Light reflex animation */}
+        <motion.div
+          animate={{
+            opacity: isTransitioning ? [0.3, 0.8, 0.3] : 0.15,
+            background: isTransitioning
+              ? ['linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)',
+                 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)']
+              : 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)',
+          }}
+          transition={{ duration: 0.5 }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Scan lines for film projector effect */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          perspective: '1200px',
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 180, 220, 0.04) 2px, rgba(0, 180, 220, 0.04) 4px)',
+          animation: 'scanMove 0.1s linear infinite',
+          pointerEvents: 'none',
+        }} />
+      </div>
+
+      {/* Inner concentrated beam */}
+      <div style={{
+        position: 'absolute',
+        bottom: '60px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: isMobile ? '50%' : '40%',
+        height: isMobile ? '320px' : '380px',
+        background: `linear-gradient(to top,
+          rgba(0, 230, 255, 0.4) 0%,
+          rgba(0, 200, 240, 0.2) 20%,
+          transparent 60%)`,
+        clipPath: 'polygon(25% 100%, 75% 100%, 90% 0%, 10% 0%)',
+        zIndex: 0,
+      }} />
+
+      {/* 3D Rotating Carousel */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: '800px',
+        height: isMobile ? '280px' : '340px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        perspective: '1000px',
+        perspectiveOrigin: '50% 50%',
+      }}>
+        <div style={{
+          position: 'relative',
+          width: isMobile ? '200px' : '280px',
+          height: isMobile ? '200px' : '260px',
+          transformStyle: 'preserve-3d',
         }}>
-          {getVisibleFeatures().map(({ feature, position }) => {
-            const isCenter = position === 'center';
-            const isLeft = position === 'left';
+          {features.map((feature, index) => {
+            const style = getCardStyle(index);
+            if (!style.isVisible) return null;
 
             return (
               <motion.div
-                key={`${feature.title}-${position}`}
-                initial={false}
+                key={feature.title}
                 animate={{
-                  opacity: isCenter ? 1 : 0.5,
-                  scale: isCenter ? 1 : 0.7,
-                  x: isLeft ? (isMobile ? -70 : -160) : isCenter ? 0 : (isMobile ? 70 : 160),
-                  y: isCenter ? [0, -5, 0] : 10,
-                  rotateY: isLeft ? 30 : isCenter ? 0 : -30,
-                  z: isCenter ? 100 : 0,
+                  x: style.x,
+                  z: style.z,
+                  rotateY: style.rotateY,
+                  opacity: style.opacity,
+                  scale: style.scale,
                 }}
                 transition={{
-                  duration: 0.4,
-                  y: isCenter ? { duration: 3, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.4 }
+                  type: 'spring',
+                  stiffness: 260,
+                  damping: 25,
                 }}
-                onClick={() => !isCenter && setActiveIndex(isLeft ? (activeIndex - 1 + features.length) % features.length : (activeIndex + 1) % features.length)}
+                onClick={() => {
+                  if (!style.isActive) {
+                    setIsTransitioning(true);
+                    setTimeout(() => setIsTransitioning(false), 600);
+                    setActiveIndex(index);
+                  }
+                }}
                 style={{
                   position: 'absolute',
-                  width: isMobile ? '180px' : '240px',
-                  cursor: isCenter ? 'default' : 'pointer',
-                  zIndex: isCenter ? 10 : 5,
+                  width: '100%',
+                  height: '100%',
                   transformStyle: 'preserve-3d',
+                  cursor: style.isActive ? 'default' : 'pointer',
                 }}
               >
-                {/* Lightweight Newspaper Card */}
+                {/* Newspaper-style Card */}
                 <div style={{
-                  background: 'linear-gradient(180deg, rgba(230, 245, 255, 0.92) 0%, rgba(210, 235, 250, 0.88) 100%)',
-                  borderRadius: '6px',
-                  padding: isMobile ? '12px' : '16px',
-                  boxShadow: isCenter
-                    ? '0 8px 32px rgba(0, 150, 200, 0.35), 0 0 40px rgba(0, 200, 255, 0.15)'
-                    : '0 4px 16px rgba(0, 100, 150, 0.15)',
-                  border: '1px solid rgba(0, 180, 220, 0.25)',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(180deg, rgba(248, 252, 255, 0.97) 0%, rgba(235, 245, 252, 0.95) 100%)',
+                  borderRadius: '8px',
+                  padding: isMobile ? '14px' : '20px',
+                  boxShadow: style.isActive
+                    ? '0 15px 50px rgba(0, 180, 220, 0.4), 0 0 60px rgba(0, 210, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.8)'
+                    : '0 8px 25px rgba(0, 120, 160, 0.2)',
+                  border: `1px solid ${style.isActive ? 'rgba(0, 200, 240, 0.4)' : 'rgba(0, 150, 200, 0.2)'}`,
+                  display: 'flex',
+                  flexDirection: 'column',
                   position: 'relative',
+                  overflow: 'hidden',
                 }}>
+                  {/* Holographic shimmer overlay */}
+                  <motion.div
+                    animate={{
+                      background: isTransitioning && style.isActive
+                        ? ['linear-gradient(120deg, transparent 30%, rgba(0,220,255,0.15) 50%, transparent 70%)',
+                           'linear-gradient(120deg, transparent 0%, rgba(0,220,255,0.2) 20%, transparent 40%)',
+                           'linear-gradient(120deg, transparent 60%, rgba(0,220,255,0.15) 80%, transparent 100%)']
+                        : 'linear-gradient(120deg, transparent 40%, rgba(0,220,255,0.05) 50%, transparent 60%)',
+                    }}
+                    transition={{ duration: 0.6 }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      pointerEvents: 'none',
+                      borderRadius: '8px',
+                    }}
+                  />
+
                   {/* Scan lines */}
                   <div style={{
                     position: 'absolute',
                     inset: 0,
-                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(0, 150, 200, 0.03) 4px, rgba(0, 150, 200, 0.03) 8px)',
+                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 150, 200, 0.025) 3px, rgba(0, 150, 200, 0.025) 6px)',
                     pointerEvents: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                   }} />
 
-                  {/* Header */}
+                  {/* Newspaper Header */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '10px',
-                    marginBottom: '10px',
-                    paddingBottom: '10px',
-                    borderBottom: '1.5px solid rgba(0, 150, 200, 0.15)',
+                    gap: '12px',
+                    paddingBottom: '12px',
+                    borderBottom: '2px solid rgba(0, 140, 180, 0.15)',
+                    marginBottom: '12px',
                   }}>
                     <div style={{
-                      width: isMobile ? '28px' : '36px',
-                      height: isMobile ? '28px' : '36px',
-                      borderRadius: '6px',
-                      background: 'linear-gradient(135deg, rgba(0, 180, 220, 0.25) 0%, rgba(0, 150, 200, 0.15) 100%)',
+                      width: isMobile ? '32px' : '42px',
+                      height: isMobile ? '32px' : '42px',
+                      borderRadius: '8px',
+                      background: `linear-gradient(135deg, ${feature.color}20 0%, ${feature.color}10 100%)`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#0088aa',
+                      color: feature.color,
+                      boxShadow: `0 2px 8px ${feature.color}20`,
                     }}>
-                      {React.cloneElement(feature.icon, { size: isMobile ? 16 : 20 })}
+                      {React.cloneElement(feature.icon, { size: isMobile ? 18 : 22 })}
                     </div>
-                    <span style={{
-                      fontSize: isMobile ? '11px' : '13px',
-                      fontWeight: 700,
-                      color: '#006688',
+                    <h3 style={{
+                      fontSize: isMobile ? '13px' : '16px',
+                      fontWeight: 800,
+                      color: '#0a3d5c',
+                      margin: 0,
                       flex: 1,
-                      lineHeight: 1.2,
+                      lineHeight: 1.3,
+                      letterSpacing: '-0.01em',
                     }}>
                       {feature.title}
-                    </span>
+                    </h3>
                   </div>
 
-                  {/* Content lines */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '10px' }}>
-                    <div style={{ height: '7px', background: 'rgba(0, 100, 140, 0.12)', borderRadius: '3px', width: '100%' }} />
-                    <div style={{ height: '7px', background: 'rgba(0, 100, 140, 0.09)', borderRadius: '3px', width: '80%' }} />
-                    <div style={{ height: '7px', background: 'rgba(0, 100, 140, 0.06)', borderRadius: '3px', width: '60%' }} />
-                  </div>
+                  {/* Description Text */}
+                  <p style={{
+                    fontSize: isMobile ? '11px' : '13px',
+                    color: '#1a5070',
+                    lineHeight: 1.6,
+                    margin: 0,
+                    flex: 1,
+                    fontWeight: 500,
+                  }}>
+                    {feature.description}
+                  </p>
 
                   {/* Footer */}
                   <div style={{
-                    paddingTop: '8px',
-                    borderTop: '1px solid rgba(0, 150, 200, 0.1)',
+                    paddingTop: '10px',
+                    borderTop: '1px solid rgba(0, 140, 180, 0.1)',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    marginTop: 'auto',
                   }}>
-                    <span style={{ fontSize: '8px', color: '#0099bb', fontWeight: 600, letterSpacing: '0.05em' }}>CRYMADX</span>
-                    <span style={{ fontSize: '8px', color: feature.color, fontWeight: 700 }}>{feature.lightBg?.toUpperCase()}</span>
+                    <span style={{
+                      fontSize: isMobile ? '8px' : '9px',
+                      color: '#0088aa',
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                    }}>
+                      CrymadX
+                    </span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      <div style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background: feature.color,
+                        boxShadow: `0 0 6px ${feature.color}`,
+                      }} />
+                      <span style={{
+                        fontSize: isMobile ? '8px' : '9px',
+                        color: feature.color,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                      }}>
+                        Active
+                      </span>
+                    </div>
                   </div>
                 </div>
               </motion.div>
             );
           })}
         </div>
-
-        {/* Nav Arrows */}
-        <motion.button
-          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.12)' }}
-          whileTap={{ scale: 0.9 }}
-          onClick={goToPrev}
-          style={{
-            position: 'absolute',
-            left: '8px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            background: 'rgba(0, 200, 255, 0.06)',
-            border: '1px solid rgba(0, 200, 255, 0.2)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#00c8ff',
-            fontSize: '16px',
-            zIndex: 20,
-          }}
-        >
-          ‹
-        </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.1, background: 'rgba(0, 200, 255, 0.12)' }}
-          whileTap={{ scale: 0.9 }}
-          onClick={goToNext}
-          style={{
-            position: 'absolute',
-            right: '8px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            background: 'rgba(0, 200, 255, 0.06)',
-            border: '1px solid rgba(0, 200, 255, 0.2)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#00c8ff',
-            fontSize: '16px',
-            zIndex: 20,
-          }}
-        >
-          ›
-        </motion.button>
       </div>
 
-      {/* Projector */}
-      <div style={{ position: 'relative', marginTop: '-8px', zIndex: 15 }}>
-        <div style={{
+      {/* Navigation Arrows */}
+      <motion.button
+        whileHover={{ scale: 1.15, boxShadow: '0 0 20px rgba(0, 200, 255, 0.4)' }}
+        whileTap={{ scale: 0.9 }}
+        onClick={(e) => { e.stopPropagation(); goToPrev(); }}
+        style={{
           position: 'absolute',
-          top: '-15px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '60px',
-          height: '30px',
-          background: 'radial-gradient(ellipse, rgba(0, 200, 255, 0.45) 0%, transparent 70%)',
-          filter: 'blur(6px)',
-        }} />
-        <div style={{
-          width: isMobile ? '90px' : '100px',
-          height: '28px',
-          background: 'linear-gradient(180deg, #2a2a2a 0%, #151515 100%)',
-          borderRadius: '5px 5px 8px 8px',
-          border: '1px solid rgba(0, 200, 255, 0.2)',
-          boxShadow: '0 3px 12px rgba(0, 0, 0, 0.35)',
+          left: isMobile ? '10px' : '30px',
+          top: '45%',
+          transform: 'translateY(-50%)',
+          width: isMobile ? '36px' : '44px',
+          height: isMobile ? '36px' : '44px',
+          borderRadius: '50%',
+          background: 'rgba(0, 20, 40, 0.6)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(0, 200, 255, 0.3)',
+          cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '5px',
+          color: '#00d4ff',
+          fontSize: isMobile ? '18px' : '22px',
+          zIndex: 20,
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        ‹
+      </motion.button>
+
+      <motion.button
+        whileHover={{ scale: 1.15, boxShadow: '0 0 20px rgba(0, 200, 255, 0.4)' }}
+        whileTap={{ scale: 0.9 }}
+        onClick={(e) => { e.stopPropagation(); goToNext(); }}
+        style={{
+          position: 'absolute',
+          right: isMobile ? '10px' : '30px',
+          top: '45%',
+          transform: 'translateY(-50%)',
+          width: isMobile ? '36px' : '44px',
+          height: isMobile ? '36px' : '44px',
+          borderRadius: '50%',
+          background: 'rgba(0, 20, 40, 0.6)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(0, 200, 255, 0.3)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#00d4ff',
+          fontSize: isMobile ? '18px' : '22px',
+          zIndex: 20,
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        ›
+      </motion.button>
+
+      {/* Movie Projector Base */}
+      <div style={{
+        position: 'relative',
+        marginTop: '-10px',
+        zIndex: 15,
+      }}>
+        {/* Projector glow */}
+        <motion.div
+          animate={{
+            opacity: isTransitioning ? [0.5, 1, 0.5] : [0.3, 0.5, 0.3],
+            scale: isTransitioning ? [1, 1.2, 1] : 1,
+          }}
+          transition={{ duration: isTransitioning ? 0.4 : 2, repeat: isTransitioning ? 0 : Infinity }}
+          style={{
+            position: 'absolute',
+            top: '-20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '80px',
+            height: '40px',
+            background: 'radial-gradient(ellipse, rgba(0, 220, 255, 0.6) 0%, rgba(0, 180, 220, 0.3) 40%, transparent 70%)',
+            filter: 'blur(8px)',
+          }}
+        />
+
+        {/* Projector body */}
+        <div style={{
+          width: isMobile ? '100px' : '120px',
+          height: '35px',
+          background: 'linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 50%, #0d0d0d 100%)',
+          borderRadius: '6px 6px 10px 10px',
+          border: '1px solid rgba(0, 200, 255, 0.25)',
+          boxShadow: '0 5px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          padding: '0 12px',
         }}>
+          {/* Main lens */}
           <motion.div
-            animate={{ opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
+            animate={{
+              boxShadow: isTransitioning
+                ? ['0 0 10px #00ffff, 0 0 20px #00ffff', '0 0 15px #00ffff, 0 0 30px #00ffff', '0 0 10px #00ffff, 0 0 20px #00ffff']
+                : ['0 0 8px #00ffff', '0 0 12px #00ffff', '0 0 8px #00ffff'],
+            }}
+            transition={{ duration: isTransitioning ? 0.3 : 1.5, repeat: isTransitioning ? 0 : Infinity }}
             style={{
-              width: '10px',
-              height: '10px',
+              width: '14px',
+              height: '14px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, #00ffff 0%, #0099cc 100%)',
-              boxShadow: '0 0 8px #00ffff',
+              background: 'radial-gradient(circle, #00ffff 0%, #00bbdd 50%, #0088aa 100%)',
             }}
           />
-          <div style={{ display: 'flex', gap: '2px' }}>
-            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 3px #00ff88' }} />
-            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00ccff', boxShadow: '0 0 3px #00ccff' }} />
+
+          {/* Status indicators */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <motion.div
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+              style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: '#00ff88',
+                boxShadow: '0 0 4px #00ff88',
+              }}
+            />
+            <motion.div
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1, repeat: Infinity, delay: 0.3 }}
+              style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: '#00ccff',
+                boxShadow: '0 0 4px #00ccff',
+              }}
+            />
+            <motion.div
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1, repeat: Infinity, delay: 0.6 }}
+              style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: '#ffaa00',
+                boxShadow: '0 0 4px #ffaa00',
+              }}
+            />
           </div>
+
+          {/* Film reels */}
+          <motion.div
+            animate={{ rotate: isAutoPlaying ? 360 : 0 }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+            style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              border: '2px solid #444',
+              background: '#222',
+              position: 'relative',
+            }}
+          >
+            <div style={{
+              position: 'absolute',
+              inset: '3px',
+              borderRadius: '50%',
+              background: '#333',
+            }} />
+          </motion.div>
         </div>
       </div>
 
-      {/* Dots */}
-      <div style={{ display: 'flex', gap: '6px', marginTop: '16px' }}>
+      {/* Navigation Dots */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        marginTop: '20px',
+      }}>
         {features.map((_, index) => (
           <motion.button
             key={index}
-            whileHover={{ scale: 1.15 }}
-            onClick={() => setActiveIndex(index)}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setIsTransitioning(true);
+              setTimeout(() => setIsTransitioning(false), 600);
+              setActiveIndex(index);
+            }}
             style={{
-              width: index === activeIndex ? '20px' : '7px',
-              height: '7px',
-              borderRadius: '3.5px',
-              background: index === activeIndex ? '#00d4ff' : 'rgba(0, 200, 255, 0.2)',
+              width: index === activeIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              background: index === activeIndex
+                ? 'linear-gradient(90deg, #00d4ff 0%, #00ff88 100%)'
+                : 'rgba(0, 200, 255, 0.25)',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-              boxShadow: index === activeIndex ? '0 0 8px rgba(0, 200, 255, 0.5)' : 'none',
+              boxShadow: index === activeIndex
+                ? '0 0 12px rgba(0, 210, 255, 0.6)'
+                : 'none',
             }}
           />
         ))}
       </div>
+
+      {/* Drag hint */}
+      <p style={{
+        fontSize: '11px',
+        color: 'rgba(0, 200, 255, 0.5)',
+        marginTop: '12px',
+        textAlign: 'center',
+      }}>
+        Drag or swipe to navigate
+      </p>
     </div>
   );
 };
