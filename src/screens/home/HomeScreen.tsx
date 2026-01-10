@@ -1187,7 +1187,7 @@ const GlassPanel: React.FC<{
 // ============================================
 const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isDark, isMobile }) => {
   const navigate = useNavigate();
-  const size = isMobile ? 280 : 360;
+  const size = isMobile ? 260 : 340;
 
   // Coins with different animation types - some enter chest, some bounce, some miss, one goes to Viking
   const coins = [
