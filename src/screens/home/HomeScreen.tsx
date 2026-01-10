@@ -140,14 +140,32 @@ const cryptoPrices = [
   { symbol: 'DOGE', name: 'Dogecoin', price: 0.3245, change: -1.25 },
 ];
 
-// Core features for "Why Choose CrymadX"
-const coreFeatures = [
-  { icon: <Shield size={24} />, title: 'Bank-Grade Security', description: 'Multi-signature wallets with 98% cold storage protection.' },
-  { icon: <Zap size={24} />, title: 'Lightning Fast', description: 'Execute trades in under 10ms with our matching engine.' },
-  { icon: <Globe size={24} />, title: 'Global Access', description: 'Trade 24/7 from 150+ countries with local support.' },
-  { icon: <BarChart3 size={24} />, title: 'Pro Trading Tools', description: 'TradingView charts with 100+ indicators & signals.' },
-  { icon: <Lock size={24} />, title: 'Multi-Layer Auth', description: '2FA, biometrics, and hardware key support.' },
-  { icon: <Smartphone size={24} />, title: 'Mobile First', description: 'Full-featured iOS and Android trading apps.' },
+// Core features for "Why Choose CrymadX" - Paired for banner-style display
+const coreFeaturesBanners = [
+  {
+    category: 'SECURITY & SPEED',
+    title: 'ENTERPRISE GRADE',
+    features: [
+      { icon: <Shield size={28} />, title: 'Bank-Grade Security', description: 'Multi-signature wallets with 98% cold storage protection.' },
+      { icon: <Zap size={28} />, title: 'Lightning Fast', description: 'Execute trades in under 10ms with our matching engine.' },
+    ]
+  },
+  {
+    category: 'GLOBAL REACH',
+    title: 'WORLDWIDE ACCESS',
+    features: [
+      { icon: <Globe size={28} />, title: 'Global Access', description: 'Trade 24/7 from 150+ countries with local support.' },
+      { icon: <BarChart3 size={28} />, title: 'Pro Trading Tools', description: 'TradingView charts with 100+ indicators & signals.' },
+    ]
+  },
+  {
+    category: 'USER EXPERIENCE',
+    title: 'BUILT FOR YOU',
+    features: [
+      { icon: <Lock size={28} />, title: 'Multi-Layer Auth', description: '2FA, biometrics, and hardware key support.' },
+      { icon: <Smartphone size={28} />, title: 'Mobile First', description: 'Full-featured iOS and Android trading apps.' },
+    ]
+  },
 ];
 
 // Platform features - Curated list (removed NFT, Institutional API, Debit Cards)
@@ -1169,17 +1187,18 @@ const GlassPanel: React.FC<{
 // ============================================
 const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isDark, isMobile }) => {
   const navigate = useNavigate();
-  const size = isMobile ? 300 : 400;
+  const size = isMobile ? 280 : 360;
 
-  // Coins with different animation types - some enter, some bounce, some miss
+  // Coins with different animation types - some enter chest, some bounce, some miss, one goes to Viking
   const coins = [
     { id: 'btc', color: '#F7931A', symbol: 'B', delay: 0, type: 'enter' },
     { id: 'eth', color: '#627EEA', symbol: 'E', delay: 2, type: 'bounce' },
-    { id: 'sol', color: '#9945FF', symbol: 'S', delay: 4, type: 'enter' },
-    { id: 'usdt', color: '#26A17B', symbol: 'U', delay: 6, type: 'missLeft' },
+    { id: 'sol', color: '#9945FF', symbol: 'S', delay: 4, type: 'toViking' },
+    { id: 'usdt', color: '#26A17B', symbol: 'U', delay: 6, type: 'enter' },
     { id: 'doge', color: '#C2A633', symbol: 'D', delay: 8, type: 'bounce' },
     { id: 'bnb', color: '#F0B90B', symbol: 'B', delay: 10, type: 'enter' },
     { id: 'ltc', color: '#345D9D', symbol: 'L', delay: 12, type: 'missRight' },
+    { id: 'ada', color: '#0D1E30', symbol: 'A', delay: 14, type: 'toViking' },
   ];
 
   return (
@@ -1187,40 +1206,47 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
       {/* CSS Animations - Exciting coin behaviors */}
       <style>{`
         @keyframes coinEnter {
-          0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0; }
-          8% { opacity: 1; }
-          45% { transform: translateY(70px) rotate(180deg) scale(1); opacity: 1; }
-          75% { transform: translateY(105px) rotate(300deg) scale(1); opacity: 1; }
-          90% { transform: translateY(115px) rotate(340deg) scale(0.9); opacity: 1; }
-          100% { transform: translateY(125px) rotate(360deg) scale(0); opacity: 0; }
+          0% { transform: translateY(0) translateX(45px) rotate(0deg) scale(1); opacity: 0; }
+          5% { opacity: 1; }
+          15% { transform: translateY(30px) translateX(45px) rotate(60deg) scale(1); opacity: 1; }
+          30% { transform: translateY(70px) translateX(45px) rotate(120deg) scale(1); opacity: 1; }
+          45% { transform: translateY(110px) translateX(45px) rotate(180deg) scale(1); opacity: 1; }
+          60% { transform: translateY(150px) translateX(45px) rotate(240deg) scale(1); opacity: 1; }
+          75% { transform: translateY(185px) translateX(45px) rotate(300deg) scale(0.9); opacity: 1; }
+          85% { transform: translateY(205px) translateX(45px) rotate(340deg) scale(0.75); opacity: 1; }
+          92% { transform: translateY(215px) translateX(45px) rotate(355deg) scale(0.5); opacity: 0.6; }
+          97% { transform: translateY(220px) translateX(45px) rotate(360deg) scale(0.3); opacity: 0.3; }
+          100% { transform: translateY(222px) translateX(45px) rotate(360deg) scale(0); opacity: 0; }
         }
         @keyframes coinBounce {
-          0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
-          8% { opacity: 1; }
-          40% { transform: translateY(80px) translateX(0) rotate(180deg); opacity: 1; }
-          55% { transform: translateY(100px) translateX(0) rotate(220deg); opacity: 1; }
-          65% { transform: translateY(85px) translateX(5px) rotate(260deg); opacity: 1; }
-          80% { transform: translateY(105px) translateX(0) rotate(320deg); opacity: 1; }
-          95% { transform: translateY(120px) translateX(0) rotate(355deg) scale(0.8); opacity: 0.8; }
-          100% { transform: translateY(125px) translateX(0) rotate(360deg) scale(0); opacity: 0; }
+          0% { transform: translateY(0) translateX(45px) rotate(0deg); opacity: 0; }
+          5% { opacity: 1; }
+          18% { transform: translateY(45px) translateX(50px) rotate(90deg); opacity: 1; }
+          32% { transform: translateY(85px) translateX(40px) rotate(160deg); opacity: 1; }
+          46% { transform: translateY(120px) translateX(50px) rotate(230deg); opacity: 1; }
+          60% { transform: translateY(155px) translateX(42px) rotate(290deg); opacity: 1; }
+          74% { transform: translateY(185px) translateX(47px) rotate(340deg) scale(0.9); opacity: 1; }
+          85% { transform: translateY(205px) translateX(45px) rotate(355deg) scale(0.7); opacity: 0.8; }
+          93% { transform: translateY(218px) translateX(45px) rotate(360deg) scale(0.4); opacity: 0.4; }
+          100% { transform: translateY(222px) translateX(45px) rotate(360deg) scale(0); opacity: 0; }
         }
         @keyframes coinMissLeft {
           0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
           8% { opacity: 1; }
-          40% { transform: translateY(70px) translateX(-5px) rotate(150deg); opacity: 1; }
-          60% { transform: translateY(100px) translateX(-15px) rotate(250deg); opacity: 1; }
-          75% { transform: translateY(115px) translateX(-35px) rotate(320deg); opacity: 1; }
-          85% { transform: translateY(100px) translateX(-55px) rotate(400deg); opacity: 0.8; }
-          100% { transform: translateY(130px) translateX(-80px) rotate(500deg); opacity: 0; }
+          30% { transform: translateY(60px) translateX(-20px) rotate(150deg); opacity: 1; }
+          50% { transform: translateY(100px) translateX(-40px) rotate(280deg); opacity: 1; }
+          70% { transform: translateY(130px) translateX(-60px) rotate(400deg); opacity: 0.9; }
+          85% { transform: translateY(150px) translateX(-80px) rotate(500deg); opacity: 0.6; }
+          100% { transform: translateY(180px) translateX(-100px) rotate(600deg); opacity: 0; }
         }
         @keyframes coinMissRight {
           0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
           8% { opacity: 1; }
-          40% { transform: translateY(70px) translateX(5px) rotate(-150deg); opacity: 1; }
-          60% { transform: translateY(100px) translateX(15px) rotate(-250deg); opacity: 1; }
-          75% { transform: translateY(115px) translateX(35px) rotate(-320deg); opacity: 1; }
-          85% { transform: translateY(100px) translateX(55px) rotate(-400deg); opacity: 0.8; }
-          100% { transform: translateY(130px) translateX(80px) rotate(-500deg); opacity: 0; }
+          30% { transform: translateY(60px) translateX(60px) rotate(-150deg); opacity: 1; }
+          50% { transform: translateY(100px) translateX(90px) rotate(-280deg); opacity: 1; }
+          70% { transform: translateY(130px) translateX(110px) rotate(-400deg); opacity: 0.9; }
+          85% { transform: translateY(150px) translateX(130px) rotate(-500deg); opacity: 0.6; }
+          100% { transform: translateY(180px) translateX(150px) rotate(-600deg); opacity: 0; }
         }
         @keyframes networkPulse {
           0%, 100% { filter: drop-shadow(0 0 6px rgba(0, 210, 106, 0.25)); }
@@ -1249,6 +1275,16 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
         }
         .briefcase-clickable:hover {
           filter: drop-shadow(0 6px 20px rgba(0,210,106,0.5));
+        }
+        @keyframes coinToViking {
+          0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+          5% { opacity: 1; }
+          25% { transform: translateY(50px) translateX(-50px) rotate(180deg); opacity: 1; }
+          45% { transform: translateY(90px) translateX(-100px) rotate(320deg); opacity: 1; }
+          60% { transform: translateY(120px) translateX(-130px) rotate(420deg); opacity: 1; }
+          75% { transform: translateY(140px) translateX(-150px) rotate(500deg); opacity: 0.9; }
+          85% { transform: translateY(150px) translateX(-160px) rotate(560deg); opacity: 0.5; }
+          100% { transform: translateY(160px) translateX(-170px) rotate(600deg); opacity: 0; }
         }
       `}</style>
 
@@ -1397,70 +1433,36 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
         {/* "Crypto Bank" text on top of the rig */}
         <text x="200" y="62" textAnchor="middle" fill="#00D26A" fontSize="18" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.15em">CRYPTO BANK</text>
 
-        {/* Matching Server-Style Briefcase - Clickable Login Button */}
-        <g
-          className="briefcase-clickable"
-          onClick={() => navigate('/login')}
-        >
-          {/* Briefcase body */}
-          <rect x="115" y="285" width="170" height="115" rx="8" fill="url(#briefcaseBody)" stroke={isDark ? '#4a4a4a' : '#a0a0a0'} strokeWidth="3" />
+        {/* Treasure Chest Image - SUPER SIZED, moved up */}
+        <image
+          href="/treasure-chest.svg"
+          x="50"
+          y="120"
+          width="380"
+          height="380"
+          preserveAspectRatio="xMidYMid meet"
+        />
 
-          {/* Green accent trim on top */}
-          <rect x="115" y="282" width="170" height="6" rx="3" fill="url(#greenAccent)" />
-
-          {/* Handle - matching style */}
-          <path d="M 165 272 Q 165 252 200 252 Q 235 252 235 272" fill="none" stroke={isDark ? '#2a2a2a' : '#909090'} strokeWidth="7" strokeLinecap="round" />
-          <path d="M 165 272 Q 165 256 200 256 Q 235 256 235 272" fill="none" stroke="url(#greenAccent)" strokeWidth="4" strokeLinecap="round" />
-
-          {/* Briefcase lid separation line */}
-          <line x1="115" y1="318" x2="285" y2="318" stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="2" />
-
-          {/* Green latches */}
-          <rect x="140" y="310" width="26" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
-          <rect x="234" y="310" width="26" height="16" rx="4" fill="url(#greenAccent)" stroke="#00A854" strokeWidth="1.5" />
-          <circle cx="153" cy="318" r="4" fill="#00A854" />
-          <circle cx="247" cy="318" r="4" fill="#00A854" />
-
-          {/* Center coin entry slot */}
-          <rect x="172" y="292" width="56" height="14" rx="4" fill={isDark ? '#050505' : '#1a1a1a'} stroke="#00D26A" strokeWidth="1.5" />
-
-          {/* Large LOGIN Button with Key Icon */}
-          <rect x="130" y="335" width="140" height="50" rx="10" fill="#00D26A" stroke="#00ff7f" strokeWidth="2" />
-
-          {/* Key Icon inside button */}
-          <g transform="translate(152, 352)">
-            {/* Key head (circle) */}
-            <circle cx="0" cy="8" r="7" fill="none" stroke="#000000" strokeWidth="2.5" />
-            <circle cx="0" cy="8" r="3" fill="#000000" />
-            {/* Key shaft */}
-            <rect x="6" y="6" width="18" height="4" rx="1" fill="#000000" />
-            {/* Key teeth */}
-            <rect x="16" y="10" width="3" height="5" fill="#000000" />
-            <rect x="21" y="10" width="3" height="4" fill="#000000" />
-          </g>
-
-          {/* LOGIN text */}
-          <text x="220" y="367" textAnchor="middle" fill="#000000" fontSize="16" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="0.1em">LOGIN</text>
-
-          {/* Green corner accents */}
-          <path d="M 115 300 L 115 285 L 130 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
-          <path d="M 285 300 L 285 285 L 270 285" fill="none" stroke="#00D26A" strokeWidth="2.5" />
-          <path d="M 115 385 L 115 400 L 130 400" fill="none" stroke="#00D26A" strokeWidth="2.5" />
-          <path d="M 285 385 L 285 400 L 270 400" fill="none" stroke="#00D26A" strokeWidth="2.5" />
-
-          {/* Status LEDs on briefcase */}
-          <circle cx="128" cy="395" r="3" style={{ animation: 'serverBlink 1.2s ease-in-out infinite' }} />
-          <circle cx="272" cy="395" r="3" fill="#F7931A"><animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" /></circle>
-        </g>
+        {/* Viking Character Image - BIGGER SIZE */}
+        <image
+          href="/viking.svg"
+          x="-90"
+          y="150"
+          width="320"
+          height="370"
+          preserveAspectRatio="xMidYMid meet"
+        />
 
         {/* Animated Coins with different behaviors - bigger coins */}
         {coins.map((coin) => {
           const animName = coin.type === 'enter' ? 'coinEnter' :
                           coin.type === 'bounce' ? 'coinBounce' :
+                          coin.type === 'toViking' ? 'coinToViking' :
                           coin.type === 'missLeft' ? 'coinMissLeft' : 'coinMissRight';
+          const duration = coin.type === 'toViking' ? '10s' : '14s';
           return (
             <g key={coin.id} style={{
-              animation: `${animName} 14s ease-in-out infinite`,
+              animation: `${animName} ${duration} ease-in-out infinite`,
               animationDelay: `${coin.delay}s`,
             }}>
               <g transform="translate(200, 195)" filter="url(#coinGlow)">
@@ -1759,8 +1761,8 @@ const LiveTicker: React.FC<{ colors: any; isDark: boolean }> = ({ colors, isDark
 
   return (
     <div style={{
-      background: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(10, 35, 65, 0.85)',
-      borderBottom: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.2)' : 'rgba(255, 255, 255, 0.3)'}`,
+      background: isDark ? 'rgba(0, 0, 0, 0.8)' : '#f8fafc',
+      borderBottom: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.2)' : '#e5e7eb'}`,
       overflow: 'hidden',
       padding: '12px 0',
     }}>
@@ -1776,8 +1778,8 @@ const LiveTicker: React.FC<{ colors: any; isDark: boolean }> = ({ colors, isDark
         {tickerItems.map((item, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap' }}>
             <CryptoIcon symbol={item.symbol} size={20} />
-            <span style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>{item.symbol}</span>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>
+            <span style={{ fontWeight: 600, color: isDark ? '#ffffff' : '#000000', fontSize: '13px' }}>{item.symbol}</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: isDark ? '#ffffff' : '#000000', fontSize: '13px' }}>
               ${item.price < 1 ? item.price.toFixed(4) : item.price.toLocaleString()}
             </span>
             <span style={{
@@ -1941,7 +1943,7 @@ export const HomeScreen: React.FC = () => {
               >
                 <motion.button
                   onClick={() => !link.hasDropdown && navigate(link.href)}
-                  whileHover={{ color: '#00D26A', background: 'rgba(255,255,255,0.1)' }}
+                  whileHover={{ color: '#00D26A', background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1949,8 +1951,7 @@ export const HomeScreen: React.FC = () => {
                     padding: '10px 16px',
                     fontSize: '14px',
                     fontWeight: 600,
-                    color: isDark ? 'rgba(255,255,255,0.85)' : '#ffffff',
-                    textShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.5)',
+                    color: isDark ? 'rgba(255,255,255,0.85)' : '#000000',
                     background: 'none',
                     border: 'none',
                     borderRadius: '10px',
@@ -1993,7 +1994,7 @@ export const HomeScreen: React.FC = () => {
                           padding: '10px 16px',
                           fontSize: '14px',
                           fontWeight: 500,
-                          color: isDark ? 'rgba(255,255,255,0.9)' : '#374151',
+                          color: isDark ? 'rgba(255,255,255,0.9)' : '#000000',
                           background: 'none',
                           border: 'none',
                           borderRadius: '8px',
@@ -2017,23 +2018,22 @@ export const HomeScreen: React.FC = () => {
           {!isMobile && (
             <>
               <motion.button
-                whileHover={{ background: 'rgba(255,255,255,0.15)' }}
+                whileHover={{ background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }}
                 style={{
                   padding: '10px',
                   background: 'transparent',
                   border: 'none',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  color: isDark ? 'rgba(255,255,255,0.85)' : '#ffffff',
+                  color: isDark ? 'rgba(255,255,255,0.85)' : '#000000',
                   display: 'flex',
-                  filter: isDark ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
                 }}
               >
                 <Search size={18} />
               </motion.button>
               {/* Theme Toggle Button */}
               <motion.button
-                whileHover={{ background: 'rgba(255,255,255,0.15)' }}
+                whileHover={{ background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={toggleTheme}
                 title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -2043,12 +2043,11 @@ export const HomeScreen: React.FC = () => {
                   border: 'none',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  color: isDark ? '#ffd700' : '#ffd700',
+                  color: isDark ? '#ffd700' : '#6366f1',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.2s ease',
-                  filter: isDark ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
                 }}
               >
                 <AnimatePresence mode="wait">
@@ -2068,13 +2067,6 @@ export const HomeScreen: React.FC = () => {
                 variant="primary"
                 size="sm"
                 onClick={() => navigate('/login')}
-                style={{
-                  background: isDark ? 'transparent' : 'rgba(255,255,255,0.15)',
-                  color: isDark ? colors.text.secondary : '#ffffff',
-                  border: isDark ? 'none' : '1px solid rgba(255,255,255,0.3)',
-                  backdropFilter: 'blur(10px)',
-                  textShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
-                }}
               >
                 Log In
               </Button>
@@ -2091,10 +2083,10 @@ export const HomeScreen: React.FC = () => {
               onClick={() => setMenuOpen(true)}
               style={{
                 padding: '10px',
-                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)',
-                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.25)',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.15)',
                 borderRadius: '10px',
-                color: isDark ? '#ffffff' : '#ffffff',
+                color: isDark ? '#ffffff' : '#000000',
                 cursor: 'pointer',
                 display: 'flex',
               }}
@@ -2270,12 +2262,12 @@ export const HomeScreen: React.FC = () => {
 
       {/* Hero Section - Premium Cinematic Bull vs Bear Integration */}
       <section style={{
-        minHeight: isMobile ? 'auto' : '560px',
+        minHeight: isMobile ? 'auto' : '480px',
         display: 'flex',
         alignItems: 'center',
         position: 'relative',
-        paddingTop: isMobile ? '24px' : '40px',
-        paddingBottom: isMobile ? '32px' : '48px',
+        paddingTop: isMobile ? '16px' : '20px',
+        paddingBottom: isMobile ? '24px' : '28px',
         overflow: 'hidden',
       }}>
         {/* Dark mode: Pure black background */}
@@ -2313,7 +2305,7 @@ export const HomeScreen: React.FC = () => {
           padding: isMobile ? '0 16px' : '0 32px',
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : '1.1fr 0.9fr',
-          gap: isMobile ? '32px' : '40px',
+          gap: isMobile ? '24px' : '32px',
           alignItems: 'center',
           position: 'relative',
           zIndex: 1,
@@ -2362,10 +2354,10 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05, duration: 0.3 }}
               style={{
-                fontSize: isMobile ? '32px' : '52px',
+                fontSize: isMobile ? '30px' : '46px',
                 fontWeight: 900,
                 lineHeight: 1.1,
-                marginBottom: '16px',
+                marginBottom: '12px',
                 color: isDark ? '#ffffff' : '#000000',
                 textShadow: isDark
                   ? '0 2px 15px rgba(0,0,0,0.8), 0 0 30px rgba(0, 210, 106, 0.3)'
@@ -2391,12 +2383,12 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
               style={{
-                fontSize: isMobile ? '15px' : '18px',
+                fontSize: isMobile ? '14px' : '16px',
                 fontWeight: 600,
                 color: isDark ? 'rgba(255,255,255,0.95)' : '#333333',
-                lineHeight: 1.6,
-                marginBottom: '24px',
-                maxWidth: isMobile ? '100%' : '450px',
+                lineHeight: 1.5,
+                marginBottom: '18px',
+                maxWidth: isMobile ? '100%' : '440px',
                 textShadow: isDark
                   ? '0 1px 4px rgba(0,0,0,0.6)'
                   : 'none',
@@ -2419,19 +2411,19 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.3 }}
               style={{
-                marginBottom: '24px',
-                maxWidth: isMobile ? '100%' : '420px',
+                marginBottom: '16px',
+                maxWidth: isMobile ? '100%' : '400px',
               }}
             >
               <div style={{
                 display: 'flex',
-                gap: '10px',
+                gap: '8px',
                 flexDirection: isMobile ? 'column' : 'row',
-                padding: '6px',
+                padding: '5px',
                 background: isDark
                   ? 'rgba(0, 0, 0, 0.5)'
                   : 'rgba(255, 255, 255, 0.95)',
-                borderRadius: '14px',
+                borderRadius: '12px',
                 border: isDark
                   ? '1px solid rgba(255,255,255,0.12)'
                   : '1px solid rgba(0,0,0,0.08)',
@@ -2446,11 +2438,11 @@ export const HomeScreen: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   style={{
                     flex: 1,
-                    padding: '14px 18px',
+                    padding: '12px 16px',
                     background: 'transparent',
                     border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '15px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
                     fontWeight: 500,
                     color: isDark ? '#ffffff' : '#000000',
                     outline: 'none',
@@ -2462,10 +2454,10 @@ export const HomeScreen: React.FC = () => {
                   onClick={() => navigate('/register')}
                   style={{
                     whiteSpace: 'nowrap',
-                    padding: '14px 28px',
-                    borderRadius: '10px',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
                     fontWeight: 700,
-                    fontSize: '15px',
+                    fontSize: '14px',
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     border: 'none',
                     boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
@@ -2542,19 +2534,21 @@ export const HomeScreen: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Right Content - Crypto Mining Rig Animation */}
-          <motion.div
-            initial={{ opacity: 0, x: 20, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.5, ease: 'easeOut' }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <CryptoMiningRig isDark={isDark} isMobile={isMobile} />
-          </motion.div>
+          {/* Right Content - Crypto Mining Rig Animation - HIDDEN ON MOBILE */}
+          {!isMobile && (
+            <motion.div
+              initial={{ opacity: 0, x: 20, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5, ease: 'easeOut' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CryptoMiningRig isDark={isDark} isMobile={false} />
+            </motion.div>
+          )}
         </div>
       </section>
 
@@ -2948,53 +2942,107 @@ export const HomeScreen: React.FC = () => {
             </p>
           </motion.div>
 
+          {/* Electroneum-style Banner Cards */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-            gap: isMobile ? '16px' : '24px',
+            gap: isMobile ? '20px' : '28px',
           }}>
-            {coreFeatures.map((feature, i) => (
+            {coreFeaturesBanners.map((banner, i) => (
               <motion.div
-                key={feature.title}
+                key={banner.title}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: i * 0.15 }}
+                style={{
+                  background: isDark
+                    ? 'linear-gradient(145deg, rgba(30,30,30,0.95) 0%, rgba(20,20,20,0.98) 100%)'
+                    : '#ffffff',
+                  borderRadius: '20px',
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e7eb',
+                  overflow: 'hidden',
+                  boxShadow: isDark
+                    ? '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
+                    : '0 4px 20px rgba(0,0,0,0.08)',
+                }}
               >
-                <GlassPanel style={{ padding: isMobile ? '24px' : '32px' }} hover isDark={isDark}>
-                  <div style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '16px',
-                    background: 'rgba(0, 210, 106, 0.1)',
-                    border: '1px solid rgba(0, 210, 106, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: colors.primary[400],
-                    marginBottom: '20px',
-                    boxShadow: '0 0 30px rgba(0, 210, 106, 0.15)',
-                  }}>
-                    {feature.icon}
-                  </div>
-                  <h3 style={{
-                    fontSize: '18px',
+                {/* Category Header */}
+                <div style={{
+                  padding: '24px 28px 16px',
+                  borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #f0f0f0',
+                }}>
+                  <span style={{
+                    fontSize: '11px',
                     fontWeight: 700,
-                    color: '#ffffff',
-                    marginBottom: '12px',
-                    textShadow: '0 2px 6px rgba(0,0,0,0.5)',
+                    color: '#00D26A',
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
                   }}>
-                    {feature.title}
+                    {banner.category}
+                  </span>
+                  <h3 style={{
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    color: isDark ? '#ffffff' : '#000000',
+                    marginTop: '8px',
+                    letterSpacing: '-0.02em',
+                  }}>
+                    {banner.title}
                   </h3>
-                  <p style={{
-                    fontSize: '14px',
-                    color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.9)',
-                    lineHeight: 1.7,
-                    textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-                  }}>
-                    {feature.description}
-                  </p>
-                </GlassPanel>
+                </div>
+
+                {/* Features List */}
+                <div style={{ padding: '20px 28px 28px' }}>
+                  {banner.features.map((feature, fi) => (
+                    <div
+                      key={feature.title}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '16px',
+                        marginBottom: fi === 0 ? '24px' : '0',
+                        paddingBottom: fi === 0 ? '24px' : '0',
+                        borderBottom: fi === 0 ? (isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #f0f0f0') : 'none',
+                      }}
+                    >
+                      {/* Icon */}
+                      <div style={{
+                        width: '52px',
+                        height: '52px',
+                        minWidth: '52px',
+                        borderRadius: '14px',
+                        background: isDark ? 'rgba(0, 210, 106, 0.12)' : 'rgba(0, 210, 106, 0.1)',
+                        border: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.25)' : 'rgba(0, 210, 106, 0.2)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#00D26A',
+                      }}>
+                        {feature.icon}
+                      </div>
+
+                      {/* Text */}
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{
+                          fontSize: '16px',
+                          fontWeight: 700,
+                          color: isDark ? '#ffffff' : '#000000',
+                          marginBottom: '6px',
+                        }}>
+                          {feature.title}
+                        </h4>
+                        <p style={{
+                          fontSize: '13px',
+                          color: isDark ? 'rgba(255,255,255,0.65)' : '#555555',
+                          lineHeight: 1.5,
+                        }}>
+                          {feature.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </motion.div>
             ))}
           </div>

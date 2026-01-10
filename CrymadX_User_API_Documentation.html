@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrymadX User Dashboard - API Documentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 40px; background: #fff; }
+        @media print { body { padding: 20px; font-size: 11px; } .page-break { page-break-before: always; } h2 { page-break-after: avoid; } pre, table { page-break-inside: avoid; } }
+        .header { text-align: center; padding: 40px 0; border-bottom: 3px solid #02c076; margin-bottom: 40px; }
+        .header h1 { color: #02c076; font-size: 2.5em; margin-bottom: 10px; }
+        .header .subtitle { color: #666; font-size: 1.2em; }
+        .meta-info { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
+        .meta-info span { background: #f5f5f5; padding: 8px 16px; border-radius: 20px; font-size: 0.9em; }
+        .toc { background: #f8f9fa; padding: 30px; border-radius: 10px; margin-bottom: 40px; }
+        .toc h2 { color: #02c076; margin-bottom: 20px; }
+        .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+        .toc a { color: #333; text-decoration: none; padding: 8px 12px; display: block; border-radius: 5px; }
+        h2 { color: #02c076; font-size: 1.8em; margin: 40px 0 20px; padding-bottom: 10px; border-bottom: 2px solid #e9ecef; }
+        h3 { color: #1a1a2e; font-size: 1.3em; margin: 30px 0 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .method { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.75em; font-weight: bold; color: #fff; }
+        .method.get { background: #28a745; } .method.post { background: #007bff; } .method.put { background: #ffc107; color: #000; } .method.delete { background: #dc3545; }
+        .endpoint { font-family: 'Courier New', monospace; background: #f4f4f4; padding: 4px 8px; border-radius: 4px; font-size: 0.95em; }
+        p { margin: 10px 0; }
+        pre { background: #1a1a2e; color: #e9ecef; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 15px 0; font-size: 0.9em; }
+        code { font-family: 'Courier New', monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+        th, td { border: 1px solid #e9ecef; padding: 12px; text-align: left; }
+        th { background: #02c076; color: #fff; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .section { margin-bottom: 60px; }
+        .footer { text-align: center; padding: 40px 0; border-top: 2px solid #e9ecef; margin-top: 60px; color: #666; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .stat-card { background: linear-gradient(135deg, #02c076, #00a86b); color: #fff; padding: 20px; border-radius: 10px; text-align: center; }
+        .stat-card h4 { font-size: 2em; margin-bottom: 5px; }
+        .auth-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7em; margin-left: 10px; }
+        .auth-badge.required { background: #dc3545; color: #fff; }
+        .auth-badge.public { background: #28a745; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CrymadX User Dashboard</h1>
+        <p class="subtitle">Complete API Documentation for Frontend Developers</p>
+        <div class="meta-info">
+            <span><strong>Version:</strong> 1.0.0</span>
+            <span><strong>Base URL:</strong> https://api.crymadx.com/v1</span>
+            <span><strong>Last Updated:</strong> December 28, 2025</span>
+        </div>
+    </div>
+
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc-grid">
+            <a>1. Overview</a><a>2. Authentication</a><a>3. User / Profile</a><a>4. Wallet</a>
+            <a>5. Trading</a><a>6. Markets</a><a>7. P2P Trading</a><a>8. Earn / Savings</a>
+            <a>9. Vault</a><a>10. Referral</a><a>11. Rewards</a><a>12. Support</a>
+            <a>13. Notifications</a><a>14. WebSocket</a><a>15. Data Models</a><a>16. Errors</a>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><h4>80+</h4><p>API Endpoints</p></div>
+        <div class="stat-card"><h4>17</h4><p>Screen Modules</p></div>
+        <div class="stat-card"><h4>15</h4><p>WebSocket Events</p></div>
+        <div class="stat-card"><h4>10</h4><p>Data Models</p></div>
+    </div>
+
+    <div class="section">
+        <h2>1. Overview</h2>
+        <p>The CrymadX API provides programmatic access to the CrymadX cryptocurrency exchange platform.</p>
+        <h3>Request Headers</h3>
+        <pre><code>Content-Type: application/json
+Accept: application/json
+Authorization: Bearer &lt;access_token&gt;</code></pre>
+        <h3>Response Format</h3>
+        <pre><code>{ "success": true, "data": { ... }, "message": "Operation successful" }</code></pre>
+        <h3>Token Types</h3>
+        <table><tr><th>Token</th><th>Expiry</th><th>Usage</th></tr><tr><td>Access Token</td><td>15 min</td><td>API requests</td></tr><tr><td>Refresh Token</td><td>7 days</td><td>Get new access token</td></tr></table>
+        <h3>Rate Limiting</h3>
+        <table><tr><th>Endpoint</th><th>Limit</th><th>Window</th></tr><tr><td>Public</td><td>100</td><td>1 min</td></tr><tr><td>Authenticated</td><td>300</td><td>1 min</td></tr><tr><td>Trading</td><td>50</td><td>1 sec</td></tr><tr><td>Withdrawals</td><td>10</td><td>1 min</td></tr></table>
+    </div>
+
+    <div class="section page-break">
+        <h2>2. Authentication</h2>
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/register</span> <span class="auth-badge public">Public</span></h3>
+        <p>Creates a new user account.</p>
+        <pre><code>// Request
+{ "full_name": "John Doe", "email": "john@example.com", "phone": "+1234567890",
+  "password": "SecurePass123!", "confirm_password": "SecurePass123!",
+  "referral_code": "REF123", "terms_accepted": true }
+
+// Response (201)
+{ "success": true, "data": { "user": { "id": "usr_abc123", "email": "john@example.com" },
+  "access_token": "eyJ...", "refresh_token": "eyJ...", "expires_in": 900 }}</code></pre>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/login</span> <span class="auth-badge public">Public</span></h3>
+        <p>Authenticate user with credentials.</p>
+        <pre><code>// Request
+{ "email": "john@example.com", "password": "SecurePass123!", "remember_me": true }
+
+// Response
+{ "success": true, "data": { "user": {...}, "access_token": "eyJ...", "requires_2fa": false }}</code></pre>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/login/2fa</span> <span class="auth-badge public">Public</span></h3>
+        <p>Complete login with 2FA code.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/refresh</span> <span class="auth-badge public">Public</span></h3>
+        <p>Refresh access token.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/logout</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Logout and invalidate tokens.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/forgot-password</span> <span class="auth-badge public">Public</span></h3>
+        <p>Request password reset email.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/reset-password</span> <span class="auth-badge public">Public</span></h3>
+        <p>Reset password with token.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/verify-email</span> <span class="auth-badge public">Public</span></h3>
+        <p>Verify email with code.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/google</span> <span class="auth-badge public">Public</span></h3>
+        <p>Login/Register with Google OAuth.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/auth/apple</span> <span class="auth-badge public">Public</span></h3>
+        <p>Login/Register with Apple OAuth.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>3. User / Profile</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/user/profile</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get current user profile.</p>
+        <pre><code>// Response
+{ "id": "usr_abc123", "full_name": "John Doe", "email": "john@example.com",
+  "kyc_status": "verified", "kyc_level": 2, "two_factor_enabled": true }</code></pre>
+
+        <h3><span class="method put">PUT</span> <span class="endpoint">/user/profile</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Update user profile.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/user/avatar</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Upload profile avatar (multipart/form-data).</p>
+
+        <h3><span class="method put">PUT</span> <span class="endpoint">/user/password</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Change password.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/user/login-history</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get login history.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/user/2fa/enable</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Enable 2FA authentication.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/user/2fa/verify</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Verify and activate 2FA.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/user/2fa/disable</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Disable 2FA authentication.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/user/api-keys</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get API keys list.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/user/api-keys</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Create new API key.</p>
+
+        <h3><span class="method delete">DELETE</span> <span class="endpoint">/user/api-keys/:keyId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Delete API key.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>4. Wallet</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/wallet/assets</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get all wallet assets with balances.</p>
+        <pre><code>// Response
+{ "total_balance_usd": 15420.50, "assets": [
+  { "symbol": "BTC", "name": "Bitcoin", "spot_available": 0.5,
+    "spot_in_order": 0.1, "funding_available": 0.05, "price": 42000.00 }
+]}</code></pre>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/wallet/deposit/address/:symbol</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get deposit address for asset.</p>
+        <pre><code>// Response
+{ "symbol": "BTC", "network": "Bitcoin", "address": "bc1q...",
+  "qr_code": "data:image/png;base64,...", "min_deposit": 0.0001 }</code></pre>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/wallet/withdraw</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Request withdrawal.</p>
+        <pre><code>// Request
+{ "symbol": "BTC", "network": "Bitcoin", "address": "bc1q...",
+  "amount": 0.5, "2fa_code": "123456" }</code></pre>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/wallet/withdraw/fee/:symbol</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get withdrawal fee.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/wallet/convert</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Convert between assets.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/wallet/convert/quote</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get conversion quote.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/wallet/transfer</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Transfer between spot and funding.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/wallet/transactions</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get transaction history.</p>
+        <table><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>type</td><td>string</td><td>deposit, withdraw, convert, transfer</td></tr>
+        <tr><td>asset</td><td>string</td><td>Filter by asset</td></tr>
+        <tr><td>status</td><td>string</td><td>pending, completed, failed</td></tr></table>
+    </div>
+
+    <div class="section page-break">
+        <h2>5. Trading</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/trading/pairs</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get all trading pairs.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/trading/ticker/:pair</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get ticker data.</p>
+        <pre><code>// Response
+{ "pair": "BTC/USDT", "last_price": 42150.00, "price_change_24h": 850.00,
+  "high_24h": 42500.00, "low_24h": 41200.00, "volume_24h": 15000000.00 }</code></pre>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/trading/orderbook/:pair</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get order book.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/trading/trades/:pair</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get recent trades.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/trading/order</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Place a new order.</p>
+        <pre><code>// Request
+{ "pair": "BTC/USDT", "side": "buy", "type": "limit", "price": 42000.00, "amount": 0.1 }
+
+// Response
+{ "order_id": "ord_abc123", "status": "open", "created_at": "2025-12-28T10:30:00Z" }</code></pre>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/trading/orders</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get open orders.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/trading/orders/history</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get order history.</p>
+
+        <h3><span class="method delete">DELETE</span> <span class="endpoint">/trading/orders/:orderId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Cancel an order.</p>
+
+        <h3><span class="method delete">DELETE</span> <span class="endpoint">/trading/orders</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Cancel all open orders.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/trading/my-trades</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get user's trade history.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>6. Markets</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/markets</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get all market data.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/markets/:symbol</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get specific market data.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/markets/stats</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get market statistics.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/markets/favorites</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get user's favorite markets.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/markets/favorites/:symbol</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Add to favorites.</p>
+
+        <h3><span class="method delete">DELETE</span> <span class="endpoint">/markets/favorites/:symbol</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Remove from favorites.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>7. P2P Trading</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/p2p/orders</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get P2P order listings.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/p2p/orders</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Create P2P order.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/p2p/trade/:orderId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Initiate P2P trade.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/p2p/trades</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get user's P2P trades.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/p2p/trades/:tradeId/payment-sent</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Mark payment as sent.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/p2p/trades/:tradeId/payment-received</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Confirm payment received.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/p2p/trades/:tradeId/cancel</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Cancel P2P trade.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/p2p/trades/:tradeId/dispute</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Open dispute on trade.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/p2p/trades/:tradeId/chat</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Send chat message.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>8. Earn / Savings</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/earn/products</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get all savings products.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/earn/subscribe</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Subscribe to savings product.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/earn/subscriptions</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get user's subscriptions.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/earn/redeem/:subscriptionId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Redeem from savings.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/earn/interest-history</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get interest history.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>9. Vault</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/vault/options</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get vault lock options.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/vault/create</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Create new vault lock.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/vault/positions</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get user's vault positions.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/vault/break/:positionId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Break vault early (with penalty).</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/vault/claim/:positionId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Claim matured vault.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>10. Referral</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/referral/stats</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get referral statistics.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/referral/list</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get referral list.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/referral/payouts</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get payout history.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/referral/withdraw</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Withdraw referral earnings.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>11. Rewards</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/rewards/tasks</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get available reward tasks.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/rewards/claim/:taskId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Claim task reward.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/rewards/tiers</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get reward tiers.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/rewards/history</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get reward history.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>12. Support / Tickets</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/support/categories</span> <span class="auth-badge public">Public</span></h3>
+        <p>Get support categories.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/support/tickets</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Create support ticket.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/support/tickets</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get user's tickets.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/support/tickets/:ticketId</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get ticket details.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/support/tickets/:ticketId/reply</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Reply to ticket.</p>
+
+        <h3><span class="method post">POST</span> <span class="endpoint">/support/tickets/:ticketId/close</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Close ticket.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>13. Notifications</h2>
+        <h3><span class="method get">GET</span> <span class="endpoint">/notifications</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get user notifications.</p>
+
+        <h3><span class="method put">PUT</span> <span class="endpoint">/notifications/:notificationId/read</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Mark as read.</p>
+
+        <h3><span class="method put">PUT</span> <span class="endpoint">/notifications/read-all</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Mark all as read.</p>
+
+        <h3><span class="method get">GET</span> <span class="endpoint">/notifications/settings</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Get notification settings.</p>
+
+        <h3><span class="method put">PUT</span> <span class="endpoint">/notifications/settings</span> <span class="auth-badge required">Auth</span></h3>
+        <p>Update notification settings.</p>
+    </div>
+
+    <div class="section page-break">
+        <h2>14. WebSocket Events</h2>
+        <p><strong>URL:</strong> <code>wss://api.crymadx.com/ws</code></p>
+        <h3>Public Channels</h3>
+        <table><tr><th>Channel</th><th>Event</th><th>Description</th></tr>
+        <tr><td>ticker:{pair}</td><td>ticker_update</td><td>Real-time price updates</td></tr>
+        <tr><td>orderbook:{pair}</td><td>orderbook_update</td><td>Order book changes</td></tr>
+        <tr><td>trades:{pair}</td><td>trade</td><td>New trades executed</td></tr>
+        <tr><td>markets</td><td>market_update</td><td>All market updates</td></tr></table>
+        <h3>Private Channels (Auth Required)</h3>
+        <table><tr><th>Channel</th><th>Event</th><th>Description</th></tr>
+        <tr><td>user:{userId}</td><td>order_update</td><td>Order status changes</td></tr>
+        <tr><td>user:{userId}</td><td>trade_executed</td><td>User's trade executed</td></tr>
+        <tr><td>user:{userId}</td><td>balance_update</td><td>Balance changes</td></tr>
+        <tr><td>user:{userId}</td><td>deposit_confirmed</td><td>Deposit confirmed</td></tr>
+        <tr><td>user:{userId}</td><td>withdrawal_processed</td><td>Withdrawal processed</td></tr>
+        <tr><td>user:{userId}</td><td>notification</td><td>New notification</td></tr>
+        <tr><td>p2p:{tradeId}</td><td>p2p_message</td><td>P2P chat message</td></tr></table>
+    </div>
+
+    <div class="section page-break">
+        <h2>15. Data Models</h2>
+        <h3>User</h3>
+        <pre><code>interface User {
+  id: string; full_name: string; email: string; phone: string;
+  kyc_status: 'pending' | 'verified' | 'rejected'; kyc_level: 0|1|2|3;
+  two_factor_enabled: boolean; email_verified: boolean;
+}</code></pre>
+        <h3>WalletAsset</h3>
+        <pre><code>interface WalletAsset {
+  symbol: string; name: string; spot_available: number;
+  spot_in_order: number; funding_available: number; price: number;
+}</code></pre>
+        <h3>Order</h3>
+        <pre><code>interface Order {
+  id: string; pair: string; side: 'buy'|'sell'; type: 'market'|'limit';
+  price: number; amount: number; filled: number; status: string;
+}</code></pre>
+        <h3>Transaction</h3>
+        <pre><code>interface Transaction {
+  id: string; type: 'deposit'|'withdraw'|'convert'|'transfer';
+  asset: string; amount: number; status: string; tx_hash: string;
+}</code></pre>
+    </div>
+
+    <div class="section page-break">
+        <h2>16. Error Codes</h2>
+        <h3>Authentication Errors</h3>
+        <table><tr><th>Code</th><th>HTTP</th><th>Description</th></tr>
+        <tr><td>AUTH_INVALID_CREDENTIALS</td><td>401</td><td>Invalid email or password</td></tr>
+        <tr><td>AUTH_TOKEN_EXPIRED</td><td>401</td><td>Access token has expired</td></tr>
+        <tr><td>AUTH_TOKEN_INVALID</td><td>401</td><td>Invalid token</td></tr>
+        <tr><td>AUTH_2FA_REQUIRED</td><td>403</td><td>2FA verification required</td></tr></table>
+        <h3>Wallet Errors</h3>
+        <table><tr><th>Code</th><th>HTTP</th><th>Description</th></tr>
+        <tr><td>WALLET_INSUFFICIENT_BALANCE</td><td>400</td><td>Insufficient funds</td></tr>
+        <tr><td>WALLET_INVALID_ADDRESS</td><td>400</td><td>Invalid address</td></tr>
+        <tr><td>WALLET_MIN_AMOUNT</td><td>400</td><td>Below minimum</td></tr></table>
+        <h3>Trading Errors</h3>
+        <table><tr><th>Code</th><th>HTTP</th><th>Description</th></tr>
+        <tr><td>TRADING_PAIR_NOT_FOUND</td><td>404</td><td>Pair not found</td></tr>
+        <tr><td>TRADING_ORDER_FAILED</td><td>400</td><td>Order failed</td></tr>
+        <tr><td>TRADING_MIN_ORDER</td><td>400</td><td>Below min order</td></tr></table>
+        <h3>General Errors</h3>
+        <table><tr><th>Code</th><th>HTTP</th><th>Description</th></tr>
+        <tr><td>RATE_LIMIT_EXCEEDED</td><td>429</td><td>Too many requests</td></tr>
+        <tr><td>VALIDATION_ERROR</td><td>422</td><td>Validation failed</td></tr>
+        <tr><td>SERVER_ERROR</td><td>500</td><td>Internal server error</td></tr></table>
+    </div>
+
+    <div class="footer">
+        <p><strong>CrymadX User Dashboard API Documentation</strong></p>
+        <p>Version 1.0.0 | December 28, 2025</p>
+        <p>For Admin Dashboard API, see <code>CrymadX_Admin_API_Documentation.html</code></p>
+    </div>
+</body>
+</html>

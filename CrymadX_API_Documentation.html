@@ -1,0 +1,2675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrymadX API Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #0a0b0d;
+      color: #e4e4e7;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 2.5rem; margin-bottom: 10px; background: linear-gradient(135deg, #02c076, #00d9ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    h2 { font-size: 1.8rem; margin: 40px 0 20px; padding-bottom: 10px; border-bottom: 1px solid #27272a; color: #02c076; }
+    h3 { font-size: 1.3rem; margin: 30px 0 15px; color: #fafafa; }
+    h4 { font-size: 1.1rem; margin: 20px 0 10px; color: #a1a1aa; }
+    p { margin: 10px 0; color: #a1a1aa; }
+    .subtitle { font-size: 1.1rem; color: #71717a; margin-bottom: 30px; }
+    .toc { background: #18181b; border-radius: 12px; padding: 24px; margin: 30px 0; }
+    .toc h3 { margin-top: 0; color: #02c076; }
+    .toc ul { list-style: none; columns: 2; }
+    .toc li { margin: 8px 0; }
+    .toc a { color: #71717a; text-decoration: none; transition: color 0.2s; }
+    .toc a:hover { color: #02c076; }
+    .endpoint { background: #18181b; border-radius: 12px; padding: 20px; margin: 20px 0; border: 1px solid #27272a; }
+    .endpoint-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+    .method { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .get { background: #22c55e20; color: #22c55e; }
+    .post { background: #3b82f620; color: #3b82f6; }
+    .put { background: #f59e0b20; color: #f59e0b; }
+    .patch { background: #8b5cf620; color: #8b5cf6; }
+    .delete { background: #ef444420; color: #ef4444; }
+    .path { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #fafafa; }
+    .description { color: #a1a1aa; margin-bottom: 15px; }
+    .section-title { font-size: 12px; font-weight: 600; color: #71717a; text-transform: uppercase; margin: 15px 0 8px; }
+    pre { background: #09090b; border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 13px; border: 1px solid #27272a; }
+    code { font-family: 'JetBrains Mono', monospace; color: #02c076; }
+    .params-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .params-table th, .params-table td { padding: 10px; text-align: left; border-bottom: 1px solid #27272a; }
+    .params-table th { color: #71717a; font-size: 12px; text-transform: uppercase; }
+    .params-table td { font-size: 14px; }
+    .type { color: #8b5cf6; font-family: monospace; }
+    .required { color: #ef4444; font-size: 11px; }
+    .optional { color: #71717a; font-size: 11px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px; }
+    .admin-only { background: #f59e0b20; color: #f59e0b; }
+    .user-only { background: #3b82f620; color: #3b82f6; }
+    .public { background: #22c55e20; color: #22c55e; }
+    .auth-section { background: linear-gradient(135deg, #02c07610, #00d9ff10); border: 1px solid #02c07640; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .warning { background: #f59e0b15; border: 1px solid #f59e0b40; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .warning-title { color: #f59e0b; font-weight: 600; margin-bottom: 5px; }
+    .info { background: #3b82f615; border: 1px solid #3b82f640; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .info-title { color: #3b82f6; font-weight: 600; margin-bottom: 5px; }
+    hr { border: none; border-top: 1px solid #27272a; margin: 40px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>CrymadX API Documentation</h1>
+    <p class="subtitle">Complete REST API reference for the CrymadX cryptocurrency trading platform</p>
+
+    <div class="info">
+      <div class="info-title">Base URL</div>
+      <code>https://api.crymadx.com/v1</code>
+      <p style="margin-top: 10px;">All API requests should be made to this base URL. Replace with your actual domain in production.</p>
+    </div>
+
+    <div class="toc">
+      <h3>Table of Contents</h3>
+      <ul>
+        <li><a href="#authentication">1. Authentication</a></li>
+        <li><a href="#users">2. Users Management</a></li>
+        <li><a href="#kyc">3. KYC Verification</a></li>
+        <li><a href="#wallets">4. Wallets & Balances</a></li>
+        <li><a href="#transactions">5. Transactions</a></li>
+        <li><a href="#trading">6. Trading Pairs</a></li>
+        <li><a href="#orders">7. Orders & Trading</a></li>
+        <li><a href="#p2p">8. P2P Trading</a></li>
+        <li><a href="#savings">9. Savings Products</a></li>
+        <li><a href="#referrals">10. Referrals</a></li>
+        <li><a href="#rewards">11. Rewards & Tasks</a></li>
+        <li><a href="#support">12. Support Tickets</a></li>
+        <li><a href="#cms">13. CMS & Content</a></li>
+        <li><a href="#admins">14. Admin Management</a></li>
+        <li><a href="#analytics">15. Analytics</a></li>
+        <li><a href="#system">16. System & Health</a></li>
+        <li><a href="#webhooks">17. Webhooks</a></li>
+        <li><a href="#errors">18. Error Codes</a></li>
+      </ul>
+    </div>
+
+    <!-- AUTHENTICATION -->
+    <h2 id="authentication">1. Authentication</h2>
+    <p>CrymadX uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header for all protected endpoints.</p>
+
+    <div class="auth-section">
+      <h4>Authorization Header</h4>
+      <pre><code>Authorization: Bearer &lt;your_jwt_token&gt;</code></pre>
+    </div>
+
+    <h3>1.1 User Authentication</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/register</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Register a new user account</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "email": "user@example.com",
+  "password": "securePassword123!",
+  "fullName": "John Doe",
+  "phone": "+1234567890",
+  "country": "US",
+  "referralCode": "REF123" // optional
+}</code></pre>
+      <div class="section-title">Response (201 Created)</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "usr_abc123",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "status": "pending_verification",
+      "kycStatus": "not_started",
+      "createdAt": "2024-12-28T10:00:00Z"
+    },
+    "tokens": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+      "expiresIn": 3600
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/login</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Login with email and password</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "email": "user@example.com",
+  "password": "securePassword123!",
+  "twoFactorCode": "123456" // required if 2FA enabled
+}</code></pre>
+      <div class="section-title">Response (200 OK)</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "usr_abc123",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "status": "active",
+      "kycStatus": "verified",
+      "twoFactorEnabled": true
+    },
+    "tokens": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+      "expiresIn": 3600
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/refresh</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Refresh access token using refresh token</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/logout</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Logout and invalidate tokens</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/forgot-password</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Request password reset email</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "email": "user@example.com"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/reset-password</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Reset password with token from email</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "token": "reset_token_from_email",
+  "newPassword": "newSecurePassword123!"
+}</code></pre>
+    </div>
+
+    <h3>1.2 Admin Authentication</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/auth/login</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Admin login with email and password</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "email": "admin@crymadx.com",
+  "password": "adminPassword123!",
+  "twoFactorCode": "123456" // required for admins
+}</code></pre>
+      <div class="section-title">Response (200 OK)</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "admin": {
+      "id": "adm_xyz789",
+      "email": "admin@crymadx.com",
+      "name": "Super Admin",
+      "role": "superadmin",
+      "permissions": ["all"],
+      "department": "Management"
+    },
+    "tokens": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+      "expiresIn": 1800
+    }
+  }
+}</code></pre>
+    </div>
+
+    <h3>1.3 Two-Factor Authentication</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/2fa/setup</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Generate 2FA secret and QR code</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "qrCode": "data:image/png;base64,iVBORw0KGgo...",
+    "backupCodes": ["ABC123", "DEF456", "GHI789", ...]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/auth/2fa/verify</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Verify and enable 2FA</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "code": "123456"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <span class="path">/auth/2fa</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Disable 2FA (requires current password)</p>
+    </div>
+
+    <hr>
+
+    <!-- USERS MANAGEMENT -->
+    <h2 id="users">2. Users Management</h2>
+
+    <h3>2.1 User Profile (User Frontend)</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/users/me</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get current user's profile</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "id": "usr_abc123",
+    "email": "user@example.com",
+    "fullName": "John Doe",
+    "phone": "+1234567890",
+    "country": "US",
+    "avatar": "https://cdn.crymadx.com/avatars/usr_abc123.jpg",
+    "status": "active",
+    "kycStatus": "verified",
+    "kycLevel": 2,
+    "vipTier": "gold",
+    "twoFactorEnabled": true,
+    "emailVerified": true,
+    "phoneVerified": true,
+    "tradingEnabled": true,
+    "withdrawalEnabled": true,
+    "dailyWithdrawalLimit": 100000,
+    "referralCode": "JOHN123",
+    "referredBy": "REF456",
+    "createdAt": "2024-01-15T10:00:00Z",
+    "lastLoginAt": "2024-12-28T08:30:00Z"
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/users/me</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Update current user's profile</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "fullName": "John Smith",
+  "phone": "+1987654321",
+  "avatar": "base64_encoded_image_or_url"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/users/me/change-password</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Change user's password</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "currentPassword": "oldPassword123!",
+  "newPassword": "newPassword456!"
+}</code></pre>
+    </div>
+
+    <h3>2.2 User Management (Admin)</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/users</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all users with pagination and filters</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>page</td><td class="type">integer</td><td>Page number (default: 1)</td></tr>
+        <tr><td>limit</td><td class="type">integer</td><td>Items per page (default: 20, max: 100)</td></tr>
+        <tr><td>search</td><td class="type">string</td><td>Search by name, email, or ID</td></tr>
+        <tr><td>status</td><td class="type">string</td><td>Filter by status: active, suspended, banned</td></tr>
+        <tr><td>kycStatus</td><td class="type">string</td><td>Filter by KYC: not_started, pending, verified, rejected</td></tr>
+        <tr><td>vipTier</td><td class="type">string</td><td>Filter by VIP tier: bronze, silver, gold, platinum</td></tr>
+        <tr><td>sortBy</td><td class="type">string</td><td>Sort field: createdAt, balance, volume</td></tr>
+        <tr><td>sortOrder</td><td class="type">string</td><td>Sort order: asc, desc</td></tr>
+      </table>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "users": [
+      {
+        "id": "usr_abc123",
+        "email": "user@example.com",
+        "fullName": "John Doe",
+        "status": "active",
+        "kycStatus": "verified",
+        "vipTier": "gold",
+        "totalBalance": 15000.50,
+        "tradingVolume30d": 250000,
+        "createdAt": "2024-01-15T10:00:00Z",
+        "lastLoginAt": "2024-12-28T08:30:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 1500,
+      "totalPages": 75
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/users/:userId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get detailed user information</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "usr_abc123",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "phone": "+1234567890",
+      "country": "US",
+      "status": "active",
+      "kycStatus": "verified",
+      "kycLevel": 2,
+      "vipTier": "gold",
+      "twoFactorEnabled": true,
+      "tradingEnabled": true,
+      "withdrawalEnabled": true,
+      "dailyWithdrawalLimit": 100000,
+      "referralCode": "JOHN123",
+      "referredBy": "REF456",
+      "referralCount": 15,
+      "createdAt": "2024-01-15T10:00:00Z"
+    },
+    "balances": [
+      { "asset": "BTC", "available": 1.5, "locked": 0.1, "usdValue": 65000 },
+      { "asset": "ETH", "available": 10.0, "locked": 0, "usdValue": 25000 },
+      { "asset": "USDT", "available": 5000, "locked": 500, "usdValue": 5500 }
+    ],
+    "stats": {
+      "totalBalance": 95500,
+      "tradingVolume24h": 12500,
+      "tradingVolume30d": 250000,
+      "totalDeposits": 150000,
+      "totalWithdrawals": 55000,
+      "totalTrades": 342,
+      "openOrders": 5
+    },
+    "activity": {
+      "lastLoginAt": "2024-12-28T08:30:00Z",
+      "lastLoginIp": "192.168.1.1",
+      "loginCount": 156,
+      "deviceCount": 3
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/users/:userId/status</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update user status (activate, suspend, ban)</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "status": "suspended", // active, suspended, banned
+  "reason": "Suspicious activity detected",
+  "duration": 7 // days, null for permanent
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/users/:userId/trading</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Enable/disable user trading</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "tradingEnabled": false,
+  "reason": "KYC verification required"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/users/:userId/withdrawal</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Enable/disable user withdrawals or set limits</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "withdrawalEnabled": true,
+  "dailyWithdrawalLimit": 50000
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/users/stats</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get user statistics overview</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "totalUsers": 15000,
+    "activeUsers": 12500,
+    "newUsersToday": 45,
+    "newUsersThisWeek": 312,
+    "newUsersThisMonth": 1250,
+    "kycPending": 89,
+    "kycVerified": 10500,
+    "suspendedUsers": 125,
+    "bannedUsers": 50
+  }
+}</code></pre>
+    </div>
+
+    <hr>
+
+    <!-- KYC -->
+    <h2 id="kyc">3. KYC Verification</h2>
+
+    <h3>3.1 User KYC Submission</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/users/me/kyc</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get current KYC status and submission</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "status": "pending", // not_started, pending, verified, rejected
+    "level": 1,
+    "submittedAt": "2024-12-25T10:00:00Z",
+    "reviewedAt": null,
+    "rejectionReason": null,
+    "documents": {
+      "idType": "passport",
+      "idNumber": "****5678",
+      "idFrontUploaded": true,
+      "idBackUploaded": true,
+      "selfieUploaded": true,
+      "proofOfAddressUploaded": false
+    },
+    "limits": {
+      "current": {
+        "dailyWithdrawal": 10000,
+        "monthlyWithdrawal": 50000
+      },
+      "afterVerification": {
+        "dailyWithdrawal": 100000,
+        "monthlyWithdrawal": 500000
+      }
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/users/me/kyc</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Submit KYC application</p>
+      <div class="section-title">Request Body (multipart/form-data)</div>
+      <pre><code>{
+  "level": 1, // 1 = basic, 2 = advanced
+  "idType": "passport", // passport, national_id, drivers_license
+  "idNumber": "AB123456",
+  "firstName": "John",
+  "lastName": "Doe",
+  "dateOfBirth": "1990-01-15",
+  "nationality": "US",
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "state": "NY",
+    "country": "US",
+    "postalCode": "10001"
+  },
+  "idFront": "[FILE]", // Base64 or file upload
+  "idBack": "[FILE]",
+  "selfie": "[FILE]",
+  "proofOfAddress": "[FILE]" // required for level 2
+}</code></pre>
+    </div>
+
+    <h3>3.2 Admin KYC Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/kyc</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List KYC applications</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>status</td><td class="type">string</td><td>Filter: pending, verified, rejected</td></tr>
+        <tr><td>level</td><td class="type">integer</td><td>KYC level: 1 or 2</td></tr>
+        <tr><td>page</td><td class="type">integer</td><td>Page number</td></tr>
+        <tr><td>limit</td><td class="type">integer</td><td>Items per page</td></tr>
+      </table>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "applications": [
+      {
+        "id": "kyc_123",
+        "userId": "usr_abc123",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "level": 1,
+        "status": "pending",
+        "idType": "passport",
+        "nationality": "US",
+        "submittedAt": "2024-12-25T10:00:00Z",
+        "documents": {
+          "idFront": "https://secure.crymadx.com/kyc/...",
+          "idBack": "https://secure.crymadx.com/kyc/...",
+          "selfie": "https://secure.crymadx.com/kyc/..."
+        }
+      }
+    ],
+    "stats": {
+      "pending": 89,
+      "todaySubmissions": 12
+    },
+    "pagination": { "page": 1, "limit": 20, "total": 89 }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/kyc/:applicationId/approve</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Approve KYC application</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "notes": "All documents verified successfully"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/kyc/:applicationId/reject</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Reject KYC application</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "reason": "document_unclear", // document_unclear, document_expired, info_mismatch, suspicious
+  "details": "ID photo is blurry, please resubmit"
+}</code></pre>
+    </div>
+
+    <hr>
+
+    <!-- WALLETS -->
+    <h2 id="wallets">4. Wallets & Balances</h2>
+
+    <h3>4.1 User Wallet Operations</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/wallets</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's wallet balances</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "totalBalanceUsd": 95500.00,
+    "balances": [
+      {
+        "asset": "BTC",
+        "name": "Bitcoin",
+        "available": 1.50000000,
+        "locked": 0.10000000,
+        "total": 1.60000000,
+        "usdValue": 65600.00,
+        "btcValue": 1.60000000,
+        "depositEnabled": true,
+        "withdrawalEnabled": true
+      },
+      {
+        "asset": "ETH",
+        "name": "Ethereum",
+        "available": 10.00000000,
+        "locked": 0.00000000,
+        "total": 10.00000000,
+        "usdValue": 25000.00,
+        "btcValue": 0.61000000,
+        "depositEnabled": true,
+        "withdrawalEnabled": true
+      },
+      {
+        "asset": "USDT",
+        "name": "Tether",
+        "available": 5000.00000000,
+        "locked": 500.00000000,
+        "total": 5500.00000000,
+        "usdValue": 5500.00,
+        "btcValue": 0.13414634,
+        "depositEnabled": true,
+        "withdrawalEnabled": true
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/wallets/:asset</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get specific asset wallet details</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "asset": "BTC",
+    "name": "Bitcoin",
+    "available": 1.50000000,
+    "locked": 0.10000000,
+    "total": 1.60000000,
+    "usdValue": 65600.00,
+    "depositAddress": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "depositMemo": null,
+    "networks": [
+      {
+        "network": "BTC",
+        "name": "Bitcoin",
+        "depositEnabled": true,
+        "withdrawalEnabled": true,
+        "minDeposit": 0.0001,
+        "minWithdrawal": 0.001,
+        "withdrawalFee": 0.0002,
+        "confirmations": 3
+      }
+    ],
+    "recentTransactions": [...]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/wallets/:asset/deposit-address</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Generate deposit address for asset</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "network": "BTC" // or ERC20, TRC20, BEP20, etc.
+}</code></pre>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "asset": "BTC",
+    "network": "BTC",
+    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "memo": null, // for assets like XRP, XLM
+    "qrCode": "data:image/png;base64,..."
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/wallets/:asset/withdraw</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Request withdrawal</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "network": "BTC",
+  "address": "bc1q...",
+  "amount": 0.5,
+  "memo": null,
+  "twoFactorCode": "123456"
+}</code></pre>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "withdrawalId": "wd_abc123",
+    "asset": "BTC",
+    "amount": 0.5,
+    "fee": 0.0002,
+    "netAmount": 0.4998,
+    "address": "bc1q...",
+    "status": "pending",
+    "estimatedCompletion": "2024-12-28T12:00:00Z"
+  }
+}</code></pre>
+    </div>
+
+    <h3>4.2 Admin Wallet Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/wallets/overview</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get platform wallet overview</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "totalPlatformBalance": 12500000,
+    "deposits24h": 450200,
+    "withdrawals24h": 320800,
+    "pendingWithdrawals": 12,
+    "pendingWithdrawalsAmount": 85000,
+    "hotWalletBalance": 2500000,
+    "coldWalletBalance": 10000000,
+    "assets": [
+      {
+        "asset": "BTC",
+        "totalBalance": 150.5,
+        "hotWallet": 30.5,
+        "coldWallet": 120.0,
+        "userBalances": 145.2,
+        "usdValue": 6170500
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/wallets/assets</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all platform assets with configuration</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "assets": [
+      {
+        "id": "asset_btc",
+        "symbol": "BTC",
+        "name": "Bitcoin",
+        "type": "coin",
+        "depositEnabled": true,
+        "withdrawalEnabled": true,
+        "tradingEnabled": true,
+        "minDeposit": 0.0001,
+        "minWithdrawal": 0.001,
+        "withdrawalFee": 0.0002,
+        "maxWithdrawal": 100,
+        "confirmations": 3,
+        "contractAddress": null,
+        "decimals": 8,
+        "networks": ["BTC"],
+        "iconUrl": "https://cdn.crymadx.com/icons/btc.png"
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/wallets/assets</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Add new asset to platform</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "symbol": "SOL",
+  "name": "Solana",
+  "type": "coin",
+  "networks": ["SOL"],
+  "minDeposit": 0.1,
+  "minWithdrawal": 0.5,
+  "withdrawalFee": 0.01,
+  "maxWithdrawal": 10000,
+  "confirmations": 32,
+  "decimals": 9,
+  "depositEnabled": true,
+  "withdrawalEnabled": true,
+  "tradingEnabled": true
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/wallets/assets/:assetId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update asset configuration</p>
+    </div>
+
+    <hr>
+
+    <!-- TRANSACTIONS -->
+    <h2 id="transactions">5. Transactions</h2>
+
+    <h3>5.1 User Transactions</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/transactions</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's transaction history</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>type</td><td class="type">string</td><td>deposit, withdrawal, trade, transfer</td></tr>
+        <tr><td>asset</td><td class="type">string</td><td>Filter by asset symbol</td></tr>
+        <tr><td>status</td><td class="type">string</td><td>pending, completed, failed, cancelled</td></tr>
+        <tr><td>startDate</td><td class="type">string</td><td>ISO date string</td></tr>
+        <tr><td>endDate</td><td class="type">string</td><td>ISO date string</td></tr>
+        <tr><td>page</td><td class="type">integer</td><td>Page number</td></tr>
+        <tr><td>limit</td><td class="type">integer</td><td>Items per page</td></tr>
+      </table>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "id": "tx_abc123",
+        "type": "deposit",
+        "asset": "BTC",
+        "amount": 0.5,
+        "fee": 0,
+        "status": "completed",
+        "txHash": "0x...",
+        "address": "bc1q...",
+        "network": "BTC",
+        "confirmations": 6,
+        "createdAt": "2024-12-27T10:00:00Z",
+        "completedAt": "2024-12-27T10:45:00Z"
+      },
+      {
+        "id": "tx_def456",
+        "type": "withdrawal",
+        "asset": "ETH",
+        "amount": 2.0,
+        "fee": 0.005,
+        "status": "pending",
+        "address": "0x...",
+        "network": "ERC20",
+        "createdAt": "2024-12-28T08:00:00Z"
+      }
+    ],
+    "pagination": { "page": 1, "limit": 20, "total": 150 }
+  }
+}</code></pre>
+    </div>
+
+    <h3>5.2 Admin Transaction Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/transactions/deposits</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all deposits</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/transactions/withdrawals</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all withdrawals with pending queue</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "withdrawals": [
+      {
+        "id": "wd_abc123",
+        "userId": "usr_xyz",
+        "userName": "John Doe",
+        "userEmail": "john@example.com",
+        "asset": "BTC",
+        "amount": 1.5,
+        "fee": 0.0002,
+        "address": "bc1q...",
+        "network": "BTC",
+        "status": "pending_approval",
+        "riskScore": "low",
+        "createdAt": "2024-12-28T08:00:00Z"
+      }
+    ],
+    "stats": {
+      "pendingCount": 12,
+      "pendingAmount": 85000,
+      "completedToday": 45,
+      "completedAmountToday": 320800
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/transactions/withdrawals/:withdrawalId/approve</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Approve pending withdrawal</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "notes": "Verified user identity"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/transactions/withdrawals/:withdrawalId/reject</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Reject pending withdrawal</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "reason": "Suspicious activity",
+  "refundToWallet": true
+}</code></pre>
+    </div>
+
+    <hr>
+
+    <!-- TRADING PAIRS -->
+    <h2 id="trading">6. Trading Pairs</h2>
+
+    <h3>6.1 Public Trading Pair Information</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/trading/pairs</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">List all trading pairs</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "pairs": [
+      {
+        "symbol": "BTCUSDT",
+        "baseAsset": "BTC",
+        "quoteAsset": "USDT",
+        "status": "active",
+        "lastPrice": 43250.50,
+        "priceChange24h": 2.5,
+        "high24h": 44100.00,
+        "low24h": 42800.00,
+        "volume24h": 5200000,
+        "quoteVolume24h": 224900000000,
+        "trades24h": 12450,
+        "makerFee": 0.1,
+        "takerFee": 0.15,
+        "minOrderSize": 0.0001,
+        "maxOrderSize": 100,
+        "pricePrecision": 2,
+        "quantityPrecision": 6,
+        "tickSize": 0.01
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/trading/pairs/:symbol</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get single trading pair details</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/trading/pairs/:symbol/orderbook</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get order book for trading pair</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>limit</td><td class="type">integer</td><td>Number of levels (5, 10, 20, 50, 100)</td></tr>
+      </table>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "symbol": "BTCUSDT",
+    "lastUpdateId": 1234567890,
+    "bids": [
+      [43250.00, 1.5],    // [price, quantity]
+      [43249.50, 2.3],
+      [43249.00, 0.8]
+    ],
+    "asks": [
+      [43251.00, 0.9],
+      [43251.50, 1.2],
+      [43252.00, 3.1]
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/trading/pairs/:symbol/trades</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get recent trades for trading pair</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/trading/pairs/:symbol/klines</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get candlestick/OHLCV data</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>interval</td><td class="type">string</td><td>1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w</td></tr>
+        <tr><td>startTime</td><td class="type">integer</td><td>Start timestamp (ms)</td></tr>
+        <tr><td>endTime</td><td class="type">integer</td><td>End timestamp (ms)</td></tr>
+        <tr><td>limit</td><td class="type">integer</td><td>Number of candles (max 1000)</td></tr>
+      </table>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": [
+    {
+      "openTime": 1703721600000,
+      "open": 43200.00,
+      "high": 43450.00,
+      "low": 43100.00,
+      "close": 43250.50,
+      "volume": 125.5,
+      "closeTime": 1703725199999,
+      "quoteVolume": 5425000.00,
+      "trades": 1250
+    }
+  ]
+}</code></pre>
+    </div>
+
+    <h3>6.2 Admin Trading Pair Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/trading/pairs</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all trading pairs with admin details</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/trading/pairs</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Create new trading pair</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "baseAsset": "SOL",
+  "quoteAsset": "USDT",
+  "makerFee": 0.1,
+  "takerFee": 0.15,
+  "minOrderSize": 0.1,
+  "maxOrderSize": 5000,
+  "pricePrecision": 2,
+  "quantityPrecision": 3,
+  "tickSize": 0.01,
+  "status": "active"
+}</code></pre>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "id": "pair_abc123",
+    "symbol": "SOLUSDT",
+    "baseAsset": "SOL",
+    "quoteAsset": "USDT",
+    "status": "active",
+    "makerFee": 0.1,
+    "takerFee": 0.15,
+    "minOrderSize": 0.1,
+    "maxOrderSize": 5000,
+    "pricePrecision": 2,
+    "quantityPrecision": 3,
+    "tickSize": 0.01,
+    "createdAt": "2024-12-28T10:00:00Z"
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/trading/pairs/:pairId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update trading pair configuration</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/trading/pairs/:pairId/status</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Toggle trading pair status</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "status": "inactive" // active, inactive, maintenance
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <span class="path">/admin/trading/pairs/:pairId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Delete trading pair</p>
+      <div class="warning">
+        <div class="warning-title">Warning</div>
+        Deleting a trading pair will cancel all open orders. Ensure no active orders exist before deletion.
+      </div>
+    </div>
+
+    <h3>6.3 Fee Structure</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/trading/fees</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get fee structure configuration</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "defaultFees": {
+      "makerFee": 0.1,
+      "takerFee": 0.15
+    },
+    "vipTiers": [
+      {
+        "tier": "bronze",
+        "volumeRequirement": 0,
+        "makerFee": 0.1,
+        "takerFee": 0.15
+      },
+      {
+        "tier": "silver",
+        "volumeRequirement": 100000,
+        "makerFee": 0.08,
+        "takerFee": 0.12
+      },
+      {
+        "tier": "gold",
+        "volumeRequirement": 500000,
+        "makerFee": 0.06,
+        "takerFee": 0.1
+      },
+      {
+        "tier": "platinum",
+        "volumeRequirement": 2000000,
+        "makerFee": 0.04,
+        "takerFee": 0.08
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/trading/fees</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update fee structure</p>
+    </div>
+
+    <hr>
+
+    <!-- ORDERS -->
+    <h2 id="orders">7. Orders & Trading</h2>
+
+    <h3>7.1 User Order Operations</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/orders</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Place a new order</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "symbol": "BTCUSDT",
+  "side": "buy", // buy, sell
+  "type": "limit", // limit, market, stop_limit, stop_market
+  "quantity": 0.5,
+  "price": 43000.00, // required for limit orders
+  "stopPrice": null, // required for stop orders
+  "timeInForce": "GTC" // GTC, IOC, FOK
+}</code></pre>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "orderId": "ord_abc123",
+    "symbol": "BTCUSDT",
+    "side": "buy",
+    "type": "limit",
+    "status": "open",
+    "quantity": 0.5,
+    "executedQty": 0,
+    "price": 43000.00,
+    "avgPrice": 0,
+    "timeInForce": "GTC",
+    "createdAt": "2024-12-28T10:00:00Z"
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/orders</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's orders</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>symbol</td><td class="type">string</td><td>Filter by trading pair</td></tr>
+        <tr><td>status</td><td class="type">string</td><td>open, filled, cancelled, all</td></tr>
+        <tr><td>side</td><td class="type">string</td><td>buy, sell</td></tr>
+        <tr><td>page</td><td class="type">integer</td><td>Page number</td></tr>
+        <tr><td>limit</td><td class="type">integer</td><td>Items per page</td></tr>
+      </table>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/orders/:orderId</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get order details</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <span class="path">/orders/:orderId</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Cancel an order</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <span class="path">/orders</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Cancel all open orders</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>symbol</td><td class="type">string</td><td>Cancel only for specific pair (optional)</td></tr>
+      </table>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/trades</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's trade history</p>
+    </div>
+
+    <hr>
+
+    <!-- P2P -->
+    <h2 id="p2p">8. P2P Trading</h2>
+
+    <h3>8.1 User P2P Operations</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/p2p/ads</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">List P2P advertisements</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>asset</td><td class="type">string</td><td>Cryptocurrency (BTC, ETH, USDT)</td></tr>
+        <tr><td>fiat</td><td class="type">string</td><td>Fiat currency (USD, EUR, NGN)</td></tr>
+        <tr><td>type</td><td class="type">string</td><td>buy, sell</td></tr>
+        <tr><td>paymentMethod</td><td class="type">string</td><td>Filter by payment method</td></tr>
+        <tr><td>amount</td><td class="type">number</td><td>Filter by trade amount</td></tr>
+      </table>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "ads": [
+      {
+        "id": "ad_abc123",
+        "trader": {
+          "id": "usr_xyz",
+          "name": "CryptoKing",
+          "completedTrades": 1250,
+          "rating": 4.9,
+          "responseTime": "< 5 min"
+        },
+        "type": "sell",
+        "asset": "USDT",
+        "fiat": "USD",
+        "price": 1.02,
+        "available": 5000,
+        "minLimit": 100,
+        "maxLimit": 2000,
+        "paymentMethods": ["bank_transfer", "paypal"],
+        "terms": "Fast release, verified traders only"
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/p2p/ads</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Create P2P advertisement</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "type": "sell",
+  "asset": "USDT",
+  "fiat": "USD",
+  "price": 1.02,
+  "totalAmount": 5000,
+  "minLimit": 100,
+  "maxLimit": 2000,
+  "paymentMethods": ["bank_transfer", "paypal"],
+  "terms": "Fast release, verified traders only",
+  "autoReply": "Thank you for trading with me!"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/p2p/orders</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Create P2P order (initiate trade)</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "adId": "ad_abc123",
+  "amount": 500,
+  "paymentMethod": "bank_transfer"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/p2p/orders</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's P2P orders</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/p2p/orders/:orderId/mark-paid</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Mark order as paid (buyer)</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/p2p/orders/:orderId/release</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Release crypto (seller)</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/p2p/orders/:orderId/dispute</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Open dispute</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "reason": "payment_not_received",
+  "description": "I made the payment but seller hasn't released",
+  "evidence": ["image_url_1", "image_url_2"]
+}</code></pre>
+    </div>
+
+    <h3>8.2 Admin P2P Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/p2p/traders</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List P2P traders</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/p2p/orders</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all P2P orders</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/p2p/disputes</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List P2P disputes</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/p2p/disputes/:disputeId/resolve</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Resolve P2P dispute</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "resolution": "release_to_buyer", // release_to_buyer, refund_to_seller, split
+  "notes": "Buyer provided valid payment proof"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/p2p/payment-methods</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List payment methods</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/p2p/payment-methods</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Add payment method</p>
+    </div>
+
+    <hr>
+
+    <!-- SAVINGS -->
+    <h2 id="savings">9. Savings Products</h2>
+
+    <h3>9.1 User Savings</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/savings/products</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">List available savings products</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "products": [
+      {
+        "id": "sav_btc_flex",
+        "asset": "BTC",
+        "name": "BTC Flexible Savings",
+        "type": "flexible",
+        "apy": 3.5,
+        "minDeposit": 0.001,
+        "maxDeposit": 10,
+        "totalCapacity": 1000,
+        "currentDeposits": 450,
+        "status": "active"
+      },
+      {
+        "id": "sav_usdt_30",
+        "asset": "USDT",
+        "name": "USDT 30-Day Lock",
+        "type": "locked",
+        "duration": 30,
+        "apy": 8.5,
+        "minDeposit": 100,
+        "maxDeposit": 100000,
+        "status": "active"
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/savings/subscribe</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Subscribe to savings product</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "productId": "sav_usdt_30",
+  "amount": 1000,
+  "autoRenew": true
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/savings/subscriptions</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's savings subscriptions</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/savings/redeem</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Redeem savings (flexible only)</p>
+    </div>
+
+    <h3>9.2 Admin Savings Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/savings/products</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all savings products</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/savings/products</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Create savings product</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/savings/products/:productId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update savings product</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/savings/deposits</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List user savings deposits</p>
+    </div>
+
+    <hr>
+
+    <!-- REFERRALS -->
+    <h2 id="referrals">10. Referrals</h2>
+
+    <h3>10.1 User Referrals</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/referrals</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's referral information</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "referralCode": "JOHN123",
+    "referralLink": "https://crymadx.com/ref/JOHN123",
+    "totalReferrals": 15,
+    "activeReferrals": 12,
+    "totalEarnings": 1250.50,
+    "pendingEarnings": 125.00,
+    "commissionRate": 20,
+    "referrals": [
+      {
+        "id": "ref_abc",
+        "userId": "usr_xyz",
+        "status": "active",
+        "tradingVolume": 50000,
+        "commission": 75.00,
+        "joinedAt": "2024-11-15T10:00:00Z"
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/referrals/earnings</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get referral earnings history</p>
+    </div>
+
+    <h3>10.2 Admin Referral Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/referrals/codes</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all referral codes</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/referrals/commissions</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List commission payouts</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/referrals/settings</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update referral program settings</p>
+    </div>
+
+    <hr>
+
+    <!-- REWARDS -->
+    <h2 id="rewards">11. Rewards & Tasks</h2>
+
+    <h3>11.1 User Rewards</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/rewards/tasks</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get available reward tasks</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "tasks": [
+      {
+        "id": "task_daily_login",
+        "name": "Daily Login",
+        "description": "Log in to the platform",
+        "type": "daily",
+        "reward": 10,
+        "rewardAsset": "USDT",
+        "progress": 1,
+        "target": 1,
+        "completed": true,
+        "expiresAt": "2024-12-29T00:00:00Z"
+      },
+      {
+        "id": "task_first_trade",
+        "name": "First Trade",
+        "description": "Complete your first trade",
+        "type": "one_time",
+        "reward": 50,
+        "rewardAsset": "USDT",
+        "progress": 0,
+        "target": 1,
+        "completed": false
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/rewards/tasks/:taskId/claim</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Claim task reward</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/rewards/vip</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get VIP tier information</p>
+    </div>
+
+    <h3>11.2 Admin Rewards Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/rewards/tasks</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all reward tasks</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/rewards/tasks</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Create reward task</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/rewards/vip-tiers</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get VIP tier configuration</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/rewards/vip-tiers</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update VIP tier configuration</p>
+    </div>
+
+    <hr>
+
+    <!-- SUPPORT -->
+    <h2 id="support">12. Support Tickets</h2>
+
+    <h3>12.1 User Support</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/support/tickets</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get user's support tickets</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/support/tickets</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Create support ticket</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "category": "account", // account, trading, deposit, withdrawal, kyc, other
+  "priority": "medium", // low, medium, high
+  "subject": "Unable to withdraw funds",
+  "message": "I'm trying to withdraw BTC but getting an error...",
+  "attachments": ["base64_image_1", "base64_image_2"]
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/support/tickets/:ticketId</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Get ticket details with messages</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/support/tickets/:ticketId/reply</span>
+        <span class="badge user-only">User</span>
+      </div>
+      <p class="description">Reply to ticket</p>
+    </div>
+
+    <h3>12.2 Admin Support Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/support/tickets</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all support tickets</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/support/tickets/:ticketId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get ticket details</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/support/tickets/:ticketId/reply</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Reply to ticket</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/support/tickets/:ticketId/status</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update ticket status</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "status": "resolved" // open, in_progress, waiting, resolved, closed
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/support/tickets/:ticketId/assign</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Assign ticket to admin</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/support/canned-responses</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List canned responses</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/support/canned-responses</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Create canned response</p>
+    </div>
+
+    <hr>
+
+    <!-- CMS -->
+    <h2 id="cms">13. CMS & Content</h2>
+
+    <h3>13.1 Public Content</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/cms/pages</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">List published pages</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/cms/pages/:slug</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get page by slug</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/cms/announcements</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get active announcements</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/cms/footer</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get footer content</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/cms/social-links</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">Get social media links</p>
+    </div>
+
+    <h3>13.2 Admin CMS Management</h3>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/cms/pages</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all pages (including drafts)</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/cms/pages</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Create page</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "title": "Terms of Service",
+  "slug": "terms-of-service",
+  "content": "&lt;h1&gt;Terms of Service&lt;/h1&gt;...",
+  "metaTitle": "Terms of Service | CrymadX",
+  "metaDescription": "Read our terms of service",
+  "status": "published"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/cms/pages/:pageId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update page</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <span class="path">/admin/cms/pages/:pageId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Delete page</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/cms/announcements</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all announcements</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/cms/announcements</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Create announcement</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/cms/footer</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update footer sections</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/cms/social-links</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update social media links</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/cms/branding</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get branding settings</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/cms/branding</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update branding (logo, colors, etc.)</p>
+    </div>
+
+    <hr>
+
+    <!-- ADMINS -->
+    <h2 id="admins">14. Admin Management</h2>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/admins</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">List all admin users</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "admins": [
+      {
+        "id": "adm_001",
+        "email": "admin@crymadx.com",
+        "name": "Super Admin",
+        "role": "superadmin",
+        "department": "Management",
+        "status": "active",
+        "lastLogin": "2024-12-28T08:00:00Z",
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/admins/invite</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Invite new admin user</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "email": "newadmin@crymadx.com",
+  "name": "John Admin",
+  "role": "admin", // superadmin, admin, moderator, support
+  "department": "Support"
+}</code></pre>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "inviteId": "inv_abc123",
+    "email": "newadmin@crymadx.com",
+    "inviteLink": "https://admin.crymadx.com/invite/abc123",
+    "expiresAt": "2024-12-31T00:00:00Z"
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method patch">PATCH</span>
+        <span class="path">/admin/admins/:adminId/role</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update admin role</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <span class="path">/admin/admins/:adminId</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Remove admin user</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/roles</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get roles and permissions</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "roles": [
+      {
+        "id": "role_superadmin",
+        "name": "Super Admin",
+        "description": "Full access to all features",
+        "permissions": ["*"]
+      },
+      {
+        "id": "role_admin",
+        "name": "Admin",
+        "description": "Manage users, wallets, trading",
+        "permissions": [
+          "users.view", "users.edit",
+          "wallets.view", "wallets.approve_withdrawals",
+          "trading.view", "trading.edit"
+        ]
+      },
+      {
+        "id": "role_moderator",
+        "name": "Moderator",
+        "description": "Handle support and moderation",
+        "permissions": [
+          "users.view",
+          "support.view", "support.reply",
+          "p2p.disputes"
+        ]
+      },
+      {
+        "id": "role_support",
+        "name": "Support",
+        "description": "Handle support tickets only",
+        "permissions": [
+          "support.view", "support.reply"
+        ]
+      }
+    ]
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/audit-log</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get admin audit log</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "logs": [
+      {
+        "id": "log_abc123",
+        "adminId": "adm_001",
+        "adminName": "Super Admin",
+        "action": "user.suspend",
+        "target": "usr_xyz",
+        "details": { "reason": "Suspicious activity" },
+        "ipAddress": "192.168.1.1",
+        "userAgent": "Mozilla/5.0...",
+        "createdAt": "2024-12-28T10:00:00Z"
+      }
+    ],
+    "pagination": { "page": 1, "limit": 50, "total": 1250 }
+  }
+}</code></pre>
+    </div>
+
+    <hr>
+
+    <!-- ANALYTICS -->
+    <h2 id="analytics">15. Analytics</h2>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/analytics/overview</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get platform overview analytics</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "users": {
+      "total": 15000,
+      "active": 12500,
+      "new24h": 45,
+      "growth": 5.2
+    },
+    "trading": {
+      "volume24h": 18500000,
+      "trades24h": 45200,
+      "volumeChange": 8.5
+    },
+    "wallets": {
+      "totalBalance": 12500000,
+      "deposits24h": 450200,
+      "withdrawals24h": 320800
+    },
+    "revenue": {
+      "today": 12500,
+      "thisMonth": 285000,
+      "growth": 12.3
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/analytics/users</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get user analytics</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>period</td><td class="type">string</td><td>24h, 7d, 30d, 90d, 1y</td></tr>
+        <tr><td>groupBy</td><td class="type">string</td><td>hour, day, week, month</td></tr>
+      </table>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/analytics/trading</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get trading analytics</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/analytics/revenue</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get revenue analytics</p>
+    </div>
+
+    <hr>
+
+    <!-- SYSTEM -->
+    <h2 id="system">16. System & Health</h2>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/health</span>
+        <span class="badge public">Public</span>
+      </div>
+      <p class="description">API health check</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "status": "healthy",
+  "timestamp": "2024-12-28T10:00:00Z",
+  "version": "1.0.0"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/system/health</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Detailed system health</p>
+      <div class="section-title">Response</div>
+      <pre><code>{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "uptime": 864000,
+    "services": {
+      "database": { "status": "healthy", "latency": 5 },
+      "redis": { "status": "healthy", "latency": 1 },
+      "blockchain": { "status": "healthy", "lastBlock": 815234 },
+      "email": { "status": "healthy" },
+      "sms": { "status": "healthy" }
+    },
+    "metrics": {
+      "cpuUsage": 45,
+      "memoryUsage": 68,
+      "diskUsage": 42,
+      "activeConnections": 1250,
+      "requestsPerMinute": 3500
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/system/logs</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get system logs</p>
+      <div class="section-title">Query Parameters</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>level</td><td class="type">string</td><td>error, warn, info, debug</td></tr>
+        <tr><td>service</td><td class="type">string</td><td>Filter by service</td></tr>
+        <tr><td>startTime</td><td class="type">string</td><td>ISO date</td></tr>
+        <tr><td>endTime</td><td class="type">string</td><td>ISO date</td></tr>
+      </table>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/settings/general</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get general platform settings</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/settings/general</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update general settings</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/admin/settings/security</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Get security settings</p>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <span class="path">/admin/settings/security</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Update security settings</p>
+    </div>
+
+    <hr>
+
+    <!-- WEBHOOKS -->
+    <h2 id="webhooks">17. Webhooks</h2>
+    <p>CrymadX can send webhooks to your backend for various events.</p>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/admin/webhooks</span>
+        <span class="badge admin-only">Admin</span>
+      </div>
+      <p class="description">Register webhook endpoint</p>
+      <div class="section-title">Request Body</div>
+      <pre><code>{
+  "url": "https://your-backend.com/webhooks/crymadx",
+  "events": [
+    "user.created",
+    "user.kyc_verified",
+    "deposit.completed",
+    "withdrawal.completed",
+    "trade.completed",
+    "p2p.dispute_opened"
+  ],
+  "secret": "your_webhook_secret"
+}</code></pre>
+    </div>
+
+    <h3>Webhook Events</h3>
+    <table class="params-table">
+      <tr><th>Event</th><th>Description</th></tr>
+      <tr><td>user.created</td><td>New user registered</td></tr>
+      <tr><td>user.kyc_verified</td><td>User KYC approved</td></tr>
+      <tr><td>user.kyc_rejected</td><td>User KYC rejected</td></tr>
+      <tr><td>deposit.pending</td><td>Deposit detected, awaiting confirmations</td></tr>
+      <tr><td>deposit.completed</td><td>Deposit confirmed and credited</td></tr>
+      <tr><td>withdrawal.requested</td><td>Withdrawal requested by user</td></tr>
+      <tr><td>withdrawal.completed</td><td>Withdrawal processed</td></tr>
+      <tr><td>withdrawal.failed</td><td>Withdrawal failed</td></tr>
+      <tr><td>trade.completed</td><td>Trade executed</td></tr>
+      <tr><td>order.filled</td><td>Order fully filled</td></tr>
+      <tr><td>order.cancelled</td><td>Order cancelled</td></tr>
+      <tr><td>p2p.order_created</td><td>P2P order created</td></tr>
+      <tr><td>p2p.dispute_opened</td><td>P2P dispute opened</td></tr>
+      <tr><td>p2p.dispute_resolved</td><td>P2P dispute resolved</td></tr>
+    </table>
+
+    <h3>Webhook Payload Example</h3>
+    <pre><code>{
+  "event": "deposit.completed",
+  "timestamp": "2024-12-28T10:00:00Z",
+  "data": {
+    "transactionId": "tx_abc123",
+    "userId": "usr_xyz",
+    "asset": "BTC",
+    "amount": 0.5,
+    "txHash": "0x...",
+    "confirmations": 6
+  },
+  "signature": "sha256_hmac_signature"
+}</code></pre>
+
+    <hr>
+
+    <!-- ERROR CODES -->
+    <h2 id="errors">18. Error Codes</h2>
+    <p>All API errors follow a consistent format:</p>
+    <pre><code>{
+  "success": false,
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Invalid email or password",
+    "details": {}
+  }
+}</code></pre>
+
+    <h3>Common Error Codes</h3>
+    <table class="params-table">
+      <tr><th>Code</th><th>HTTP Status</th><th>Description</th></tr>
+      <tr><td>UNAUTHORIZED</td><td>401</td><td>Missing or invalid authentication token</td></tr>
+      <tr><td>FORBIDDEN</td><td>403</td><td>Insufficient permissions</td></tr>
+      <tr><td>NOT_FOUND</td><td>404</td><td>Resource not found</td></tr>
+      <tr><td>VALIDATION_ERROR</td><td>400</td><td>Invalid request parameters</td></tr>
+      <tr><td>RATE_LIMITED</td><td>429</td><td>Too many requests</td></tr>
+      <tr><td>INTERNAL_ERROR</td><td>500</td><td>Server error</td></tr>
+      <tr><td>INVALID_CREDENTIALS</td><td>401</td><td>Wrong email or password</td></tr>
+      <tr><td>EMAIL_EXISTS</td><td>409</td><td>Email already registered</td></tr>
+      <tr><td>2FA_REQUIRED</td><td>403</td><td>Two-factor authentication required</td></tr>
+      <tr><td>2FA_INVALID</td><td>401</td><td>Invalid 2FA code</td></tr>
+      <tr><td>KYC_REQUIRED</td><td>403</td><td>KYC verification required for this action</td></tr>
+      <tr><td>INSUFFICIENT_BALANCE</td><td>400</td><td>Not enough balance</td></tr>
+      <tr><td>WITHDRAWAL_LIMIT_EXCEEDED</td><td>400</td><td>Daily withdrawal limit exceeded</td></tr>
+      <tr><td>TRADING_DISABLED</td><td>403</td><td>Trading is disabled for this account</td></tr>
+      <tr><td>PAIR_NOT_FOUND</td><td>404</td><td>Trading pair not found</td></tr>
+      <tr><td>PAIR_INACTIVE</td><td>400</td><td>Trading pair is not active</td></tr>
+      <tr><td>ORDER_MIN_SIZE</td><td>400</td><td>Order below minimum size</td></tr>
+      <tr><td>ORDER_MAX_SIZE</td><td>400</td><td>Order above maximum size</td></tr>
+      <tr><td>INVALID_PRICE</td><td>400</td><td>Invalid price precision</td></tr>
+    </table>
+
+    <h3>Rate Limits</h3>
+    <table class="params-table">
+      <tr><th>Endpoint Type</th><th>Limit</th><th>Window</th></tr>
+      <tr><td>Public endpoints</td><td>100 requests</td><td>per minute</td></tr>
+      <tr><td>User endpoints</td><td>300 requests</td><td>per minute</td></tr>
+      <tr><td>Admin endpoints</td><td>600 requests</td><td>per minute</td></tr>
+      <tr><td>Order placement</td><td>10 requests</td><td>per second</td></tr>
+      <tr><td>Withdrawal requests</td><td>5 requests</td><td>per minute</td></tr>
+    </table>
+
+    <hr>
+
+    <div style="text-align: center; padding: 40px 0; color: #71717a;">
+      <p>CrymadX API Documentation v1.0</p>
+      <p>Last updated: December 28, 2024</p>
+      <p style="margin-top: 20px;">
+        <a href="https://crymadx.com" style="color: #02c076;">crymadx.com</a> |
+        <a href="mailto:api@crymadx.com" style="color: #02c076;">api@crymadx.com</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
