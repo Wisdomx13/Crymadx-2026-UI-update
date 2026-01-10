@@ -1429,9 +1429,12 @@ const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isD
         <path d="M 188 165 L 200 180 L 212 165" fill={isDark ? '#1a1a1a' : '#b0b0b0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1.5" />
         <rect x="196" y="180" width="8" height="15" fill={isDark ? '#1a1a1a' : '#a0a0a0'} stroke={isDark ? '#3a3a3a' : '#909090'} strokeWidth="1" />
 
-        {/* "Crypto Exchange Bank" text on top of the rig */}
-        <text x="200" y="62" textAnchor="middle" fill="#00D26A" fontSize="15" fontWeight="800" fontFamily="'Inter', 'SF Pro Display', system-ui, sans-serif" letterSpacing="0.12em" style={{ textTransform: 'uppercase' }}>
-          CRYPTO EXCHANGE BANK
+        {/* "Crypto Exchange Bank" text on top of the rig - two lines */}
+        <text x="200" y="45" textAnchor="middle" fill="#00D26A" fontSize="13" fontWeight="700" fontFamily="'Inter', 'SF Pro Display', system-ui, sans-serif" letterSpacing="0.12em">
+          CRYPTO EXCHANGE
+        </text>
+        <text x="200" y="65" textAnchor="middle" fill="#00D26A" fontSize="20" fontWeight="900" fontFamily="'Inter', 'SF Pro Display', system-ui, sans-serif" letterSpacing="0.2em">
+          BANK
         </text>
 
         {/* Treasure Chest Image - SUPER SIZED, moved up */}
