@@ -119,12 +119,11 @@ const CountingUsersStat: React.FC<{ colors: any; isDark?: boolean }> = ({ colors
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      color: isDark ? colors.text.tertiary : '#ffffff',
+      color: '#ffffff',
       fontSize: '14px',
-      fontWeight: 600,
-      textShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.5)',
+      fontWeight: 700,
     }}>
-      <span style={{ color: '#00D26A', filter: isDark ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}><Users size={16} /></span>
+      <span style={{ color: isDark ? '#00D26A' : '#ffffff' }}><Users size={16} /></span>
       <span>{count.toLocaleString()}+ Users</span>
     </div>
   );
@@ -2367,11 +2366,11 @@ export const HomeScreen: React.FC = () => {
             >
               Your Gateway to{' '}
               <span style={{
-                color: isDark ? '#00D26A' : '#d97706',
+                color: isDark ? '#00D26A' : '#F59E0B',
                 fontWeight: 900,
                 textShadow: isDark
                   ? '0 0 20px rgba(0, 210, 106, 0.8), 0 2px 4px rgba(0,0,0,0.5)'
-                  : 'none',
+                  : '0 0 20px rgba(245, 158, 11, 0.6), 0 0 40px rgba(245, 158, 11, 0.4)',
               }}>
                 Digital Wealth
               </span>
@@ -2385,7 +2384,7 @@ export const HomeScreen: React.FC = () => {
               style={{
                 fontSize: isMobile ? '14px' : '16px',
                 fontWeight: 600,
-                color: isDark ? 'rgba(255,255,255,0.95)' : '#333333',
+                color: isDark ? 'rgba(255,255,255,0.95)' : '#000000',
                 lineHeight: 1.5,
                 marginBottom: '18px',
                 maxWidth: isMobile ? '100%' : '440px',
@@ -2396,9 +2395,9 @@ export const HomeScreen: React.FC = () => {
             >
               Trade 500+ cryptocurrencies with ultra-low fees. Sign up today and claim up to{' '}
               <span style={{
-                color: isDark ? '#00D26A' : '#d97706',
+                color: isDark ? '#00D26A' : '#F59E0B',
                 fontWeight: 900,
-                textShadow: 'none',
+                textShadow: isDark ? 'none' : '0 0 15px rgba(245, 158, 11, 0.5)',
               }}>
                 5,100 USDT
               </span>{' '}
@@ -2468,7 +2467,7 @@ export const HomeScreen: React.FC = () => {
               </div>
             </motion.div>
 
-            {/* Trust Indicators - Cool Blue Glass Pills matching Bear Side */}
+            {/* Trust Indicators - Solid Authentic Containers */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -2488,14 +2487,12 @@ export const HomeScreen: React.FC = () => {
                 padding: '10px 16px',
                 background: isDark
                   ? 'rgba(16, 185, 129, 0.2)'
-                  : 'linear-gradient(135deg, rgba(10, 25, 50, 0.55) 0%, rgba(15, 30, 55, 0.45) 100%)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
+                  : '#10b981',
                 borderRadius: '50px',
                 border: isDark
                   ? '1px solid rgba(16, 185, 129, 0.3)'
-                  : '1px solid rgba(100, 160, 220, 0.3)',
-                boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(59,130,246,0.08)',
+                  : 'none',
+                boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 12px rgba(16, 185, 129, 0.3)',
               }}>
                 <CountingUsersStat colors={colors} isDark={isDark} />
               </div>
@@ -2510,24 +2507,19 @@ export const HomeScreen: React.FC = () => {
                   padding: '10px 18px',
                   background: isDark
                     ? 'linear-gradient(135deg, rgba(0, 210, 106, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%)'
-                    : 'linear-gradient(135deg, rgba(5, 20, 40, 0.75) 0%, rgba(10, 30, 55, 0.65) 100%)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
+                    : '#374151',
                   borderRadius: '50px',
                   border: isDark
                     ? '1px solid rgba(0, 210, 106, 0.25)'
-                    : '2px solid rgba(255, 255, 255, 0.3)',
+                    : 'none',
                   boxShadow: isDark
                     ? '0 4px 20px rgba(0, 210, 106, 0.15)'
-                    : '0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    : '0 4px 12px rgba(0,0,0,0.15)',
                   color: '#ffffff',
                   fontSize: '14px',
                   fontWeight: 700,
-                  textShadow: isDark
-                    ? '0 1px 3px rgba(0,0,0,0.5)'
-                    : '0 2px 4px rgba(0,0,0,0.6)',
                 }}>
-                  <span style={{ color: '#00D26A', filter: 'drop-shadow(0 0 4px rgba(0, 210, 106, 0.5))' }}>{item.icon}</span>
+                  <span style={{ color: '#00D26A' }}>{item.icon}</span>
                   <span>{item.text}</span>
                 </div>
               ))}
