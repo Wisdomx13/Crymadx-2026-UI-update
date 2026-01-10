@@ -485,28 +485,18 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [dragStartX, setDragStartX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Smooth auto-rotation
+  // Auto-rotation with smooth timing
   useEffect(() => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % features.length);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [isAutoPlaying, features.length]);
 
-  const navigateTo = (index: number) => {
-    setActiveIndex(index);
-  };
-
-  const goToPrev = () => {
-    setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
-  };
-
-  const goToNext = () => {
-    setActiveIndex((prev) => (prev + 1) % features.length);
-  };
+  const goToPrev = () => setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
+  const goToNext = () => setActiveIndex((prev) => (prev + 1) % features.length);
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -518,16 +508,15 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
     const diff = e.clientX - dragStartX;
-    if (Math.abs(diff) > 80) {
-      if (diff > 0) goToPrev();
-      else goToNext();
+    if (Math.abs(diff) > 100) {
+      diff > 0 ? goToPrev() : goToNext();
       setDragStartX(e.clientX);
     }
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    setTimeout(() => setIsAutoPlaying(true), 3000);
+    setTimeout(() => setIsAutoPlaying(true), 4000);
   };
 
   // Touch handlers
@@ -540,45 +529,35 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
     const diff = e.touches[0].clientX - dragStartX;
-    if (Math.abs(diff) > 60) {
-      if (diff > 0) goToPrev();
-      else goToNext();
+    if (Math.abs(diff) > 80) {
+      diff > 0 ? goToPrev() : goToNext();
       setDragStartX(e.touches[0].clientX);
     }
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    setTimeout(() => setIsAutoPlaying(true), 3000);
+    setTimeout(() => setIsAutoPlaying(true), 4000);
   };
 
-  // Premium 3D carousel positioning - smooth circular rotation
-  const getCardTransform = (index: number) => {
+  // Get only 3 visible cards (optimized - no extra renders)
+  const getVisibleCards = () => {
     const total = features.length;
-    let diff = index - activeIndex;
-
-    // Normalize to shortest path
-    if (diff > total / 2) diff -= total;
-    if (diff < -total / 2) diff += total;
-
-    const isCenter = diff === 0;
-    const isAdjacent = Math.abs(diff) === 1;
-    const isVisible = Math.abs(diff) <= 2;
-
-    // Smooth circular positioning
-    const spacing = isMobile ? 220 : 320;
-    const x = diff * spacing;
-    const z = isCenter ? 0 : -Math.abs(diff) * 100;
-    const rotateY = diff * -35;
-    const scale = isCenter ? 1 : isAdjacent ? 0.85 : 0.7;
-    const opacity = isCenter ? 1 : isAdjacent ? 0.6 : 0.3;
-
-    return { x, z, rotateY, scale, opacity, isCenter, isVisible };
+    const prev = (activeIndex - 1 + total) % total;
+    const next = (activeIndex + 1) % total;
+    return [
+      { feature: features[prev], position: -1 },
+      { feature: features[activeIndex], position: 0 },
+      { feature: features[next], position: 1 },
+    ];
   };
+
+  const cardWidth = isMobile ? 260 : 300;
+  const cardHeight = isMobile ? 280 : 320;
+  const spacing = isMobile ? 180 : 260;
 
   return (
     <div
-      ref={containerRef}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -591,341 +570,363 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        minHeight: isMobile ? '450px' : '520px',
+        minHeight: isMobile ? '460px' : '540px',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         overflow: 'hidden',
       }}
     >
-      {/* Clean Hologram Projection Beam */}
+      {/* Hologram Projection Beam */}
       <div style={{
         position: 'absolute',
-        bottom: '50px',
+        bottom: '70px',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: isMobile ? '100%' : '90%',
-        height: isMobile ? '360px' : '420px',
-        background: 'linear-gradient(to top, rgba(0, 212, 255, 0.25) 0%, rgba(0, 212, 255, 0.08) 30%, rgba(0, 212, 255, 0.02) 60%, transparent 100%)',
-        clipPath: 'polygon(15% 100%, 85% 100%, 100% 0%, 0% 0%)',
+        width: isMobile ? '95%' : '85%',
+        height: isMobile ? '350px' : '400px',
+        background: 'linear-gradient(to top, rgba(0, 200, 255, 0.2) 0%, rgba(0, 200, 255, 0.06) 40%, transparent 80%)',
+        clipPath: 'polygon(18% 100%, 82% 100%, 98% 0%, 2% 0%)',
         zIndex: 0,
-      }}>
-        {/* Subtle scan lines */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(255,255,255,0.02) 3px, rgba(255,255,255,0.02) 6px)',
-          pointerEvents: 'none',
-        }} />
-      </div>
+      }} />
 
-      {/* 3D Carousel Stage */}
+      {/* 3D Carousel - Only 3 cards rendered */}
       <div style={{
         position: 'relative',
         width: '100%',
-        height: isMobile ? '320px' : '380px',
+        height: isMobile ? '340px' : '400px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        perspective: '1200px',
-        perspectiveOrigin: '50% 50%',
+        perspective: '1000px',
       }}>
-        <div style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          transformStyle: 'preserve-3d',
-        }}>
-          <AnimatePresence mode="sync">
-            {features.map((feature, index) => {
-              const transform = getCardTransform(index);
-              if (!transform.isVisible) return null;
+        {getVisibleCards().map(({ feature, position }) => {
+          const isCenter = position === 0;
+          const xOffset = position * spacing;
+          const zOffset = isCenter ? 0 : -80;
+          const rotation = position * -25;
+          const scale = isCenter ? 1 : 0.8;
+          const opacity = isCenter ? 1 : 0.5;
 
-              return (
-                <motion.div
-                  key={feature.title}
-                  initial={false}
-                  animate={{
-                    x: transform.x,
-                    z: transform.z,
-                    rotateY: transform.rotateY,
-                    scale: transform.scale,
-                    opacity: transform.opacity,
-                  }}
-                  transition={{
-                    type: 'tween',
-                    duration: 0.6,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  }}
-                  onClick={() => !transform.isCenter && navigateTo(index)}
-                  style={{
-                    position: 'absolute',
-                    left: '50%',
-                    top: '50%',
-                    marginLeft: isMobile ? '-130px' : '-160px',
-                    marginTop: isMobile ? '-140px' : '-165px',
-                    width: isMobile ? '260px' : '320px',
-                    height: isMobile ? '280px' : '330px',
-                    transformStyle: 'preserve-3d',
-                    cursor: transform.isCenter ? 'default' : 'pointer',
-                    zIndex: transform.isCenter ? 10 : 5 - Math.abs(index - activeIndex),
-                  }}
-                >
-                  {/* Premium Glass Card */}
+          return (
+            <div
+              key={`${feature.title}-${position}`}
+              onClick={() => !isCenter && (position === -1 ? goToPrev() : goToNext())}
+              style={{
+                position: 'absolute',
+                width: cardWidth,
+                height: cardHeight,
+                transform: `translateX(${xOffset}px) translateZ(${zOffset}px) rotateY(${rotation}deg) scale(${scale})`,
+                opacity,
+                transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: isCenter ? 'default' : 'pointer',
+                zIndex: isCenter ? 10 : 5,
+                willChange: 'transform, opacity',
+                transformStyle: 'preserve-3d',
+              }}
+            >
+              {/* Clean White Card */}
+              <div style={{
+                width: '100%',
+                height: '100%',
+                background: '#fff',
+                borderRadius: '12px',
+                padding: isMobile ? '22px' : '26px',
+                boxShadow: isCenter
+                  ? '0 30px 60px rgba(0, 0, 0, 0.12), 0 0 40px rgba(0, 200, 255, 0.1)'
+                  : '0 15px 35px rgba(0, 0, 0, 0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                {/* Header */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  paddingBottom: '14px',
+                  borderBottom: '2px solid #000',
+                  marginBottom: '14px',
+                }}>
                   <div style={{
-                    width: '100%',
-                    height: '100%',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: '16px',
-                    padding: isMobile ? '20px' : '28px',
-                    boxShadow: transform.isCenter
-                      ? '0 25px 80px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255,255,255,0.8) inset, 0 0 60px rgba(0, 212, 255, 0.15)'
-                      : '0 15px 40px rgba(0, 0, 0, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.6)',
+                    width: isMobile ? '38px' : '44px',
+                    height: isMobile ? '38px' : '44px',
+                    borderRadius: '8px',
+                    background: '#000',
                     display: 'flex',
-                    flexDirection: 'column',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    flexShrink: 0,
                   }}>
-                    {/* Subtle glass reflection */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '50%',
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%)',
-                      borderRadius: '16px 16px 0 0',
-                      pointerEvents: 'none',
-                    }} />
-
-                    {/* Newspaper Header */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '14px',
-                      paddingBottom: '16px',
-                      borderBottom: '2px solid #111',
-                      marginBottom: '16px',
-                      position: 'relative',
-                    }}>
-                      <div style={{
-                        width: isMobile ? '40px' : '48px',
-                        height: isMobile ? '40px' : '48px',
-                        borderRadius: '10px',
-                        background: '#111',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                      }}>
-                        {React.cloneElement(feature.icon, { size: isMobile ? 20 : 24 })}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{
-                          fontSize: isMobile ? '15px' : '18px',
-                          fontWeight: 900,
-                          color: '#000',
-                          margin: 0,
-                          lineHeight: 1.2,
-                          letterSpacing: '-0.02em',
-                          fontFamily: "'Georgia', 'Times New Roman', serif",
-                        }}>
-                          {feature.title}
-                        </h3>
-                      </div>
-                    </div>
-
-                    {/* Article Content */}
-                    <p style={{
-                      fontSize: isMobile ? '13px' : '15px',
-                      color: '#222',
-                      lineHeight: 1.7,
-                      margin: 0,
-                      flex: 1,
-                      fontWeight: 400,
-                      fontFamily: "'Georgia', 'Times New Roman', serif",
-                    }}>
-                      {feature.description}
-                    </p>
-
-                    {/* Newspaper Footer */}
-                    <div style={{
-                      paddingTop: '14px',
-                      borderTop: '1px solid #ddd',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginTop: 'auto',
-                    }}>
-                      <span style={{
-                        fontSize: isMobile ? '10px' : '11px',
-                        color: '#000',
-                        fontWeight: 800,
-                        letterSpacing: '0.15em',
-                        textTransform: 'uppercase',
-                        fontFamily: "'Arial', sans-serif",
-                      }}>
-                        CRYMADX
-                      </span>
-                      <span style={{
-                        fontSize: isMobile ? '10px' : '11px',
-                        color: '#666',
-                        fontWeight: 500,
-                        fontFamily: "'Arial', sans-serif",
-                      }}>
-                        Feature Highlight
-                      </span>
-                    </div>
+                    {React.cloneElement(feature.icon, { size: isMobile ? 18 : 22 })}
                   </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
+                  <h3 style={{
+                    fontSize: isMobile ? '14px' : '17px',
+                    fontWeight: 800,
+                    color: '#000',
+                    margin: 0,
+                    lineHeight: 1.25,
+                    fontFamily: 'Georgia, serif',
+                  }}>
+                    {feature.title}
+                  </h3>
+                </div>
+
+                {/* Content */}
+                <p style={{
+                  fontSize: isMobile ? '12px' : '14px',
+                  color: '#333',
+                  lineHeight: 1.65,
+                  margin: 0,
+                  flex: 1,
+                  fontFamily: 'Georgia, serif',
+                }}>
+                  {feature.description}
+                </p>
+
+                {/* Footer */}
+                <div style={{
+                  paddingTop: '12px',
+                  borderTop: '1px solid #e0e0e0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: 'auto',
+                }}>
+                  <span style={{
+                    fontSize: '10px',
+                    color: '#000',
+                    fontWeight: 800,
+                    letterSpacing: '0.12em',
+                  }}>
+                    CRYMADX
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    color: '#888',
+                    fontWeight: 500,
+                  }}>
+                    Feature
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Navigation Arrows */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
+      <button
         onClick={(e) => { e.stopPropagation(); goToPrev(); }}
         style={{
           position: 'absolute',
-          left: isMobile ? '8px' : '40px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: isMobile ? '40px' : '50px',
-          height: isMobile ? '40px' : '50px',
+          left: isMobile ? '12px' : '50px',
+          top: '45%',
+          width: isMobile ? '42px' : '52px',
+          height: isMobile ? '42px' : '52px',
           borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
+          background: '#fff',
+          border: 'none',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: '#000',
-          fontSize: isMobile ? '20px' : '24px',
+          fontSize: isMobile ? '22px' : '26px',
           fontWeight: 300,
           zIndex: 20,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.12)';
         }}
       >
         ‹
-      </motion.button>
+      </button>
 
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
+      <button
         onClick={(e) => { e.stopPropagation(); goToNext(); }}
         style={{
           position: 'absolute',
-          right: isMobile ? '8px' : '40px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: isMobile ? '40px' : '50px',
-          height: isMobile ? '40px' : '50px',
+          right: isMobile ? '12px' : '50px',
+          top: '45%',
+          width: isMobile ? '42px' : '52px',
+          height: isMobile ? '42px' : '52px',
           borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
+          background: '#fff',
+          border: 'none',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: '#000',
-          fontSize: isMobile ? '20px' : '24px',
+          fontSize: isMobile ? '22px' : '26px',
           fontWeight: 300,
           zIndex: 20,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.12)';
         }}
       >
         ›
-      </motion.button>
+      </button>
 
-      {/* Projector Base */}
+      {/* Premium Projector Base */}
       <div style={{
         position: 'relative',
-        marginTop: '10px',
+        marginTop: '15px',
         zIndex: 15,
       }}>
         {/* Lens glow */}
-        <motion.div
-          animate={{ opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            position: 'absolute',
-            top: '-25px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100px',
-            height: '50px',
-            background: 'radial-gradient(ellipse, rgba(0, 212, 255, 0.5) 0%, transparent 70%)',
-            filter: 'blur(10px)',
-          }}
-        />
-
-        {/* Projector body */}
         <div style={{
-          width: isMobile ? '120px' : '140px',
-          height: '40px',
-          background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
-          borderRadius: '8px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)',
+          position: 'absolute',
+          top: '-30px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '120px',
+          height: '60px',
+          background: 'radial-gradient(ellipse, rgba(0, 200, 255, 0.4) 0%, transparent 70%)',
+          filter: 'blur(12px)',
+          animation: 'pulse 3s ease-in-out infinite',
+        }} />
+
+        {/* Main projector housing */}
+        <div style={{
+          width: isMobile ? '160px' : '200px',
+          height: '50px',
+          background: 'linear-gradient(180deg, #2a2a2a 0%, #111 50%, #0a0a0a 100%)',
+          borderRadius: '25px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '12px',
+          gap: isMobile ? '10px' : '14px',
+          padding: '0 20px',
         }}>
-          {/* Main lens */}
-          <motion.div
-            animate={{ boxShadow: ['0 0 15px rgba(0, 212, 255, 0.6)', '0 0 25px rgba(0, 212, 255, 0.8)', '0 0 15px rgba(0, 212, 255, 0.6)'] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, #00d4ff 0%, #0099cc 100%)',
-            }}
-          />
-
-          {/* Status light */}
-          <motion.div
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1, repeat: Infinity }}
-            style={{
+          {/* Left film reel */}
+          <div style={{
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            border: '2px solid #444',
+            background: 'linear-gradient(135deg, #222 0%, #111 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'spin 4s linear infinite',
+          }}>
+            <div style={{
               width: '6px',
               height: '6px',
               borderRadius: '50%',
+              background: '#333',
+            }} />
+          </div>
+
+          {/* Main lens */}
+          <div style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 30% 30%, #00e5ff 0%, #00b4d8 40%, #0077b6 100%)',
+            boxShadow: '0 0 20px rgba(0, 200, 255, 0.6), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2)',
+            animation: 'glow 2s ease-in-out infinite',
+          }} />
+
+          {/* Right film reel */}
+          <div style={{
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            border: '2px solid #444',
+            background: 'linear-gradient(135deg, #222 0%, #111 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'spin 4s linear infinite reverse',
+          }}>
+            <div style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: '#333',
+            }} />
+          </div>
+
+          {/* Status indicators */}
+          <div style={{ display: 'flex', gap: '4px', marginLeft: '6px' }}>
+            <div style={{
+              width: '5px',
+              height: '5px',
+              borderRadius: '50%',
               background: '#00ff88',
               boxShadow: '0 0 6px #00ff88',
-            }}
-          />
+              animation: 'blink 1.5s ease-in-out infinite',
+            }} />
+            <div style={{
+              width: '5px',
+              height: '5px',
+              borderRadius: '50%',
+              background: '#00d4ff',
+              boxShadow: '0 0 6px #00d4ff',
+              animation: 'blink 1.5s ease-in-out infinite 0.5s',
+            }} />
+          </div>
         </div>
+
+        {/* CSS Animations */}
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 200, 255, 0.6), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2); }
+            50% { box-shadow: 0 0 35px rgba(0, 200, 255, 0.8), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.7; }
+          }
+          @keyframes blink {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+          }
+        `}</style>
       </div>
 
       {/* Navigation Dots */}
       <div style={{
         display: 'flex',
         gap: '10px',
-        marginTop: '24px',
+        marginTop: '22px',
       }}>
         {features.map((_, index) => (
-          <motion.button
+          <button
             key={index}
-            whileHover={{ scale: 1.2 }}
-            onClick={() => navigateTo(index)}
+            onClick={() => setActiveIndex(index)}
             style={{
-              width: index === activeIndex ? '28px' : '10px',
+              width: index === activeIndex ? '30px' : '10px',
               height: '10px',
               borderRadius: '5px',
-              background: index === activeIndex ? '#00d4ff' : 'rgba(255, 255, 255, 0.3)',
+              background: index === activeIndex ? '#00d4ff' : 'rgba(255, 255, 255, 0.25)',
               border: 'none',
               cursor: 'pointer',
-              transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-              boxShadow: index === activeIndex ? '0 0 15px rgba(0, 212, 255, 0.5)' : 'none',
+              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: index === activeIndex ? '0 0 12px rgba(0, 200, 255, 0.5)' : 'none',
             }}
           />
         ))}
@@ -933,11 +934,10 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
 
       {/* Drag hint */}
       <p style={{
-        fontSize: '12px',
-        color: 'rgba(255, 255, 255, 0.4)',
-        marginTop: '16px',
+        fontSize: '11px',
+        color: 'rgba(255, 255, 255, 0.35)',
+        marginTop: '14px',
         textAlign: 'center',
-        fontWeight: 500,
       }}>
         Drag to explore
       </p>
