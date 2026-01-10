@@ -483,85 +483,196 @@ interface HologramCarouselProps {
 const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, isMobile }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [dragStartX, setDragStartX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
 
-  // Auto-rotation with smooth timing
+  // Refs for momentum tracking
+  const dragStartX = React.useRef(0);
+  const lastX = React.useRef(0);
+  const lastTime = React.useRef(0);
+  const velocity = React.useRef(0);
+  const momentumRef = React.useRef<number | null>(null);
+
+  const total = features.length;
+  const cardWidth = isMobile ? 260 : 300;
+  const cardHeight = isMobile ? 280 : 320;
+  const spacing = isMobile ? 200 : 280;
+
+  // Auto-rotation
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlaying || isDragging) return;
     const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % features.length);
-    }, 5000);
+      setActiveIndex((prev) => (prev + 1) % total);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [isAutoPlaying, features.length]);
+  }, [isAutoPlaying, isDragging, total]);
 
-  const goToPrev = () => setActiveIndex((prev) => (prev - 1 + features.length) % features.length);
-  const goToNext = () => setActiveIndex((prev) => (prev + 1) % features.length);
+  // Cleanup momentum on unmount
+  useEffect(() => {
+    return () => {
+      if (momentumRef.current) cancelAnimationFrame(momentumRef.current);
+    };
+  }, []);
+
+  const goToIndex = (index: number) => {
+    setActiveIndex(((index % total) + total) % total);
+  };
+
+  const goToPrev = () => goToIndex(activeIndex - 1);
+  const goToNext = () => goToIndex(activeIndex + 1);
+
+  // Start drag
+  const startDrag = (clientX: number) => {
+    if (momentumRef.current) {
+      cancelAnimationFrame(momentumRef.current);
+      momentumRef.current = null;
+    }
+    setIsDragging(true);
+    setIsAutoPlaying(false);
+    dragStartX.current = clientX;
+    lastX.current = clientX;
+    lastTime.current = Date.now();
+    velocity.current = 0;
+    setDragOffset(0);
+  };
+
+  // During drag - track velocity
+  const onDrag = (clientX: number) => {
+    if (!isDragging) return;
+
+    const now = Date.now();
+    const dt = now - lastTime.current;
+
+    if (dt > 0) {
+      velocity.current = (clientX - lastX.current) / dt;
+    }
+
+    lastX.current = clientX;
+    lastTime.current = now;
+
+    const diff = clientX - dragStartX.current;
+    setDragOffset(diff);
+
+    // Change slide if dragged far enough
+    if (Math.abs(diff) > spacing * 0.5) {
+      if (diff > 0) {
+        goToPrev();
+      } else {
+        goToNext();
+      }
+      dragStartX.current = clientX;
+      setDragOffset(0);
+    }
+  };
+
+  // End drag - apply momentum
+  const endDrag = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+
+    const v = velocity.current;
+    const threshold = 0.3;
+
+    // If velocity is high enough, keep sliding
+    if (Math.abs(v) > threshold) {
+      let currentVelocity = v * 150;
+      let accumulated = 0;
+
+      const applyMomentum = () => {
+        accumulated += currentVelocity;
+        currentVelocity *= 0.92; // Friction
+
+        // Change slides based on accumulated distance
+        while (Math.abs(accumulated) > spacing * 0.6) {
+          if (accumulated > 0) {
+            goToPrev();
+            accumulated -= spacing * 0.6;
+          } else {
+            goToNext();
+            accumulated += spacing * 0.6;
+          }
+        }
+
+        if (Math.abs(currentVelocity) > 2) {
+          momentumRef.current = requestAnimationFrame(applyMomentum);
+        } else {
+          momentumRef.current = null;
+          setDragOffset(0);
+          setTimeout(() => setIsAutoPlaying(true), 3000);
+        }
+      };
+
+      momentumRef.current = requestAnimationFrame(applyMomentum);
+    } else {
+      // Snap to nearest
+      if (Math.abs(dragOffset) > spacing * 0.2) {
+        if (dragOffset > 0) goToPrev();
+        else goToNext();
+      }
+      setDragOffset(0);
+      setTimeout(() => setIsAutoPlaying(true), 3000);
+    }
+  };
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStartX(e.clientX);
-    setIsAutoPlaying(false);
+    e.preventDefault();
+    startDrag(e.clientX);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const diff = e.clientX - dragStartX;
-    if (Math.abs(diff) > 100) {
-      diff > 0 ? goToPrev() : goToNext();
-      setDragStartX(e.clientX);
-    }
+    onDrag(e.clientX);
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setTimeout(() => setIsAutoPlaying(true), 4000);
-  };
+  const handleMouseUp = () => endDrag();
+  const handleMouseLeave = () => { if (isDragging) endDrag(); };
 
   // Touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true);
-    setDragStartX(e.touches[0].clientX);
-    setIsAutoPlaying(false);
+    startDrag(e.touches[0].clientX);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const diff = e.touches[0].clientX - dragStartX;
-    if (Math.abs(diff) > 80) {
-      diff > 0 ? goToPrev() : goToNext();
-      setDragStartX(e.touches[0].clientX);
-    }
+    onDrag(e.touches[0].clientX);
   };
 
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setTimeout(() => setIsAutoPlaying(true), 4000);
-  };
+  const handleTouchEnd = () => endDrag();
 
-  // Get only 3 visible cards (optimized - no extra renders)
+  // Get visible cards (5 for smoother transitions)
   const getVisibleCards = () => {
-    const total = features.length;
-    const prev = (activeIndex - 1 + total) % total;
-    const next = (activeIndex + 1) % total;
-    return [
-      { feature: features[prev], position: -1 },
-      { feature: features[activeIndex], position: 0 },
-      { feature: features[next], position: 1 },
-    ];
+    const cards = [];
+    for (let i = -2; i <= 2; i++) {
+      const index = ((activeIndex + i) % total + total) % total;
+      cards.push({ feature: features[index], offset: i, index });
+    }
+    return cards;
   };
 
-  const cardWidth = isMobile ? 260 : 300;
-  const cardHeight = isMobile ? 280 : 320;
-  const spacing = isMobile ? 180 : 260;
+  // Calculate card transform with drag offset
+  const getCardStyle = (offset: number) => {
+    const dragInfluence = dragOffset / spacing;
+    const adjustedOffset = offset - dragInfluence;
+
+    const x = adjustedOffset * spacing;
+    const absOffset = Math.abs(adjustedOffset);
+    const z = -absOffset * 60;
+    const rotateY = adjustedOffset * -20;
+    const scale = Math.max(0.6, 1 - absOffset * 0.15);
+    const opacity = Math.max(0, 1 - absOffset * 0.35);
+
+    return {
+      transform: `translateX(${x}px) translateZ(${z}px) rotateY(${rotateY}deg) scale(${scale})`,
+      opacity,
+      zIndex: 10 - Math.abs(Math.round(adjustedOffset)),
+    };
+  };
 
   return (
     <div
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -570,148 +681,161 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        minHeight: isMobile ? '460px' : '540px',
+        minHeight: isMobile ? '480px' : '560px',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         overflow: 'hidden',
+        touchAction: 'pan-y',
       }}
     >
-      {/* Hologram Projection Beam */}
+      {/* Hologram Beam */}
       <div style={{
         position: 'absolute',
-        bottom: '70px',
+        bottom: '80px',
         left: '50%',
         transform: 'translateX(-50%)',
         width: isMobile ? '95%' : '85%',
-        height: isMobile ? '350px' : '400px',
-        background: 'linear-gradient(to top, rgba(0, 200, 255, 0.2) 0%, rgba(0, 200, 255, 0.06) 40%, transparent 80%)',
-        clipPath: 'polygon(18% 100%, 82% 100%, 98% 0%, 2% 0%)',
+        height: isMobile ? '380px' : '440px',
+        background: 'linear-gradient(to top, rgba(0, 200, 255, 0.22) 0%, rgba(0, 200, 255, 0.08) 35%, rgba(0, 200, 255, 0.02) 60%, transparent 85%)',
+        clipPath: 'polygon(15% 100%, 85% 100%, 100% 0%, 0% 0%)',
         zIndex: 0,
+        transition: 'opacity 0.3s ease',
+        opacity: isDragging ? 0.7 : 1,
       }} />
 
-      {/* 3D Carousel - Only 3 cards rendered */}
+      {/* 3D Carousel */}
       <div style={{
         position: 'relative',
         width: '100%',
-        height: isMobile ? '340px' : '400px',
+        height: isMobile ? '360px' : '420px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        perspective: '1000px',
+        perspective: '1200px',
+        perspectiveOrigin: '50% 50%',
       }}>
-        {getVisibleCards().map(({ feature, position }) => {
-          const isCenter = position === 0;
-          const xOffset = position * spacing;
-          const zOffset = isCenter ? 0 : -80;
-          const rotation = position * -25;
-          const scale = isCenter ? 1 : 0.8;
-          const opacity = isCenter ? 1 : 0.5;
+        <div style={{
+          position: 'relative',
+          width: cardWidth,
+          height: cardHeight,
+          transformStyle: 'preserve-3d',
+        }}>
+          {getVisibleCards().map(({ feature, offset, index }) => {
+            const style = getCardStyle(offset);
+            const isCenter = Math.abs(offset - dragOffset / spacing) < 0.5;
 
-          return (
-            <div
-              key={`${feature.title}-${position}`}
-              onClick={() => !isCenter && (position === -1 ? goToPrev() : goToNext())}
-              style={{
-                position: 'absolute',
-                width: cardWidth,
-                height: cardHeight,
-                transform: `translateX(${xOffset}px) translateZ(${zOffset}px) rotateY(${rotation}deg) scale(${scale})`,
-                opacity,
-                transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: isCenter ? 'default' : 'pointer',
-                zIndex: isCenter ? 10 : 5,
-                willChange: 'transform, opacity',
-                transformStyle: 'preserve-3d',
-              }}
-            >
-              {/* Clean White Card */}
-              <div style={{
-                width: '100%',
-                height: '100%',
-                background: '#fff',
-                borderRadius: '12px',
-                padding: isMobile ? '22px' : '26px',
-                boxShadow: isCenter
-                  ? '0 30px 60px rgba(0, 0, 0, 0.12), 0 0 40px rgba(0, 200, 255, 0.1)'
-                  : '0 15px 35px rgba(0, 0, 0, 0.08)',
-                display: 'flex',
-                flexDirection: 'column',
-              }}>
-                {/* Header */}
+            return (
+              <div
+                key={`${index}-${offset}`}
+                onClick={() => {
+                  if (!isDragging && offset !== 0) {
+                    goToIndex(index);
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  width: cardWidth,
+                  height: cardHeight,
+                  left: 0,
+                  top: 0,
+                  ...style,
+                  transition: isDragging ? 'none' : 'all 0.6s cubic-bezier(0.25, 0.1, 0.25, 1)',
+                  cursor: offset === 0 ? 'grab' : 'pointer',
+                  willChange: 'transform, opacity',
+                  transformStyle: 'preserve-3d',
+                  backfaceVisibility: 'hidden',
+                }}
+              >
+                {/* Card */}
                 <div style={{
+                  width: '100%',
+                  height: '100%',
+                  background: '#fff',
+                  borderRadius: '14px',
+                  padding: isMobile ? '22px' : '28px',
+                  boxShadow: isCenter && !isDragging
+                    ? '0 35px 70px rgba(0, 0, 0, 0.15), 0 0 50px rgba(0, 200, 255, 0.12)'
+                    : '0 20px 40px rgba(0, 0, 0, 0.1)',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  paddingBottom: '14px',
-                  borderBottom: '2px solid #000',
-                  marginBottom: '14px',
+                  flexDirection: 'column',
+                  transition: 'box-shadow 0.4s ease',
                 }}>
+                  {/* Header */}
                   <div style={{
-                    width: isMobile ? '38px' : '44px',
-                    height: isMobile ? '38px' : '44px',
-                    borderRadius: '8px',
-                    background: '#000',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    flexShrink: 0,
+                    gap: '14px',
+                    paddingBottom: '16px',
+                    borderBottom: '2px solid #111',
+                    marginBottom: '16px',
                   }}>
-                    {React.cloneElement(feature.icon, { size: isMobile ? 18 : 22 })}
+                    <div style={{
+                      width: isMobile ? '40px' : '48px',
+                      height: isMobile ? '40px' : '48px',
+                      borderRadius: '10px',
+                      background: '#111',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      flexShrink: 0,
+                    }}>
+                      {React.cloneElement(feature.icon, { size: isMobile ? 20 : 24 })}
+                    </div>
+                    <h3 style={{
+                      fontSize: isMobile ? '15px' : '18px',
+                      fontWeight: 800,
+                      color: '#000',
+                      margin: 0,
+                      lineHeight: 1.25,
+                      fontFamily: 'Georgia, serif',
+                    }}>
+                      {feature.title}
+                    </h3>
                   </div>
-                  <h3 style={{
-                    fontSize: isMobile ? '14px' : '17px',
-                    fontWeight: 800,
-                    color: '#000',
+
+                  {/* Content */}
+                  <p style={{
+                    fontSize: isMobile ? '13px' : '15px',
+                    color: '#333',
+                    lineHeight: 1.7,
                     margin: 0,
-                    lineHeight: 1.25,
+                    flex: 1,
                     fontFamily: 'Georgia, serif',
                   }}>
-                    {feature.title}
-                  </h3>
-                </div>
+                    {feature.description}
+                  </p>
 
-                {/* Content */}
-                <p style={{
-                  fontSize: isMobile ? '12px' : '14px',
-                  color: '#333',
-                  lineHeight: 1.65,
-                  margin: 0,
-                  flex: 1,
-                  fontFamily: 'Georgia, serif',
-                }}>
-                  {feature.description}
-                </p>
-
-                {/* Footer */}
-                <div style={{
-                  paddingTop: '12px',
-                  borderTop: '1px solid #e0e0e0',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: 'auto',
-                }}>
-                  <span style={{
-                    fontSize: '10px',
-                    color: '#000',
-                    fontWeight: 800,
-                    letterSpacing: '0.12em',
+                  {/* Footer */}
+                  <div style={{
+                    paddingTop: '14px',
+                    borderTop: '1px solid #e0e0e0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 'auto',
                   }}>
-                    CRYMADX
-                  </span>
-                  <span style={{
-                    fontSize: '10px',
-                    color: '#888',
-                    fontWeight: 500,
-                  }}>
-                    Feature
-                  </span>
+                    <span style={{
+                      fontSize: '10px',
+                      color: '#000',
+                      fontWeight: 800,
+                      letterSpacing: '0.12em',
+                    }}>
+                      CRYMADX
+                    </span>
+                    <span style={{
+                      fontSize: '10px',
+                      color: '#888',
+                      fontWeight: 500,
+                    }}>
+                      Feature
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Navigation Arrows */}
@@ -719,10 +843,10 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         onClick={(e) => { e.stopPropagation(); goToPrev(); }}
         style={{
           position: 'absolute',
-          left: isMobile ? '12px' : '50px',
-          top: '45%',
-          width: isMobile ? '42px' : '52px',
-          height: isMobile ? '42px' : '52px',
+          left: isMobile ? '10px' : '40px',
+          top: '42%',
+          width: isMobile ? '44px' : '54px',
+          height: isMobile ? '44px' : '54px',
           borderRadius: '50%',
           background: '#fff',
           border: 'none',
@@ -731,19 +855,19 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
           alignItems: 'center',
           justifyContent: 'center',
           color: '#000',
-          fontSize: isMobile ? '22px' : '26px',
+          fontSize: isMobile ? '24px' : '28px',
           fontWeight: 300,
           zIndex: 20,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.15)',
+          transition: 'all 0.25s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'scale(1.12)';
+          e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.2)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.12)';
+          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
         }}
       >
         ‹
@@ -753,10 +877,10 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         onClick={(e) => { e.stopPropagation(); goToNext(); }}
         style={{
           position: 'absolute',
-          right: isMobile ? '12px' : '50px',
-          top: '45%',
-          width: isMobile ? '42px' : '52px',
-          height: isMobile ? '42px' : '52px',
+          right: isMobile ? '10px' : '40px',
+          top: '42%',
+          width: isMobile ? '44px' : '54px',
+          height: isMobile ? '44px' : '54px',
           borderRadius: '50%',
           background: '#fff',
           border: 'none',
@@ -765,144 +889,127 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
           alignItems: 'center',
           justifyContent: 'center',
           color: '#000',
-          fontSize: isMobile ? '22px' : '26px',
+          fontSize: isMobile ? '24px' : '28px',
           fontWeight: 300,
           zIndex: 20,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.15)',
+          transition: 'all 0.25s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.transform = 'scale(1.12)';
+          e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.2)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.12)';
+          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
         }}
       >
         ›
       </button>
 
-      {/* Premium Projector Base */}
+      {/* Projector Base */}
       <div style={{
         position: 'relative',
-        marginTop: '15px',
+        marginTop: '20px',
         zIndex: 15,
       }}>
-        {/* Lens glow */}
+        {/* Glow */}
         <div style={{
           position: 'absolute',
-          top: '-30px',
+          top: '-35px',
           left: '50%',
           transform: 'translateX(-50%)',
-          width: '120px',
-          height: '60px',
-          background: 'radial-gradient(ellipse, rgba(0, 200, 255, 0.4) 0%, transparent 70%)',
-          filter: 'blur(12px)',
-          animation: 'pulse 3s ease-in-out infinite',
+          width: '140px',
+          height: '70px',
+          background: 'radial-gradient(ellipse, rgba(0, 200, 255, 0.45) 0%, transparent 70%)',
+          filter: 'blur(15px)',
+          animation: 'pulseGlow 2.5s ease-in-out infinite',
         }} />
 
-        {/* Main projector housing */}
+        {/* Housing */}
         <div style={{
-          width: isMobile ? '160px' : '200px',
-          height: '50px',
-          background: 'linear-gradient(180deg, #2a2a2a 0%, #111 50%, #0a0a0a 100%)',
-          borderRadius: '25px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+          width: isMobile ? '180px' : '220px',
+          height: '55px',
+          background: 'linear-gradient(180deg, #333 0%, #1a1a1a 40%, #0a0a0a 100%)',
+          borderRadius: '28px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 12px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: isMobile ? '10px' : '14px',
-          padding: '0 20px',
+          gap: isMobile ? '12px' : '16px',
+          padding: '0 24px',
         }}>
-          {/* Left film reel */}
+          {/* Film reels */}
           <div style={{
-            width: '20px',
-            height: '20px',
+            width: '22px',
+            height: '22px',
             borderRadius: '50%',
-            border: '2px solid #444',
-            background: 'linear-gradient(135deg, #222 0%, #111 100%)',
+            border: '2px solid #555',
+            background: 'linear-gradient(135deg, #2a2a2a 0%, #151515 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            animation: 'spin 4s linear infinite',
+            animation: 'spinReel 3s linear infinite',
           }}>
-            <div style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: '#333',
-            }} />
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#3a3a3a' }} />
           </div>
 
           {/* Main lens */}
           <div style={{
-            width: '28px',
-            height: '28px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
-            background: 'radial-gradient(circle at 30% 30%, #00e5ff 0%, #00b4d8 40%, #0077b6 100%)',
-            boxShadow: '0 0 20px rgba(0, 200, 255, 0.6), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2)',
-            animation: 'glow 2s ease-in-out infinite',
+            background: 'radial-gradient(circle at 35% 35%, #00f5ff 0%, #00c8ff 30%, #0088cc 70%, #006699 100%)',
+            boxShadow: '0 0 25px rgba(0, 200, 255, 0.7), inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 3px 6px rgba(255,255,255,0.3)',
+            animation: 'lensGlow 2s ease-in-out infinite',
           }} />
 
-          {/* Right film reel */}
+          {/* Film reels */}
           <div style={{
-            width: '20px',
-            height: '20px',
+            width: '22px',
+            height: '22px',
             borderRadius: '50%',
-            border: '2px solid #444',
-            background: 'linear-gradient(135deg, #222 0%, #111 100%)',
+            border: '2px solid #555',
+            background: 'linear-gradient(135deg, #2a2a2a 0%, #151515 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            animation: 'spin 4s linear infinite reverse',
+            animation: 'spinReel 3s linear infinite reverse',
           }}>
-            <div style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: '#333',
-            }} />
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#3a3a3a' }} />
           </div>
 
-          {/* Status indicators */}
-          <div style={{ display: 'flex', gap: '4px', marginLeft: '6px' }}>
+          {/* Status */}
+          <div style={{ display: 'flex', gap: '5px', marginLeft: '8px' }}>
             <div style={{
-              width: '5px',
-              height: '5px',
-              borderRadius: '50%',
-              background: '#00ff88',
-              boxShadow: '0 0 6px #00ff88',
-              animation: 'blink 1.5s ease-in-out infinite',
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: '#00ff88', boxShadow: '0 0 8px #00ff88',
+              animation: 'blinkLight 1.2s ease-in-out infinite',
             }} />
             <div style={{
-              width: '5px',
-              height: '5px',
-              borderRadius: '50%',
-              background: '#00d4ff',
-              boxShadow: '0 0 6px #00d4ff',
-              animation: 'blink 1.5s ease-in-out infinite 0.5s',
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: '#00d4ff', boxShadow: '0 0 8px #00d4ff',
+              animation: 'blinkLight 1.2s ease-in-out infinite 0.4s',
             }} />
           </div>
         </div>
 
-        {/* CSS Animations */}
         <style>{`
-          @keyframes spin {
+          @keyframes spinReel {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
-          @keyframes glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(0, 200, 255, 0.6), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2); }
-            50% { box-shadow: 0 0 35px rgba(0, 200, 255, 0.8), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2); }
+          @keyframes lensGlow {
+            0%, 100% { box-shadow: 0 0 25px rgba(0, 200, 255, 0.7), inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 3px 6px rgba(255,255,255,0.3); }
+            50% { box-shadow: 0 0 40px rgba(0, 200, 255, 0.9), inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 3px 6px rgba(255,255,255,0.3); }
           }
-          @keyframes pulse {
+          @keyframes pulseGlow {
+            0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.8; transform: translateX(-50%) scale(1.1); }
+          }
+          @keyframes blinkLight {
             0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.7; }
-          }
-          @keyframes blink {
-            0%, 100% { opacity: 0.5; }
             50% { opacity: 1; }
           }
         `}</style>
@@ -911,35 +1018,37 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
       {/* Navigation Dots */}
       <div style={{
         display: 'flex',
-        gap: '10px',
-        marginTop: '22px',
+        gap: '12px',
+        marginTop: '24px',
       }}>
         {features.map((_, index) => (
           <button
             key={index}
-            onClick={() => setActiveIndex(index)}
+            onClick={() => goToIndex(index)}
             style={{
-              width: index === activeIndex ? '30px' : '10px',
+              width: index === activeIndex ? '32px' : '10px',
               height: '10px',
               borderRadius: '5px',
-              background: index === activeIndex ? '#00d4ff' : 'rgba(255, 255, 255, 0.25)',
+              background: index === activeIndex
+                ? 'linear-gradient(90deg, #00d4ff, #00ff88)'
+                : 'rgba(255, 255, 255, 0.2)',
               border: 'none',
               cursor: 'pointer',
-              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: index === activeIndex ? '0 0 12px rgba(0, 200, 255, 0.5)' : 'none',
+              transition: 'all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1)',
+              boxShadow: index === activeIndex ? '0 0 15px rgba(0, 200, 255, 0.6)' : 'none',
             }}
           />
         ))}
       </div>
 
-      {/* Drag hint */}
+      {/* Hint */}
       <p style={{
         fontSize: '11px',
-        color: 'rgba(255, 255, 255, 0.35)',
-        marginTop: '14px',
+        color: 'rgba(255, 255, 255, 0.3)',
+        marginTop: '16px',
         textAlign: 'center',
       }}>
-        Drag to explore
+        Swipe or drag to explore
       </p>
     </div>
   );
