@@ -48,71 +48,71 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     ] : undefined,
   } : {};
 
-  // Theme-aware variants - Light mode: TRANSPARENT glassmorphism
+  // Theme-aware variants - Light mode: Pure white with black border
   const variants = {
     default: {
       background: isDark
         ? colors.background.card
-        : 'rgba(255,255,255,0.15)',
-      border: isDark ? colors.glass.border : 'rgba(255,255,255,0.4)',
-      hoverBorder: isDark ? colors.glass.borderHover : 'rgba(255,255,255,0.6)',
-      gradient: isDark ? colors.gradients.glassSurface : 'linear-gradient(145deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+        : '#ffffff',
+      border: isDark ? colors.glass.border : '#000000',
+      hoverBorder: isDark ? colors.glass.borderHover : '#000000',
+      gradient: isDark ? colors.gradients.glassSurface : 'none',
     },
     elevated: {
       background: isDark
         ? colors.background.tertiary
-        : 'rgba(255,255,255,0.2)',
-      border: isDark ? colors.glass.border : 'rgba(255,255,255,0.45)',
-      hoverBorder: isDark ? colors.glass.borderHover : 'rgba(255,255,255,0.65)',
-      gradient: isDark ? colors.gradients.liquidGlass : 'linear-gradient(145deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.12) 100%)',
+        : '#ffffff',
+      border: isDark ? colors.glass.border : '#000000',
+      hoverBorder: isDark ? colors.glass.borderHover : '#000000',
+      gradient: isDark ? colors.gradients.liquidGlass : 'none',
     },
     prominent: {
       background: isDark
         ? colors.background.elevated
-        : 'rgba(255,255,255,0.25)',
-      border: isDark ? colors.glass.borderHover : 'rgba(255,255,255,0.5)',
-      hoverBorder: isDark ? colors.glass.borderActive : 'rgba(16,185,129,0.5)',
-      gradient: isDark ? colors.gradients.liquidGlassPremium : 'linear-gradient(145deg, rgba(255,255,255,0.3) 0%, rgba(16,185,129,0.08) 50%, rgba(255,255,255,0.15) 100%)',
+        : '#ffffff',
+      border: isDark ? colors.glass.borderHover : '#000000',
+      hoverBorder: isDark ? colors.glass.borderActive : '#000000',
+      gradient: isDark ? colors.gradients.liquidGlassPremium : 'none',
     },
     subtle: {
       background: isDark
         ? colors.background.secondary
-        : 'rgba(255,255,255,0.1)',
-      border: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255,255,255,0.3)',
-      hoverBorder: isDark ? colors.glass.border : 'rgba(255,255,255,0.5)',
+        : '#ffffff',
+      border: isDark ? 'rgba(255, 255, 255, 0.04)' : '#000000',
+      hoverBorder: isDark ? colors.glass.border : '#000000',
       gradient: 'none',
     },
     premium: {
       background: isDark
         ? `linear-gradient(145deg, ${colors.background.elevated} 0%, ${colors.background.card} 100%)`
-        : 'rgba(255,255,255,0.22)',
-      border: isDark ? colors.glass.borderHover : 'rgba(16,185,129,0.35)',
-      hoverBorder: isDark ? colors.glass.borderActive : 'rgba(16,185,129,0.55)',
-      gradient: isDark ? colors.gradients.liquidGlassPremium : 'linear-gradient(145deg, rgba(255,255,255,0.3) 0%, rgba(16,185,129,0.1) 50%, rgba(255,255,255,0.18) 100%)',
+        : '#ffffff',
+      border: isDark ? colors.glass.borderHover : '#000000',
+      hoverBorder: isDark ? colors.glass.borderActive : '#000000',
+      gradient: isDark ? colors.gradients.liquidGlassPremium : 'none',
     },
     liquid: {
       background: isDark
         ? colors.gradients.cardGlass
-        : 'rgba(255,255,255,0.18)',
-      border: isDark ? colors.glass.border : 'rgba(255,255,255,0.4)',
-      hoverBorder: isDark ? colors.glass.borderHover : 'rgba(255,255,255,0.6)',
-      gradient: isDark ? colors.gradients.liquid3D : 'linear-gradient(145deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)',
+        : '#ffffff',
+      border: isDark ? colors.glass.border : '#000000',
+      hoverBorder: isDark ? colors.glass.borderHover : '#000000',
+      gradient: isDark ? colors.gradients.liquid3D : 'none',
     },
     dark: {
       background: isDark
         ? colors.background.primary
-        : 'rgba(255,255,255,0.12)',
-      border: isDark ? colors.glass.border : 'rgba(255,255,255,0.35)',
-      hoverBorder: isDark ? colors.glass.borderHover : 'rgba(255,255,255,0.55)',
+        : '#ffffff',
+      border: isDark ? colors.glass.border : '#000000',
+      hoverBorder: isDark ? colors.glass.borderHover : '#000000',
       gradient: 'none',
     },
     ultraGlass: {
       background: isDark
         ? 'rgba(24, 26, 32, 0.6)'
-        : 'rgba(255,255,255,0.2)',
-      border: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255,255,255,0.45)',
-      hoverBorder: isDark ? 'rgba(0, 210, 106, 0.3)' : 'rgba(16,185,129,0.5)',
-      gradient: isDark ? colors.gradients.liquid3D : 'linear-gradient(145deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.12) 100%)',
+        : '#ffffff',
+      border: isDark ? 'rgba(255, 255, 255, 0.1)' : '#000000',
+      hoverBorder: isDark ? 'rgba(0, 210, 106, 0.3)' : '#000000',
+      gradient: isDark ? colors.gradients.liquid3D : 'none',
     },
   };
 
@@ -126,17 +126,15 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   const variantStyles = variants[variant];
   const selectedGlow = glowColors[glowColor];
 
-  // Light mode: clean multi-layer 3D shadows (no blur/smoke), Dark mode: deep shadows
+  // Light mode: simple clean shadows, Dark mode: deep shadows
   const get3DShadow = () => {
     if (isDark) {
       return glow
         ? `0 4px 30px rgba(0, 0, 0, 0.4), 0 0 30px ${selectedGlow}`
         : '0 4px 20px rgba(0, 0, 0, 0.35)';
     }
-    // Light mode: crystal clear 3D shadow layers
-    return glow
-      ? `0 20px 40px -12px rgba(16, 185, 129, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(255, 255, 255, 0.9), 0 0 0 1px rgba(16, 185, 129, 0.08)`
-      : `0 20px 40px -12px rgba(16, 185, 129, 0.12), 0 8px 16px -8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.9)`;
+    // Light mode: simple clean shadow
+    return '0 1px 3px rgba(0, 0, 0, 0.08)';
   };
 
   const getHoverShadow = () => {
@@ -145,10 +143,8 @@ export const GlassCard: React.FC<GlassCardProps> = ({
         ? `0 8px 40px rgba(0, 0, 0, 0.5), 0 0 40px ${selectedGlow}`
         : '0 8px 40px rgba(0, 0, 0, 0.5)';
     }
-    // Light mode: elevated 3D effect on hover
-    return glow
-      ? `0 25px 50px -12px rgba(16, 185, 129, 0.22), 0 12px 24px -8px rgba(0, 0, 0, 0.1), inset 0 2px 4px rgba(255, 255, 255, 1), 0 0 0 1px rgba(16, 185, 129, 0.15)`
-      : `0 25px 50px -12px rgba(16, 185, 129, 0.18), 0 12px 24px -8px rgba(0, 0, 0, 0.08), inset 0 2px 4px rgba(255, 255, 255, 1)`;
+    // Light mode: slightly elevated shadow on hover
+    return '0 4px 12px rgba(0, 0, 0, 0.1)';
   };
 
   // Breathing transition settings
@@ -304,37 +300,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
         />
       )}
 
-      {/* Light mode 3D accents - top shine line and edge highlights */}
-      {!isDark && (
-        <>
-          {/* Top 3D accent line */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: '10%',
-              right: '10%',
-              height: '2px',
-              background: 'linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), rgba(16, 185, 129, 0.6), rgba(16, 185, 129, 0.4), transparent)',
-              borderRadius: '2px',
-              pointerEvents: 'none',
-            }}
-          />
-          {/* Inner top glow for 3D depth */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '40%',
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.8) 0%, transparent 100%)',
-              borderRadius: '14px 14px 0 0',
-              pointerEvents: 'none',
-            }}
-          />
-        </>
-      )}
+      {/* Light mode - no decorative elements, keep it clean */}
 
       {/* Content - uses theme text colors (dark on light, light on dark) */}
       <div style={{
@@ -506,24 +472,24 @@ export const PriceCard: React.FC<PriceCardProps> = ({
   const { colors, isDark } = useThemeMode();
   const isPositive = change >= 0;
 
-  // Light mode: crystal clear 3D gradient, Dark mode: glass effect
+  // Light mode: pure white, Dark mode: glass effect
   const cardBg = isDark
     ? colors.gradients.cardGlass
-    : 'linear-gradient(145deg, rgba(255,255,255,0.99) 0%, rgba(248,255,252,0.96) 100%)';
+    : '#ffffff';
 
-  // Light mode: 3D shadow layers, Dark mode: dark shadow
+  // Light mode: simple shadow, Dark mode: dark shadow
   const get3DShadow = () => {
     if (isDark) {
       return `0 4px 25px rgba(0, 0, 0, 0.35)`;
     }
-    return `0 16px 32px -10px rgba(16, 185, 129, 0.15), 0 6px 12px -6px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255,255,255,0.9)`;
+    return '0 1px 3px rgba(0, 0, 0, 0.08)';
   };
 
   const getHoverShadow = () => {
     if (isDark) {
       return '0 12px 40px rgba(0, 0, 0, 0.5)';
     }
-    return '0 20px 40px -12px rgba(16, 185, 129, 0.22), 0 10px 20px -8px rgba(0, 0, 0, 0.1), inset 0 2px 4px rgba(255,255,255,1)';
+    return '0 4px 12px rgba(0, 0, 0, 0.1)';
   };
 
   // Breathing animation for dark mode only
@@ -547,7 +513,7 @@ export const PriceCard: React.FC<PriceCardProps> = ({
         scale: 1.015,
         y: -2,
         boxShadow: getHoverShadow(),
-        borderColor: isDark ? colors.glass.borderHover : 'rgba(16, 185, 129, 0.5)',
+        borderColor: isDark ? colors.glass.borderHover : '#000000',
       }}
       onClick={onClick}
       style={{
@@ -555,11 +521,10 @@ export const PriceCard: React.FC<PriceCardProps> = ({
         borderRadius: '14px',
         padding: '16px',
         cursor: 'pointer',
-        border: `1px solid ${isDark ? colors.glass.border : 'rgba(16, 185, 129, 0.25)'}`,
+        border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
         transition: 'border-color 0.3s ease',
         position: 'relative',
         overflow: 'hidden',
-        // Remove blur in light mode for crystal clear look
         backdropFilter: isDark ? 'blur(12px)' : 'none',
         boxShadow: get3DShadow(),
         willChange: isDark ? 'transform, box-shadow' : undefined,
@@ -575,30 +540,16 @@ export const PriceCard: React.FC<PriceCardProps> = ({
         }} />
       )}
 
-      {/* Top 3D accent line */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: '15%',
-        right: '15%',
-        height: '2px',
-        background: isDark
-          ? 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)'
-          : 'linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.6), rgba(16, 185, 129, 0.5), transparent)',
-        borderRadius: '2px',
-        pointerEvents: 'none',
-      }} />
-
-      {/* Light mode inner glow */}
-      {!isDark && (
+      {/* Top accent line - dark mode only */}
+      {isDark && (
         <div style={{
           position: 'absolute',
           top: 0,
-          left: 0,
-          right: 0,
-          height: '35%',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, transparent 100%)',
-          borderRadius: '14px 14px 0 0',
+          left: '15%',
+          right: '15%',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
+          borderRadius: '2px',
           pointerEvents: 'none',
         }} />
       )}
@@ -610,8 +561,8 @@ export const PriceCard: React.FC<PriceCardProps> = ({
           width: '36px',
           height: '36px',
           borderRadius: '10px',
-          background: isDark ? colors.background.elevated : 'rgba(16, 185, 129, 0.08)',
-          border: `1px solid ${isDark ? colors.glass.border : 'rgba(16, 185, 129, 0.2)'}`,
+          background: isDark ? colors.background.elevated : '#f3f4f6',
+          border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

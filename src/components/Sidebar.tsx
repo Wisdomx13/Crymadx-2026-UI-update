@@ -57,15 +57,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Determine active item from location if not provided
   const currentActiveItem = activeItem || navItems.find(item => item.href === location.pathname)?.id || 'overview';
 
-  // Theme-aware sidebar background - Crystal clear glass effect
+  // Theme-aware sidebar background - Pure white for light mode
   const sidebarBg = isDark
     ? 'linear-gradient(180deg, rgba(2, 10, 4, 0.98), rgba(4, 18, 8, 0.98))'
-    : 'linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.22) 100%)';
+    : '#ffffff';
 
-  // Text colors - DARK text for light mode glass to stand out clearly
-  const sidebarTextPrimary = isDark ? '#ffffff' : '#1f2937';
-  const sidebarTextSecondary = isDark ? 'rgba(255,255,255,0.75)' : '#374151';
-  const sidebarTextTertiary = isDark ? 'rgba(255,255,255,0.55)' : '#6b7280';
+  // Text colors - Pure black for light mode
+  const sidebarTextPrimary = isDark ? '#ffffff' : '#000000';
+  const sidebarTextSecondary = isDark ? 'rgba(255,255,255,0.75)' : '#000000';
+  const sidebarTextTertiary = isDark ? 'rgba(255,255,255,0.55)' : '#374151';
 
   return (
     <motion.aside
@@ -78,24 +78,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         left: 0,
         top: 0,
         background: sidebarBg,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderRight: isDark ? `1px solid ${colors.glass.border}` : '1px solid rgba(255,255,255,0.4)',
+        backdropFilter: isDark ? 'blur(24px)' : 'none',
+        WebkitBackdropFilter: isDark ? 'blur(24px)' : 'none',
+        borderRight: isDark ? `1px solid ${colors.glass.border}` : '1px solid #000000',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 100,
         overflow: 'hidden',
         flexShrink: 0,
-        boxShadow: isDark
-          ? 'none'
-          : 'inset -1px 0 0 rgba(255,255,255,0.3), 4px 0 20px rgba(0,0,0,0.08)',
+        boxShadow: 'none',
       }}
     >
       {/* Logo - New combined logo with text */}
       <div
         style={{
           padding: collapsed ? '20px 12px' : '20px 20px',
-          borderBottom: `1px solid ${colors.glass.border}`,
+          borderBottom: isDark ? `1px solid ${colors.glass.border}` : '1px solid #e5e7eb',
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-start',
@@ -164,15 +162,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     background: isActive
                       ? isDark
                         ? 'linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(0, 255, 213, 0.08))'
-                        : 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.04))'
+                        : '#f3f4f6'
                       : isDark
                         ? 'rgba(0, 255, 136, 0.06)'
-                        : 'rgba(16, 185, 129, 0.05)',
+                        : '#f9fafb',
                     borderRadius: '12px',
                     border: isActive
                       ? isDark
                         ? '1px solid rgba(0, 255, 136, 0.2)'
-                        : '1px solid rgba(16, 185, 129, 0.15)'
+                        : '1px solid #000000'
                       : 'none',
                   }}
                 />
@@ -198,7 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <motion.span
                   animate={{
                     color: isActive
-                      ? (isDark ? colors.primary[400] : '#059669')
+                      ? (isDark ? colors.primary[400] : '#000000')
                       : sidebarTextSecondary,
                     filter: isActive && isDark ? `drop-shadow(0 0 6px ${colors.primary[400]})` : 'none',
                   }}
@@ -223,7 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         position: 'relative',
                         fontSize: '15px',
                         fontWeight: isActive ? 700 : 600,
-                        color: isActive ? (isDark ? colors.primary[400] : '#059669') : sidebarTextSecondary,
+                        color: isActive ? (isDark ? colors.primary[400] : '#000000') : sidebarTextSecondary,
                         whiteSpace: 'nowrap',
                         flex: 1,
                       }}
@@ -271,8 +269,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               padding: '20px',
               background: isDark
                 ? 'linear-gradient(135deg, rgba(0, 255, 136, 0.08), rgba(0, 255, 213, 0.05))'
-                : 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.04))',
-              border: `1px solid ${isDark ? 'rgba(0, 255, 136, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                : '#ffffff',
+              border: `1px solid ${isDark ? 'rgba(0, 255, 136, 0.2)' : '#000000'}`,
               borderRadius: '16px',
               position: 'relative',
               overflow: 'hidden',
@@ -308,17 +306,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Trade more to unlock exclusive benefits and lower fees
               </p>
               <motion.button
-                whileHover={{ scale: 1.02, boxShadow: isDark ? '0 2px 12px rgba(0, 255, 136, 0.2)' : '0 2px 12px rgba(16, 185, 129, 0.2)' }}
+                whileHover={{ scale: 1.02, boxShadow: isDark ? '0 2px 12px rgba(0, 255, 136, 0.2)' : 'none' }}
                 whileTap={{ scale: 0.98 }}
                 style={{
                   width: '100%',
                   padding: '10px',
                   background: isDark
                     ? 'linear-gradient(135deg, rgba(0, 255, 136, 0.15), rgba(0, 255, 213, 0.1))'
-                    : 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.1))',
-                  border: `1px solid ${isDark ? 'rgba(0, 255, 136, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                    : '#000000',
+                  border: `1px solid ${isDark ? 'rgba(0, 255, 136, 0.3)' : '#000000'}`,
                   borderRadius: '8px',
-                  color: isDark ? '#ffffff' : '#059669',
+                  color: '#ffffff',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -334,7 +332,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sign Out */}
       <div style={{
         padding: '16px 12px',
-        borderTop: `1px solid ${isDark ? colors.glass.border : 'rgba(0,0,0,0.08)'}`,
+        borderTop: isDark ? `1px solid ${colors.glass.border}` : '1px solid #e5e7eb',
       }}>
         <motion.button
           whileHover={{
