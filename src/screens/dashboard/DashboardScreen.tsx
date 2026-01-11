@@ -317,7 +317,7 @@ export const DashboardScreen: React.FC = () => {
   });
 
   // Show only first 10 on dashboard preview (or all if searching)
-  const displayMarkets = searchQuery ? sortedMarkets : sortedMarkets.slice(0, 10);
+  const displayMarkets = searchQuery ? sortedMarkets : sortedMarkets.slice(0, 5);
 
   const handleCopy = () => {
     navigator.clipboard.writeText('0x1234...5678');
@@ -696,28 +696,33 @@ export const DashboardScreen: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, type: 'spring', stiffness: 80 }}
-        style={{ position: 'relative', zIndex: 1 }}
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          marginBottom: '24px',
+        }}
       >
-        <GlassCard variant="elevated" padding="none">
-          {/* Liquid effect for markets card - enhanced for both modes */}
-          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 'inherit', pointerEvents: 'none' }}>
-            <LiquidWave delay={1} color={liquidColors.secondary} isDark={isDark} />
-            <LiquidShimmer isDark={isDark} />
-            {/* Light mode decorative blobs */}
-            {!isDark && <LightModeDecor variant="blue" />}
-          </div>
-          <div style={{ padding: isMobile ? '14px' : '16px' }}>
+        {/* Outer border wrapper for visibility */}
+        <div style={{
+          border: isDark ? `2px solid ${colors.glass.border}` : '2px solid #000000',
+          borderRadius: '16px',
+          padding: '2px',
+          background: isDark ? 'transparent' : '#ffffff',
+        }}>
+          <GlassCard variant="elevated" padding="none">
+            {/* Clean background - no liquid effects */}
+            <div style={{ padding: isMobile ? '12px' : '14px' }}>
             {/* Markets Header - Compact */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '12px',
+              marginBottom: '10px',
               flexWrap: 'wrap',
-              gap: '10px',
+              gap: '8px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <h2 style={{ fontSize: isMobile ? '14px' : '15px', fontWeight: 700, color: colors.text.primary }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000' }}>
                   Markets
                 </h2>
                 {/* Market Tabs - Compact */}
@@ -964,12 +969,12 @@ export const DashboardScreen: React.FC = () => {
             {!isMobile && (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 80px',
-                gap: '10px',
-                padding: '8px 12px',
+                gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 70px',
+                gap: '8px',
+                padding: '6px 10px',
                 background: isDark ? colors.background.card : '#f3f4f6',
-                borderRadius: '6px',
-                marginBottom: '4px',
+                borderRadius: '4px',
+                marginBottom: '2px',
                 border: isDark ? 'none' : '1px solid #e5e7eb',
               }}>
                 <span style={{ fontSize: '10px', fontWeight: 700, color: colors.text.tertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -1018,24 +1023,24 @@ export const DashboardScreen: React.FC = () => {
                   onClick={() => navigate(`/trade/${market.symbol.toLowerCase()}`)}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 1fr 1fr 80px',
-                    gap: isMobile ? '5px' : '10px',
+                    gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 1fr 1fr 70px',
+                    gap: isMobile ? '4px' : '8px',
                     alignItems: 'center',
-                    padding: isMobile ? '10px 8px' : '10px 12px',
-                    borderRadius: '6px',
+                    padding: isMobile ? '8px 6px' : '8px 10px',
+                    borderRadius: '4px',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     position: 'relative',
                   }}
                 >
                   {/* Pair Info - Compact */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CryptoIcon symbol={market.symbol} size={isMobile ? 28 : 30} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CryptoIcon symbol={market.symbol} size={isMobile ? 24 : 26} />
                     <div>
-                      <p style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 700, color: colors.text.primary }}>
+                      <p style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000' }}>
                         {market.pair}
                       </p>
-                      <p style={{ fontSize: '10px', color: colors.text.tertiary }}>
+                      <p style={{ fontSize: '9px', color: colors.text.tertiary }}>
                         {market.name}
                       </p>
                     </div>
@@ -1136,13 +1141,13 @@ export const DashboardScreen: React.FC = () => {
               onClick={() => navigate('/markets')}
               style={{
                 width: '100%',
-                marginTop: '12px',
-                padding: '10px 16px',
+                marginTop: '8px',
+                padding: '8px 12px',
                 background: isDark ? colors.background.card : '#ffffff',
                 border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
-                borderRadius: '8px',
+                borderRadius: '6px',
                 color: isDark ? colors.primary[400] : '#000000',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
@@ -1156,7 +1161,8 @@ export const DashboardScreen: React.FC = () => {
               <ChevronRight size={14} />
             </motion.button>
           </div>
-        </GlassCard>
+          </GlassCard>
+        </div>
       </motion.div>
 
       {/* Deposit Modal - Enhanced with Crypto Selection */}

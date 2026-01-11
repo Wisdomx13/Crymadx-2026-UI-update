@@ -27,7 +27,7 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
   return (
     <div
       style={{
-        minHeight: '100%',
+        minHeight: '100vh',
         display: 'flex',
         background: colors.background.primary,
         position: 'relative',
@@ -64,7 +64,7 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
       )}
 
       {/* Main wrapper */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', overflow: 'visible' }}>
         {/* Mobile Header */}
         {isMobile && (
           <MobileHeader title={title} showBackButton={showBackButton} />
@@ -80,13 +80,14 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
         {/* Main Content */}
         <main
           style={{
-            flex: 1,
+            flex: '1 0 auto',
             paddingTop: isMobile ? '16px' : '24px',
-            paddingBottom: isMobile ? '80px' : '24px',
+            paddingBottom: isMobile ? '80px' : '40px',
             paddingLeft: isMobile ? '12px' : '32px',
             paddingRight: isMobile ? '12px' : '32px',
             position: 'relative',
             zIndex: 1,
+            overflow: 'visible',
           }}
         >
           {/* Content Container with border - Pure white for light mode */}
@@ -102,7 +103,6 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                 ? `1px solid ${colors.glass.border}`
                 : '1px solid #000000',
               borderRadius: isMobile ? '16px' : '24px',
-              minHeight: isMobile ? 'auto' : 'calc(100vh - 180px)',
               backdropFilter: isDark ? 'blur(20px)' : 'none',
               WebkitBackdropFilter: isDark ? 'blur(20px)' : 'none',
               boxShadow: 'none',
@@ -113,7 +113,11 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
         </main>
 
         {/* Footer - Desktop only */}
-        {!isMobile && <Footer />}
+        {!isMobile && (
+          <div style={{ flexShrink: 0, marginTop: 'auto' }}>
+            <Footer />
+          </div>
+        )}
 
         {/* Mobile Bottom Navigation */}
         {isMobile && <MobileNav />}
