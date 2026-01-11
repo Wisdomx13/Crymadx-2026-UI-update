@@ -124,19 +124,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Header text colors - BRIGHT WHITE with STRONG shadows for light mode visibility
-  const headerTextPrimary = isDark ? '#ffffff' : '#ffffff';
-  const headerTextSecondary = isDark ? 'rgba(255,255,255,0.75)' : '#ffffff';
-  const headerTextTertiary = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.9)';
-  // STRONG text shadow for navigation visibility in light mode
-  const headerTextShadow = isDark ? 'none' : '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.9), 0 4px 16px rgba(0,0,0,0.6)';
+  // Header text colors - Pure black for light mode
+  const headerTextPrimary = isDark ? '#ffffff' : '#000000';
+  const headerTextSecondary = isDark ? 'rgba(255,255,255,0.75)' : '#000000';
+  const headerTextTertiary = isDark ? 'rgba(255,255,255,0.55)' : '#374151';
+  // No text shadow needed for light mode
+  const headerTextShadow = 'none';
 
   const iconButtonStyle = {
     width: '40px',
     height: '40px',
     borderRadius: '12px',
-    background: isDark ? 'transparent' : 'rgba(255,255,255,0.2)',
-    border: isDark ? 'none' : '1px solid rgba(255,255,255,0.3)',
+    background: isDark ? 'transparent' : '#ffffff',
+    border: isDark ? 'none' : '1px solid #000000',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -144,7 +144,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     color: headerTextSecondary,
     position: 'relative' as const,
     transition: 'all 0.2s ease',
-    filter: isDark ? 'none' : 'drop-shadow(0 2px 4px rgba(0,50,100,0.2))',
+    filter: 'none',
   };
 
   const menuStyle = {
@@ -153,30 +153,28 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     right: 0,
     background: isDark
       ? 'linear-gradient(145deg, rgba(30, 35, 41, 0.98), rgba(22, 24, 28, 0.98))'
-      : '#ffffff', // Solid white dropdown in light mode
-    backdropFilter: 'blur(24px)',
-    WebkitBackdropFilter: 'blur(24px)',
+      : '#ffffff',
+    backdropFilter: isDark ? 'blur(24px)' : 'none',
+    WebkitBackdropFilter: isDark ? 'blur(24px)' : 'none',
     borderRadius: '14px',
-    border: `1px solid ${isDark ? colors.glass.border : 'rgba(0, 0, 0, 0.1)'}`,
+    border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
     boxShadow: isDark
       ? '0 16px 48px rgba(0, 0, 0, 0.5)'
-      : '0 8px 30px rgba(0, 0, 0, 0.15)', // Clean shadow in light mode
+      : '0 4px 12px rgba(0, 0, 0, 0.1)',
     overflow: 'hidden',
     zIndex: 9999,
   };
 
   const currentLanguage = languages.find(l => l.code === currentLang);
 
-  // Premium header background - DARKER glass for light mode for better text visibility
+  // Pure white header background for light mode
   const headerBg = isDark
     ? 'linear-gradient(90deg, rgba(11, 14, 17, 0.9), rgba(15, 20, 25, 0.85))'
-    : 'linear-gradient(145deg, rgba(10,40,70,0.7) 0%, rgba(5,30,60,0.65) 50%, rgba(0,25,50,0.7) 100%)';
+    : '#ffffff';
 
-  const headerBorder = isDark ? colors.glass.border : 'rgba(255,255,255,0.4)';
+  const headerBorder = isDark ? colors.glass.border : '#000000';
 
-  const headerShadow = isDark
-    ? 'none'
-    : '0 4px 24px rgba(0,50,100,0.15), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,50,100,0.08)';
+  const headerShadow = 'none';
 
   return (
     <div style={{
@@ -186,8 +184,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       padding: '12px 24px',
       borderBottom: `1px solid ${headerBorder}`,
       background: headerBg,
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
+      backdropFilter: isDark ? 'blur(24px)' : 'none',
+      WebkitBackdropFilter: isDark ? 'blur(24px)' : 'none',
       boxShadow: headerShadow,
       position: 'relative',
       zIndex: 100,
@@ -203,7 +201,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           >
             <motion.button
               onClick={() => !link.hasDropdown && navigate(link.href)}
-              whileHover={{ color: '#ffffff', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.25)' }}
+              whileHover={{ color: isDark ? '#ffffff' : '#000000', background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -235,12 +233,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   left: 0,
                   marginTop: '4px',
                   minWidth: '160px',
-                  background: isDark ? 'rgba(20, 25, 30, 0.98)' : 'rgba(15, 45, 80, 0.98)',
-                  backdropFilter: 'blur(20px)',
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)'}`,
+                  background: isDark ? 'rgba(20, 25, 30, 0.98)' : '#ffffff',
+                  backdropFilter: isDark ? 'blur(20px)' : 'none',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#000000'}`,
                   borderRadius: '12px',
                   padding: '8px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  boxShadow: isDark ? '0 10px 40px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.1)',
                   zIndex: 200,
                 }}
               >
@@ -248,14 +246,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   <motion.button
                     key={subLink.label}
                     onClick={() => { navigate(subLink.href); setActiveDropdown(null); }}
-                    whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)' }}
+                    whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}
                     style={{
                       display: 'block',
                       width: '100%',
                       padding: '10px 16px',
                       fontSize: '14px',
                       fontWeight: 500,
-                      color: 'rgba(255,255,255,0.9)',
+                      color: isDark ? 'rgba(255,255,255,0.9)' : '#000000',
                       background: 'none',
                       border: 'none',
                       borderRadius: '8px',
@@ -282,7 +280,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         {/* Download App */}
         <div style={{ position: 'relative' }}>
           <motion.button
-            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(16, 185, 129, 0.1)' }}
+            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               setShowDownloadMenu(!showDownloadMenu);
@@ -343,7 +341,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         {/* Language Selector */}
         <div style={{ position: 'relative' }}>
           <motion.button
-            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(16, 185, 129, 0.1)' }}
+            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               setShowLanguageMenu(!showLanguageMenu);
@@ -422,7 +420,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         {/* Theme Toggle */}
         <motion.button
-          whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(16, 185, 129, 0.1)' }}
+          whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}
           whileTap={{ scale: 0.95 }}
           onClick={toggleTheme}
           style={{
@@ -448,7 +446,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         {/* Notifications Bell */}
         <div style={{ position: 'relative' }}>
           <motion.button
-            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(16, 185, 129, 0.1)' }}
+            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               setShowNotifications(!showNotifications);
@@ -651,7 +649,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         {/* Wallet */}
         <div style={{ position: 'relative' }}>
           <motion.button
-            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(16, 185, 129, 0.1)' }}
+            whileHover={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               setShowWalletMenu(!showWalletMenu);

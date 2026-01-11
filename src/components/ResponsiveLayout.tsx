@@ -89,7 +89,7 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
             zIndex: 1,
           }}
         >
-          {/* Content Container with border - TRANSPARENT GLASS */}
+          {/* Content Container with border - Pure white for light mode */}
           <div
             style={{
               maxWidth: '1400px',
@@ -97,17 +97,15 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
               padding: isMobile ? '16px' : '28px',
               background: isDark
                 ? 'rgba(10, 20, 15, 0.4)'
-                : 'linear-gradient(145deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.12) 50%, rgba(240,250,255,0.15) 100%)',
+                : '#ffffff',
               border: isDark
                 ? `1px solid ${colors.glass.border}`
-                : '2px solid rgba(255,255,255,0.4)',
+                : '1px solid #000000',
               borderRadius: isMobile ? '16px' : '24px',
               minHeight: isMobile ? 'auto' : 'calc(100vh - 180px)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: isDark
-                ? 'none'
-                : '0 8px 40px rgba(0,50,100,0.2), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,50,100,0.1)',
+              backdropFilter: isDark ? 'blur(20px)' : 'none',
+              WebkitBackdropFilter: isDark ? 'blur(20px)' : 'none',
+              boxShadow: 'none',
             }}
           >
             {children}

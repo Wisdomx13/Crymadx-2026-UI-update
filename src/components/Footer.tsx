@@ -110,32 +110,30 @@ export const Footer: React.FC = () => {
     },
   };
 
-  // Transparent Glass 3D background for both modes
+  // Pure white background for light mode
   const footerBg = isDark
     ? 'linear-gradient(180deg, rgba(11, 14, 17, 0.98) 0%, rgba(8, 10, 12, 1) 100%)'
-    : 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.2) 100%)';
+    : '#ffffff';
 
   const footerBorder = isDark
     ? colors.glass.border
-    : 'rgba(255,255,255,0.3)';
+    : '#000000';
 
-  // Text colors - dark text for light mode glass, light for dark mode
-  const textPrimary = isDark ? '#ffffff' : '#1f2937';
-  const textSecondary = isDark ? 'rgba(255,255,255,0.7)' : '#374151';
-  const textMuted = isDark ? 'rgba(255,255,255,0.5)' : '#6b7280';
-  const accentColor = isDark ? '#10b981' : '#059669';
+  // Text colors - black text for light mode
+  const textPrimary = isDark ? '#ffffff' : '#000000';
+  const textSecondary = isDark ? 'rgba(255,255,255,0.7)' : '#000000';
+  const textMuted = isDark ? 'rgba(255,255,255,0.5)' : '#374151';
+  const accentColor = isDark ? '#10b981' : '#000000';
 
   return (
     <footer style={{
       background: footerBg,
       borderTop: `1px solid ${footerBorder}`,
       marginTop: '40px',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
+      backdropFilter: isDark ? 'blur(20px)' : 'none',
+      WebkitBackdropFilter: isDark ? 'blur(20px)' : 'none',
       position: 'relative',
-      boxShadow: isDark
-        ? 'inset 0 1px 0 rgba(255,255,255,0.05)'
-        : 'inset 0 1px 0 rgba(255,255,255,0.4), 0 -4px 20px rgba(0,0,0,0.1)',
+      boxShadow: isDark ? 'inset 0 1px 0 rgba(255,255,255,0.05)' : 'none',
     }}>
       {/* Main Footer Content */}
       <div style={{
@@ -183,19 +181,19 @@ export const Footer: React.FC = () => {
                     rel="noopener noreferrer"
                     whileHover={{
                       scale: 1.1,
-                      boxShadow: `0 6px 20px ${social.color}50`,
+                      boxShadow: isDark ? `0 6px 20px ${social.color}50` : 'none',
                     }}
                     whileTap={{ scale: 0.95 }}
                     style={{
                       width: '42px',
                       height: '42px',
                       borderRadius: '12px',
-                      background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
-                      border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.5)',
+                      background: isDark ? 'rgba(255,255,255,0.1)' : '#ffffff',
+                      border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid #000000',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: social.color,
+                      color: isDark ? social.color : '#000000',
                       textDecoration: 'none',
                       transition: 'all 0.2s ease',
                     }}
@@ -336,7 +334,7 @@ export const Footer: React.FC = () => {
             <div style={{ position: 'relative' }}>
               <motion.button
                 whileHover={{
-                  background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
+                  background: isDark ? 'rgba(255,255,255,0.15)' : '#f3f4f6',
                 }}
                 onClick={() => setShowLanguageMenu(!showLanguageMenu)}
                 style={{
@@ -344,8 +342,8 @@ export const Footer: React.FC = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '8px 14px',
-                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                  background: isDark ? 'rgba(255,255,255,0.08)' : '#ffffff',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#000000'}`,
                   borderRadius: '8px',
                   cursor: 'pointer',
                   color: textSecondary,
@@ -379,12 +377,12 @@ export const Footer: React.FC = () => {
                       width: '180px',
                       maxHeight: '280px',
                       overflowY: 'auto',
-                      background: 'rgba(20, 30, 45, 0.98)',
-                      backdropFilter: 'blur(24px)',
-                      WebkitBackdropFilter: 'blur(24px)',
+                      background: isDark ? 'rgba(20, 30, 45, 0.98)' : '#ffffff',
+                      backdropFilter: isDark ? 'blur(24px)' : 'none',
+                      WebkitBackdropFilter: isDark ? 'blur(24px)' : 'none',
                       borderRadius: '12px',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      boxShadow: '0 -16px 48px rgba(0, 0, 0, 0.4)',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#000000'}`,
+                      boxShadow: isDark ? '0 -16px 48px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
                       zIndex: 100,
                     }}
                   >
@@ -392,7 +390,7 @@ export const Footer: React.FC = () => {
                       {languages.map((lang) => (
                         <motion.button
                           key={lang.code}
-                          whileHover={{ background: 'rgba(255,255,255,0.1)' }}
+                          whileHover={{ background: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6' }}
                           onClick={() => {
                             setCurrentLang(lang.code);
                             setShowLanguageMenu(false);
@@ -403,9 +401,9 @@ export const Footer: React.FC = () => {
                             gap: '10px',
                             width: '100%',
                             padding: '10px 14px',
-                            background: currentLang === lang.code ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                            background: currentLang === lang.code ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#f3f4f6') : 'transparent',
                             border: 'none',
-                            color: currentLang === lang.code ? colors.primary[400] : 'rgba(255,255,255,0.8)',
+                            color: currentLang === lang.code ? (isDark ? colors.primary[400] : '#000000') : (isDark ? 'rgba(255,255,255,0.8)' : '#000000'),
                             fontSize: '13px',
                             fontWeight: currentLang === lang.code ? 600 : 400,
                             cursor: 'pointer',
@@ -419,7 +417,7 @@ export const Footer: React.FC = () => {
                           />
                           <span style={{ flex: 1 }}>{lang.name}</span>
                           {currentLang === lang.code && (
-                            <Check size={14} color={colors.primary[400]} />
+                            <Check size={14} color={isDark ? colors.primary[400] : '#000000'} />
                           )}
                         </motion.button>
                       ))}
