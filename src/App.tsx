@@ -25,6 +25,8 @@ import {
   HistoryScreen,
   SavingsVaultScreen,
   VaultScreen,
+  NFTScreen,
+  FiatScreen,
 } from './screens';
 
 // Wrapper component to conditionally render background based on route
@@ -78,6 +80,10 @@ const App: React.FC = () => {
             <Route path="/earn" element={<SavingsVaultScreen />} />
             <Route path="/savings" element={<SavingsVaultScreen />} />
             <Route path="/vault" element={<VaultScreen />} />
+
+            {/* NFT & Fiat Routes */}
+            <Route path="/nft" element={<NFTScreen />} />
+            <Route path="/fiat" element={<FiatScreen />} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

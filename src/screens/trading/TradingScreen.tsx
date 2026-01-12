@@ -132,18 +132,18 @@ export const TradingScreen: React.FC = () => {
   const quoteBalance = 10000;
   const baseBalance = 0.5;
 
-  // Colors
+  // Colors - Enhanced for light mode visibility
   const colors = {
     bg: isDark ? '#0b0e11' : '#ffffff',
     cardBg: isDark ? '#1e2329' : '#ffffff',
-    panelBg: isDark ? '#0f0f0f' : '#fafafa',
-    border: isDark ? '#2b3139' : '#eaecef',
-    text: isDark ? '#eaecef' : '#1e2329',
-    textSecondary: isDark ? '#848e9c' : '#707a8a',
+    panelBg: isDark ? '#0f0f0f' : '#f8f9fa',
+    border: isDark ? '#2b3139' : '#000000',
+    text: isDark ? '#eaecef' : '#000000',
+    textSecondary: isDark ? '#848e9c' : '#374151',
     green: '#0ecb81',
     red: '#f6465d',
-    greenBg: isDark ? 'rgba(14, 203, 129, 0.1)' : 'rgba(14, 203, 129, 0.1)',
-    redBg: isDark ? 'rgba(246, 70, 93, 0.1)' : 'rgba(246, 70, 93, 0.1)',
+    greenBg: isDark ? 'rgba(14, 203, 129, 0.1)' : 'rgba(14, 203, 129, 0.15)',
+    redBg: isDark ? 'rgba(246, 70, 93, 0.1)' : 'rgba(246, 70, 93, 0.15)',
   };
 
   // Fetch all USDT trading pairs from Binance
@@ -770,7 +770,13 @@ export const TradingScreen: React.FC = () => {
       </div>
 
       {/* ========== MAIN CONTENT ========== */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        minHeight: 0,
+        borderBottom: `2px solid ${colors.border}`,
+        marginBottom: '0',
+      }}>
 
         {/* LEFT: ORDER BOOK */}
         <div style={{
@@ -788,9 +794,10 @@ export const TradingScreen: React.FC = () => {
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr 1fr',
-            padding: '8px 16px',
-            fontSize: '11px',
-            color: colors.textSecondary,
+            padding: '10px 16px',
+            fontSize: isDark ? '11px' : '13px',
+            fontWeight: isDark ? 500 : 700,
+            color: isDark ? colors.textSecondary : '#000000',
           }}>
             <span>Price({quote})</span>
             <span style={{ textAlign: 'right' }}>Amount({base})</span>
@@ -803,8 +810,9 @@ export const TradingScreen: React.FC = () => {
               <div key={`ask-${i}`} style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
-                padding: '4px 16px',
-                fontSize: '12px',
+                padding: isDark ? '4px 16px' : '6px 16px',
+                fontSize: isDark ? '12px' : '14px',
+                fontWeight: isDark ? 400 : 600,
                 position: 'relative',
                 cursor: 'pointer',
               }}>
@@ -816,7 +824,7 @@ export const TradingScreen: React.FC = () => {
                   width: `${(order.total / maxTotal) * 100}%`,
                   background: colors.redBg,
                 }} />
-                <span style={{ color: colors.red, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ color: colors.red, position: 'relative', fontFamily: "'JetBrains Mono', monospace", fontWeight: isDark ? 400 : 700 }}>
                   {formatPrice(order.price)}
                 </span>
                 <span style={{ textAlign: 'right', color: colors.text, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -854,8 +862,9 @@ export const TradingScreen: React.FC = () => {
               <div key={`bid-${i}`} style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
-                padding: '4px 16px',
-                fontSize: '12px',
+                padding: isDark ? '4px 16px' : '6px 16px',
+                fontSize: isDark ? '12px' : '14px',
+                fontWeight: isDark ? 400 : 600,
                 position: 'relative',
                 cursor: 'pointer',
               }}>
@@ -867,7 +876,7 @@ export const TradingScreen: React.FC = () => {
                   width: `${(order.total / maxTotal) * 100}%`,
                   background: colors.greenBg,
                 }} />
-                <span style={{ color: colors.green, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ color: colors.green, position: 'relative', fontFamily: "'JetBrains Mono', monospace", fontWeight: isDark ? 400 : 700 }}>
                   {formatPrice(order.price)}
                 </span>
                 <span style={{ textAlign: 'right', color: colors.text, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -1095,9 +1104,10 @@ export const TradingScreen: React.FC = () => {
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr 1fr',
-              padding: '8px 16px',
-              fontSize: '11px',
-              color: colors.textSecondary,
+              padding: '10px 16px',
+              fontSize: isDark ? '11px' : '13px',
+              fontWeight: isDark ? 500 : 700,
+              color: isDark ? colors.textSecondary : '#000000',
             }}>
               <span>Price({quote})</span>
               <span style={{ textAlign: 'right' }}>Amount({base})</span>
@@ -1108,16 +1118,17 @@ export const TradingScreen: React.FC = () => {
                 <div key={i} style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr 1fr',
-                  padding: '4px 16px',
-                  fontSize: '12px',
+                  padding: isDark ? '4px 16px' : '6px 16px',
+                  fontSize: isDark ? '12px' : '14px',
+                  fontWeight: isDark ? 400 : 600,
                 }}>
-                  <span style={{ color: trade.side === 'buy' ? colors.green : colors.red, fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span style={{ color: trade.side === 'buy' ? colors.green : colors.red, fontFamily: "'JetBrains Mono', monospace", fontWeight: isDark ? 400 : 700 }}>
                     {formatPrice(trade.price)}
                   </span>
                   <span style={{ textAlign: 'right', color: colors.text, fontFamily: "'JetBrains Mono', monospace" }}>
                     {formatAmount(trade.amount)}
                   </span>
-                  <span style={{ textAlign: 'right', color: colors.textSecondary }}>{trade.time}</span>
+                  <span style={{ textAlign: 'right', color: colors.textSecondary, fontWeight: isDark ? 400 : 600 }}>{trade.time}</span>
                 </div>
               ))}
             </div>

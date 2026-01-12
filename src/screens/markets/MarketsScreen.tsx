@@ -1,48 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
-  Star,
   TrendingUp,
   TrendingDown,
-  ArrowUpDown,
-  Flame,
-  Zap,
-  Clock,
-  Activity,
-  BarChart2,
   X,
+  ChevronRight,
   Loader2,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { GlassCard, CryptoIcon, ResponsiveLayout } from '../../components';
+import { CryptoIcon, ResponsiveLayout, GlassCard } from '../../components';
 import { usePresentationMode } from '../../components/PresentationMode';
-import { LiquidGlassBackground, LiquidOrb } from '../../components/Glass3D';
+import { LiquidGlassBackground } from '../../components/Glass3D';
 
 // ============================================
 // TYPES
 // ============================================
 interface MarketData {
   symbol: string;
-  baseAsset: string;
   name: string;
   pair: string;
   price: number;
   change24h: number;
-  high: number;
-  low: number;
+  high24h: number;
+  low24h: number;
   volume: string;
   quoteVolume: number;
-  rank: number;
-}
-
-interface MarketStats {
-  totalMarketCap: string;
-  totalVolume24h: string;
-  btcDominance: string;
-  activeMarkets: number;
 }
 
 // ============================================
@@ -62,24 +46,65 @@ const coinNames: Record<string, string> = {
   AXS: 'Axie Infinity', ENJ: 'Enjin Coin', CHZ: 'Chiliz', GALA: 'Gala',
   APE: 'ApeCoin', DYDX: 'dYdX', '1INCH': '1inch', SUSHI: 'SushiSwap',
   COMP: 'Compound', BAL: 'Balancer', YFI: 'yearn.finance', ZRX: '0x Protocol',
-  REN: 'Ren', OCEAN: 'Ocean Protocol', FET: 'Fetch.ai', AGIX: 'SingularityNET',
-  RNDR: 'Render', ROSE: 'Oasis Network', KAVA: 'Kava', ZIL: 'Zilliqa',
-  QTUM: 'Qtum', ICX: 'ICON', ONT: 'Ontology', ZEN: 'Horizen', WAVES: 'Waves',
-  STORJ: 'Storj', CELO: 'Celo', SKL: 'SKALE', ANKR: 'Ankr', SXP: 'Solar',
-  AUDIO: 'Audius', MASK: 'Mask Network', BAND: 'Band Protocol', BAT: 'Basic Attention',
-  BLUR: 'Blur', WLD: 'Worldcoin', SUI: 'Sui', SEI: 'Sei', TIA: 'Celestia',
-  PYTH: 'Pyth Network', JTO: 'Jito', WIF: 'dogwifhat', BONK: 'Bonk',
-  PEPE: 'Pepe', FLOKI: 'Floki', MEME: 'Memecoin', ORDI: 'ORDI',
-  STX: 'Stacks', KAS: 'Kaspa', MINA: 'Mina Protocol', GMX: 'GMX',
-  PENDLE: 'Pendle', JUP: 'Jupiter', W: 'Wormhole', ENA: 'Ethena',
-  TON: 'Toncoin', NOT: 'Notcoin', CORE: 'Core', TAO: 'Bittensor',
-  BRETT: 'Brett', POPCAT: 'Popcat', MEW: 'cat in a dogs world',
-  TURBO: 'Turbo', NEIRO: 'First Neiro On Ethereum', WEN: 'WEN',
+  FET: 'Fetch.ai', AGIX: 'SingularityNET', RNDR: 'Render', ROSE: 'Oasis Network',
+  SUI: 'Sui', SEI: 'Sei', TIA: 'Celestia', WIF: 'dogwifhat', BONK: 'Bonk',
+  PEPE: 'Pepe', FLOKI: 'Floki', ORDI: 'ORDI', STX: 'Stacks', KAS: 'Kaspa',
+  MINA: 'Mina Protocol', GMX: 'GMX', PENDLE: 'Pendle', JUP: 'Jupiter',
+  W: 'Wormhole', ENA: 'Ethena', TON: 'Toncoin', NOT: 'Notcoin', TAO: 'Bittensor',
 };
 
 const getCoinName = (symbol: string): string => coinNames[symbol] || symbol;
 
-// Format volume
+// Static fallback market data
+const staticMarketData: MarketData[] = [
+  { symbol: 'BTC', name: 'Bitcoin', pair: 'BTC/USDT', price: 97234.52, change24h: 2.34, high24h: 98450.00, low24h: 94120.00, volume: '28.5B', quoteVolume: 28500000000 },
+  { symbol: 'ETH', name: 'Ethereum', pair: 'ETH/USDT', price: 3456.78, change24h: 3.21, high24h: 3520.00, low24h: 3340.00, volume: '15.2B', quoteVolume: 15200000000 },
+  { symbol: 'BNB', name: 'BNB', pair: 'BNB/USDT', price: 712.45, change24h: 1.87, high24h: 725.00, low24h: 695.00, volume: '1.8B', quoteVolume: 1800000000 },
+  { symbol: 'SOL', name: 'Solana', pair: 'SOL/USDT', price: 198.34, change24h: 5.67, high24h: 205.00, low24h: 186.00, volume: '4.2B', quoteVolume: 4200000000 },
+  { symbol: 'XRP', name: 'Ripple', pair: 'XRP/USDT', price: 2.34, change24h: 4.12, high24h: 2.45, low24h: 2.21, volume: '3.1B', quoteVolume: 3100000000 },
+  { symbol: 'ADA', name: 'Cardano', pair: 'ADA/USDT', price: 1.12, change24h: -1.23, high24h: 1.18, low24h: 1.08, volume: '890M', quoteVolume: 890000000 },
+  { symbol: 'DOGE', name: 'Dogecoin', pair: 'DOGE/USDT', price: 0.3845, change24h: 6.78, high24h: 0.4012, low24h: 0.3567, volume: '2.3B', quoteVolume: 2300000000 },
+  { symbol: 'AVAX', name: 'Avalanche', pair: 'AVAX/USDT', price: 42.56, change24h: 3.45, high24h: 44.20, low24h: 40.80, volume: '620M', quoteVolume: 620000000 },
+  { symbol: 'DOT', name: 'Polkadot', pair: 'DOT/USDT', price: 8.92, change24h: -0.87, high24h: 9.15, low24h: 8.67, volume: '412M', quoteVolume: 412000000 },
+  { symbol: 'LINK', name: 'Chainlink', pair: 'LINK/USDT', price: 24.67, change24h: 2.98, high24h: 25.40, low24h: 23.80, volume: '580M', quoteVolume: 580000000 },
+  { symbol: 'MATIC', name: 'Polygon', pair: 'MATIC/USDT', price: 0.5234, change24h: 1.56, high24h: 0.5412, low24h: 0.5089, volume: '345M', quoteVolume: 345000000 },
+  { symbol: 'SHIB', name: 'Shiba Inu', pair: 'SHIB/USDT', price: 0.00002456, change24h: 8.34, high24h: 0.00002612, low24h: 0.00002234, volume: '890M', quoteVolume: 890000000 },
+  { symbol: 'LTC', name: 'Litecoin', pair: 'LTC/USDT', price: 112.34, change24h: 1.23, high24h: 115.20, low24h: 109.50, volume: '456M', quoteVolume: 456000000 },
+  { symbol: 'UNI', name: 'Uniswap', pair: 'UNI/USDT', price: 14.56, change24h: 4.56, high24h: 15.12, low24h: 13.89, volume: '289M', quoteVolume: 289000000 },
+  { symbol: 'ATOM', name: 'Cosmos', pair: 'ATOM/USDT', price: 9.87, change24h: -2.34, high24h: 10.23, low24h: 9.56, volume: '234M', quoteVolume: 234000000 },
+  { symbol: 'TRX', name: 'TRON', pair: 'TRX/USDT', price: 0.2567, change24h: 0.89, high24h: 0.2612, low24h: 0.2498, volume: '567M', quoteVolume: 567000000 },
+  { symbol: 'ETC', name: 'Ethereum Classic', pair: 'ETC/USDT', price: 28.45, change24h: 2.12, high24h: 29.30, low24h: 27.60, volume: '178M', quoteVolume: 178000000 },
+  { symbol: 'XLM', name: 'Stellar', pair: 'XLM/USDT', price: 0.4523, change24h: 3.67, high24h: 0.4689, low24h: 0.4345, volume: '298M', quoteVolume: 298000000 },
+  { symbol: 'NEAR', name: 'NEAR Protocol', pair: 'NEAR/USDT', price: 5.67, change24h: 5.89, high24h: 5.98, low24h: 5.32, volume: '345M', quoteVolume: 345000000 },
+  { symbol: 'APT', name: 'Aptos', pair: 'APT/USDT', price: 12.34, change24h: -1.56, high24h: 12.89, low24h: 11.98, volume: '256M', quoteVolume: 256000000 },
+  { symbol: 'FIL', name: 'Filecoin', pair: 'FIL/USDT', price: 6.78, change24h: 2.34, high24h: 7.12, low24h: 6.45, volume: '189M', quoteVolume: 189000000 },
+  { symbol: 'ARB', name: 'Arbitrum', pair: 'ARB/USDT', price: 1.23, change24h: 4.78, high24h: 1.29, low24h: 1.16, volume: '312M', quoteVolume: 312000000 },
+  { symbol: 'OP', name: 'Optimism', pair: 'OP/USDT', price: 2.45, change24h: 3.21, high24h: 2.56, low24h: 2.34, volume: '234M', quoteVolume: 234000000 },
+  { symbol: 'INJ', name: 'Injective', pair: 'INJ/USDT', price: 34.56, change24h: 6.78, high24h: 36.20, low24h: 32.10, volume: '278M', quoteVolume: 278000000 },
+  { symbol: 'HBAR', name: 'Hedera', pair: 'HBAR/USDT', price: 0.3123, change24h: 2.89, high24h: 0.3234, low24h: 0.3012, volume: '198M', quoteVolume: 198000000 },
+  { symbol: 'VET', name: 'VeChain', pair: 'VET/USDT', price: 0.0534, change24h: -0.56, high24h: 0.0556, low24h: 0.0512, volume: '145M', quoteVolume: 145000000 },
+  { symbol: 'ALGO', name: 'Algorand', pair: 'ALGO/USDT', price: 0.4567, change24h: 1.23, high24h: 0.4678, low24h: 0.4423, volume: '134M', quoteVolume: 134000000 },
+  { symbol: 'GRT', name: 'The Graph', pair: 'GRT/USDT', price: 0.2345, change24h: 5.67, high24h: 0.2456, low24h: 0.2198, volume: '167M', quoteVolume: 167000000 },
+  { symbol: 'SAND', name: 'The Sandbox', pair: 'SAND/USDT', price: 0.6789, change24h: 3.45, high24h: 0.7012, low24h: 0.6534, volume: '123M', quoteVolume: 123000000 },
+  { symbol: 'MANA', name: 'Decentraland', pair: 'MANA/USDT', price: 0.5678, change24h: 2.34, high24h: 0.5890, low24h: 0.5456, volume: '112M', quoteVolume: 112000000 },
+  { symbol: 'AAVE', name: 'Aave', pair: 'AAVE/USDT', price: 312.45, change24h: 4.56, high24h: 325.00, low24h: 298.00, volume: '189M', quoteVolume: 189000000 },
+  { symbol: 'MKR', name: 'Maker', pair: 'MKR/USDT', price: 1876.54, change24h: 1.89, high24h: 1920.00, low24h: 1834.00, volume: '78M', quoteVolume: 78000000 },
+  { symbol: 'RUNE', name: 'THORChain', pair: 'RUNE/USDT', price: 6.78, change24h: 7.89, high24h: 7.23, low24h: 6.23, volume: '145M', quoteVolume: 145000000 },
+  { symbol: 'FTM', name: 'Fantom', pair: 'FTM/USDT', price: 1.12, change24h: 5.67, high24h: 1.19, low24h: 1.04, volume: '234M', quoteVolume: 234000000 },
+  { symbol: 'SUI', name: 'Sui', pair: 'SUI/USDT', price: 4.56, change24h: 7.89, high24h: 4.89, low24h: 4.18, volume: '456M', quoteVolume: 456000000 },
+  { symbol: 'SEI', name: 'Sei', pair: 'SEI/USDT', price: 0.5678, change24h: 5.67, high24h: 0.6012, low24h: 0.5312, volume: '234M', quoteVolume: 234000000 },
+  { symbol: 'TIA', name: 'Celestia', pair: 'TIA/USDT', price: 6.78, change24h: 4.34, high24h: 7.12, low24h: 6.45, volume: '178M', quoteVolume: 178000000 },
+  { symbol: 'WIF', name: 'dogwifhat', pair: 'WIF/USDT', price: 2.12, change24h: 12.34, high24h: 2.34, low24h: 1.86, volume: '567M', quoteVolume: 567000000 },
+  { symbol: 'BONK', name: 'Bonk', pair: 'BONK/USDT', price: 0.00002345, change24h: 15.67, high24h: 0.00002678, low24h: 0.00001989, volume: '345M', quoteVolume: 345000000 },
+  { symbol: 'PEPE', name: 'Pepe', pair: 'PEPE/USDT', price: 0.00001234, change24h: 18.90, high24h: 0.00001456, low24h: 0.00001023, volume: '890M', quoteVolume: 890000000 },
+  { symbol: 'FLOKI', name: 'Floki', pair: 'FLOKI/USDT', price: 0.0002345, change24h: 10.23, high24h: 0.0002567, low24h: 0.0002112, volume: '234M', quoteVolume: 234000000 },
+  { symbol: 'ORDI', name: 'ORDI', pair: 'ORDI/USDT', price: 45.67, change24h: 8.90, high24h: 49.20, low24h: 41.30, volume: '178M', quoteVolume: 178000000 },
+  { symbol: 'STX', name: 'Stacks', pair: 'STX/USDT', price: 2.12, change24h: 6.78, high24h: 2.28, low24h: 1.96, volume: '145M', quoteVolume: 145000000 },
+  { symbol: 'TON', name: 'Toncoin', pair: 'TON/USDT', price: 5.67, change24h: 3.45, high24h: 5.89, low24h: 5.45, volume: '345M', quoteVolume: 345000000 },
+  { symbol: 'TAO', name: 'Bittensor', pair: 'TAO/USDT', price: 456.78, change24h: 5.67, high24h: 478.00, low24h: 432.00, volume: '145M', quoteVolume: 145000000 },
+];
+
+// Format volume helper
 const formatVolume = (volume: number): string => {
   if (volume >= 1e9) return (volume / 1e9).toFixed(2) + 'B';
   if (volume >= 1e6) return (volume / 1e6).toFixed(2) + 'M';
@@ -87,7 +112,7 @@ const formatVolume = (volume: number): string => {
   return volume.toFixed(2);
 };
 
-// Format price
+// Format price helper
 const formatPrice = (price: number): string => {
   if (price >= 1000) return '$' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (price >= 1) return '$' + price.toFixed(4);
@@ -95,222 +120,109 @@ const formatPrice = (price: number): string => {
   return '$' + price.toFixed(8);
 };
 
-const categories = [
-  { id: 'all', label: 'All', icon: null },
-  { id: 'favorites', label: 'Favorites', icon: <Star size={14} /> },
-  { id: 'spot', label: 'Spot', icon: null },
-  { id: 'futures', label: 'Futures', icon: <Zap size={14} /> },
-  { id: 'new', label: 'New Listings', icon: <Clock size={14} /> },
-  { id: 'gainers', label: 'Top Gainers', icon: <TrendingUp size={14} /> },
-  { id: 'losers', label: 'Top Losers', icon: <TrendingDown size={14} /> },
-];
-
-// Mini sparkline chart component
-const MiniSparkline: React.FC<{ positive: boolean; colors: any }> = ({ positive, colors }) => {
-  const points = positive
-    ? 'M0,20 L10,18 L20,22 L30,15 L40,17 L50,10 L60,8 L70,12 L80,5'
-    : 'M0,5 L10,8 L20,6 L30,12 L40,10 L50,15 L60,18 L70,14 L80,20';
-
-  return (
-    <svg width="80" height="24" viewBox="0 0 80 24" style={{ opacity: 0.7 }}>
-      <path
-        d={points}
-        fill="none"
-        stroke={positive ? colors.trading.buy : colors.trading.sell}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-};
-
 export const MarketsScreen: React.FC = () => {
   const navigate = useNavigate();
   const { isMobile } = usePresentationMode();
-  const { colors } = useThemeMode();
-  const { requireAuth } = useAuth();
+  const { colors, isDark } = useThemeMode();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [sortBy, setSortBy] = useState<'volume' | 'change' | 'price'>('volume');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    const saved = localStorage.getItem('marketFavorites');
-    return saved ? JSON.parse(saved) : ['BTC', 'ETH', 'SOL', 'AVAX'];
-  });
-  const [currentPage, setCurrentPage] = useState(1);
+  const [activeMarketTab, setActiveMarketTab] = useState<'hot' | 'gainers' | 'losers' | 'new'>('hot');
   const [marketData, setMarketData] = useState<MarketData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [marketStats, setMarketStats] = useState<MarketStats>({
-    totalMarketCap: '$0',
-    totalVolume24h: '$0',
-    btcDominance: '0%',
-    activeMarkets: 0,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [priceAnimations, setPriceAnimations] = useState<{[key: string]: 'up' | 'down' | null}>({});
+  const itemsPerPage = isMobile ? 15 : 20;
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const itemsPerPage = isMobile ? 10 : 15;
-
-  // Fetch market data from Binance
+  // Fetch market data
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
         setLoading(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        // Get all tickers from Binance
-        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr', {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error('API response not ok');
         const tickers = await response.json();
 
-        // Filter USDT pairs and format data
         const usdtPairs = tickers
           .filter((t: any) => t.symbol.endsWith('USDT'))
-          .map((t: any, index: number) => {
-            const baseAsset = t.symbol.replace('USDT', '');
+          .map((t: any) => {
+            const symbol = t.symbol.replace('USDT', '');
             const quoteVolume = parseFloat(t.quoteVolume) || 0;
             return {
-              symbol: baseAsset,
-              baseAsset,
-              name: getCoinName(baseAsset),
-              pair: `${baseAsset}/USDT`,
+              symbol,
+              name: getCoinName(symbol),
+              pair: `${symbol}/USDT`,
               price: parseFloat(t.lastPrice) || 0,
               change24h: parseFloat(t.priceChangePercent) || 0,
-              high: parseFloat(t.highPrice) || 0,
-              low: parseFloat(t.lowPrice) || 0,
+              high24h: parseFloat(t.highPrice) || 0,
+              low24h: parseFloat(t.lowPrice) || 0,
               volume: formatVolume(quoteVolume),
               quoteVolume,
-              rank: index + 1,
             };
           })
-          .filter((p: MarketData) => p.price > 0 && p.quoteVolume > 10000) // Filter low volume
-          .sort((a: MarketData, b: MarketData) => b.quoteVolume - a.quoteVolume)
-          .map((p: MarketData, index: number) => ({ ...p, rank: index + 1 }));
+          .filter((p: MarketData) => p.price > 0 && p.quoteVolume > 10000)
+          .sort((a: MarketData, b: MarketData) => b.quoteVolume - a.quoteVolume);
 
-        setMarketData(usdtPairs);
-
-        // Calculate market stats
-        const totalVolume = usdtPairs.reduce((sum: number, p: MarketData) => sum + p.quoteVolume, 0);
-        const btcData = usdtPairs.find((p: MarketData) => p.symbol === 'BTC');
-
-        setMarketStats({
-          totalMarketCap: '$1.72T', // Approximate - would need CoinGecko for accurate data
-          totalVolume24h: '$' + formatVolume(totalVolume),
-          btcDominance: btcData ? '49.8%' : '50%',
-          activeMarkets: usdtPairs.length.toString() as unknown as number,
-        });
-
+        if (usdtPairs.length > 0) {
+          setMarketData(usdtPairs);
+        } else {
+          throw new Error('No data');
+        }
         setLoading(false);
       } catch (error) {
-        console.error('Failed to fetch markets:', error);
+        console.log('Using static market data');
+        setMarketData(staticMarketData);
         setLoading(false);
       }
     };
 
     fetchMarkets();
-
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchMarkets, 30000);
+    const interval = setInterval(fetchMarkets, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // WebSocket for real-time updates
+  // Price animation effect
   useEffect(() => {
-    if (marketData.length === 0) return;
-
-    // Connect to all mini tickers
-    wsRef.current = new WebSocket('wss://stream.binance.com:9443/ws/!miniTicker@arr');
-
-    wsRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      setMarketData(prev => {
-        const updates = new Map<string, any>();
-        data.forEach((t: any) => {
-          if (t.s.endsWith('USDT')) {
-            const symbol = t.s.replace('USDT', '');
-            updates.set(symbol, {
-              price: parseFloat(t.c),
-              high: parseFloat(t.h),
-              low: parseFloat(t.l),
-              quoteVolume: parseFloat(t.q),
-            });
-          }
-        });
-
-        return prev.map(p => {
-          const update = updates.get(p.symbol);
-          if (update) {
-            const oldPrice = p.price;
-            const change24h = oldPrice > 0 ? ((update.price - oldPrice) / oldPrice) * 100 : p.change24h;
-            return {
-              ...p,
-              price: update.price,
-              high: update.high,
-              low: update.low,
-              quoteVolume: update.quoteVolume,
-              volume: formatVolume(update.quoteVolume),
-            };
-          }
-          return p;
-        });
-      });
-    };
-
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-    };
-  }, [marketData.length > 0]);
-
-  const handleTrade = (symbol: string) => {
-    navigate(`/trade/${symbol.toLowerCase()}usdt`);
-  };
-
-  const toggleFavorite = (symbol: string) => {
-    setFavorites(prev => {
-      const newFavs = prev.includes(symbol)
-        ? prev.filter(s => s !== symbol)
-        : [...prev, symbol];
-      localStorage.setItem('marketFavorites', JSON.stringify(newFavs));
-      return newFavs;
-    });
-  };
-
-  const filteredMarkets = marketData.filter((market) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (!market.name.toLowerCase().includes(query) &&
-          !market.symbol.toLowerCase().includes(query) &&
-          !market.pair.toLowerCase().includes(query)) {
-        return false;
+    const interval = setInterval(() => {
+      if (marketData.length > 0) {
+        const randomIndex = Math.floor(Math.random() * Math.min(marketData.length, 20));
+        const symbol = marketData[randomIndex].symbol;
+        const direction = Math.random() > 0.5 ? 'up' : 'down';
+        setPriceAnimations(prev => ({ ...prev, [symbol]: direction }));
+        setTimeout(() => {
+          setPriceAnimations(prev => ({ ...prev, [symbol]: null }));
+        }, 500);
       }
-    }
-    if (activeCategory === 'favorites' && !favorites.includes(market.symbol)) return false;
-    if (activeCategory === 'gainers' && market.change24h <= 0) return false;
-    if (activeCategory === 'losers' && market.change24h >= 0) return false;
-    return true;
-  });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [marketData.length]);
+
+  // Filter and sort markets
+  const filteredMarkets = marketData.filter((market) =>
+    market.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    market.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    market.pair.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const sortedMarkets = [...filteredMarkets].sort((a, b) => {
-    let comparison = 0;
-    if (sortBy === 'volume') {
-      comparison = b.quoteVolume - a.quoteVolume;
-    } else if (sortBy === 'change') {
-      comparison = b.change24h - a.change24h;
-    } else if (sortBy === 'price') {
-      comparison = b.price - a.price;
-    }
-    return sortOrder === 'asc' ? -comparison : comparison;
+    if (activeMarketTab === 'gainers') return b.change24h - a.change24h;
+    if (activeMarketTab === 'losers') return a.change24h - b.change24h;
+    return 0;
   });
 
-  // Pagination calculations
+  // Pagination
   const totalPages = Math.ceil(sortedMarkets.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedMarkets = sortedMarkets.slice(startIndex, endIndex);
+  const paginatedMarkets = sortedMarkets.slice(startIndex, startIndex + itemsPerPage);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, activeCategory, sortBy, sortOrder]);
+  }, [searchQuery, activeMarketTab]);
 
   if (loading) {
     return (
@@ -333,857 +245,314 @@ export const MarketsScreen: React.FC = () => {
 
   return (
     <ResponsiveLayout activeNav="markets" title="Markets">
-      {/* Premium Liquid Glass Background */}
-      <LiquidGlassBackground
-        intensity="low"
-        showOrbs={true}
-        showRings={false}
-        showCubes={false}
-      />
-      <LiquidOrb
-        size={160}
-        color="cyan"
-        style={{ position: 'fixed', top: '10%', right: '-4%', zIndex: 0 }}
-        delay={0}
-        duration={11}
-      />
-      <LiquidOrb
-        size={130}
-        color="green"
-        style={{ position: 'fixed', bottom: '20%', left: '-3%', zIndex: 0 }}
-        delay={2}
-        duration={13}
-      />
+      {/* Background - Dark mode only */}
+      {isDark && <LiquidGlassBackground intensity="low" showOrbs={true} showRings={false} showCubes={false} />}
+      {!isDark && <div style={{ position: 'fixed', inset: 0, background: '#ffffff', zIndex: 0, pointerEvents: 'none' }} />}
 
-      {/* Page Header */}
-      {!isMobile && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ marginBottom: '24px' }}
-        >
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: 700,
-            color: colors.text.primary,
-            marginBottom: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-          }}>
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.15), rgba(0, 210, 106, 0.1))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <BarChart2 size={22} color={colors.primary[400]} />
-            </motion.div>
-            Markets
-          </h1>
-          <p style={{ fontSize: '14px', color: colors.text.tertiary }}>
-            Explore {marketData.length}+ cryptocurrency pairs with real-time data
-          </p>
-        </motion.div>
-      )}
-
-      {/* Market Overview Stats */}
+      {/* Markets Section - Same style as Dashboard */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        style={{ marginBottom: isMobile ? '16px' : '24px' }}
+        style={{ position: 'relative', zIndex: 1 }}
       >
-        <GlassCard padding={isMobile ? 'sm' : 'md'}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-            gap: isMobile ? '12px' : '16px',
-          }}>
-            {[
-              { label: 'Market Cap', value: marketStats.totalMarketCap, change: 2.34, icon: <Activity size={16} /> },
-              { label: '24h Volume', value: marketStats.totalVolume24h, change: 5.67, icon: <BarChart2 size={16} /> },
-              { label: 'BTC Dom.', value: marketStats.btcDominance, change: -0.34, icon: <TrendingUp size={16} /> },
-              { label: 'Active Markets', value: marketData.length.toString(), change: null, icon: <Zap size={16} /> },
-            ].map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 + index * 0.05 }}
-                whileHover={{ scale: 1.02 }}
-                style={{
-                  padding: isMobile ? '12px' : '16px',
-                  background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.05), rgba(0, 210, 106, 0.03))',
-                  borderRadius: '12px',
-                  border: `1px solid ${colors.glass.border}`,
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  marginBottom: '6px',
-                }}>
-                  <span style={{ color: colors.primary[400] }}>{stat.icon}</span>
-                  <p style={{
-                    fontSize: isMobile ? '10px' : '12px',
-                    color: colors.text.tertiary,
-                  }}>
-                    {stat.label}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontSize: isMobile ? '16px' : '20px',
-                    fontWeight: 700,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    color: colors.text.primary,
-                  }}>
-                    {stat.value}
-                  </span>
-                  {stat.change !== null && (
-                    <span style={{
-                      fontSize: isMobile ? '10px' : '12px',
-                      fontWeight: 500,
-                      color: stat.change >= 0 ? colors.trading.buy : colors.trading.sell,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '2px',
-                    }}>
-                      {stat.change >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                      {stat.change >= 0 ? '+' : ''}{stat.change}%
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </GlassCard>
-      </motion.div>
-
-      {/* Trending Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        style={{ marginBottom: isMobile ? '16px' : '24px' }}
-      >
-        <GlassCard padding={isMobile ? 'sm' : 'md'}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '12px',
-          }}>
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              <Flame size={isMobile ? 16 : 18} color="#F7931A" />
-            </motion.div>
-            <h2 style={{
-              fontSize: isMobile ? '14px' : '16px',
-              fontWeight: 600,
-              color: colors.text.primary,
-            }}>
-              Trending Now
-            </h2>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)',
-            gap: isMobile ? '8px' : '12px',
-          }}>
-            {marketData.slice(0, isMobile ? 4 : 6).map((market, index) => (
-              <motion.div
-                key={market.symbol}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.25 + index * 0.05 }}
-                whileHover={{ scale: 1.02, y: -2 }}
-                onClick={() => handleTrade(market.symbol)}
-                style={{
-                  padding: isMobile ? '12px' : '16px',
-                  background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.05), rgba(0, 210, 106, 0.03))',
-                  borderRadius: '12px',
-                  border: `1px solid ${colors.glass.border}`,
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: isMobile ? '8px' : '12px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CryptoIcon symbol={market.symbol} size={isMobile ? 24 : 28} />
-                    <div>
-                      <p style={{
-                        fontSize: isMobile ? '12px' : '14px',
-                        fontWeight: 600,
-                        color: colors.text.primary,
-                      }}>
-                        {market.symbol}
-                      </p>
-                      <p style={{
-                        fontSize: isMobile ? '10px' : '11px',
-                        color: colors.text.tertiary,
-                      }}>
-                        {market.name}
-                      </p>
-                    </div>
-                  </div>
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(market.symbol); }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '4px',
-                    }}
-                  >
-                    <Star
-                      size={16}
-                      color={favorites.includes(market.symbol) ? '#F7931A' : colors.text.tertiary}
-                      fill={favorites.includes(market.symbol) ? '#F7931A' : 'none'}
-                    />
-                  </motion.button>
-                </div>
-
-                <div style={{ marginBottom: '8px' }}>
-                  <MiniSparkline positive={market.change24h >= 0} colors={colors} />
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-end',
-                }}>
-                  <span style={{
-                    fontSize: isMobile ? '14px' : '16px',
-                    fontWeight: 700,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    color: colors.text.primary,
-                  }}>
-                    {formatPrice(market.price)}
-                  </span>
-                  <span style={{
-                    fontSize: isMobile ? '11px' : '12px',
-                    fontWeight: 600,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    padding: isMobile ? '3px 6px' : '4px 8px',
-                    borderRadius: '6px',
-                    background: market.change24h >= 0 ? 'rgba(0, 200, 83, 0.1)' : 'rgba(255, 71, 87, 0.1)',
-                    color: market.change24h >= 0 ? colors.trading.buy : colors.trading.sell,
-                  }}>
-                    {market.change24h >= 0 ? '+' : ''}{market.change24h.toFixed(2)}%
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </GlassCard>
-      </motion.div>
-
-      {/* Markets Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <GlassCard padding={isMobile ? 'sm' : 'md'}>
-          {/* Filters */}
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'space-between',
-            alignItems: isMobile ? 'stretch' : 'center',
-            marginBottom: isMobile ? '12px' : '16px',
-            gap: isMobile ? '10px' : '12px',
-          }}>
-            {/* Search */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: isMobile ? '10px 12px' : '10px 14px',
-              background: 'rgba(26, 143, 255, 0.03)',
-              border: `1px solid ${colors.glass.border}`,
-              borderRadius: '10px',
-              flex: isMobile ? 1 : 'none',
-              minWidth: isMobile ? 'auto' : '280px',
-              order: isMobile ? 1 : 0,
-            }}>
-              <Search size={16} color={colors.text.tertiary} />
-              <input
-                type="text"
-                placeholder="Search coin name or symbol..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  flex: 1,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: colors.text.primary,
-                  fontSize: isMobile ? '13px' : '14px',
-                }}
-              />
-              {searchQuery && (
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    display: 'flex',
-                    color: colors.text.tertiary,
-                  }}
-                >
-                  <X size={14} />
-                </motion.button>
-              )}
-            </div>
-
-            {/* Categories */}
-            <div style={{
-              display: 'flex',
-              gap: '3px',
-              padding: '4px',
-              background: 'rgba(26, 143, 255, 0.03)',
-              borderRadius: '10px',
-              border: `1px solid ${colors.glass.border}`,
-              overflowX: 'auto',
-              order: isMobile ? 0 : 1,
-            }}>
-              {categories.slice(0, isMobile ? 4 : categories.length).map((cat) => (
-                <motion.button
-                  key={cat.id}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActiveCategory(cat.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: isMobile ? '6px 10px' : '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: isMobile ? '11px' : '12px',
-                    fontWeight: 600,
-                    background: activeCategory === cat.id
-                      ? 'linear-gradient(135deg, rgba(26, 143, 255, 0.15), rgba(0, 210, 106, 0.1))'
-                      : 'transparent',
-                    color: activeCategory === cat.id ? colors.primary[400] : colors.text.tertiary,
-                    border: activeCategory === cat.id ? `1px solid rgba(26, 143, 255, 0.3)` : '1px solid transparent',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {cat.icon}
-                  {cat.label}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-
-          {/* Table - Desktop */}
-          {!isMobile && (
-            <div style={{
-              border: `1px solid ${colors.glass.border}`,
-              borderRadius: '12px',
-              overflow: 'hidden',
-            }}>
-              {/* Column Headers */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '40px 2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px',
-                padding: '14px 20px',
-                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.03), rgba(0, 210, 106, 0.02))',
-                borderBottom: `1px solid ${colors.glass.border}`,
-                fontSize: '11px',
-                fontWeight: 600,
-                color: colors.text.tertiary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}>
-                <span></span>
-                <span>Market</span>
-                <button
-                  onClick={() => { setSortBy('price'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: sortBy === 'price' ? colors.primary[400] : colors.text.tertiary,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    textAlign: 'right',
-                    justifyContent: 'flex-end',
-                    fontSize: 'inherit',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Price <ArrowUpDown size={12} />
-                </button>
-                <button
-                  onClick={() => { setSortBy('change'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: sortBy === 'change' ? colors.primary[400] : colors.text.tertiary,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    textAlign: 'right',
-                    justifyContent: 'flex-end',
-                    fontSize: 'inherit',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  24h Change <ArrowUpDown size={12} />
-                </button>
-                <span style={{ textAlign: 'right' }}>24h High</span>
-                <span style={{ textAlign: 'right' }}>24h Low</span>
-                <button
-                  onClick={() => { setSortBy('volume'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: sortBy === 'volume' ? colors.primary[400] : colors.text.tertiary,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    textAlign: 'right',
-                    justifyContent: 'flex-end',
-                    fontSize: 'inherit',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Volume <ArrowUpDown size={12} />
-                </button>
-                <span style={{ textAlign: 'center' }}>Action</span>
-              </div>
-
-              {/* Market Rows */}
-              {paginatedMarkets.map((market, index) => (
-                <motion.div
-                  key={market.pair}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.03 * index }}
-                  whileHover={{ background: 'rgba(26, 143, 255, 0.06)' }}
-                  onClick={() => handleTrade(market.symbol)}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '40px 2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px',
-                    padding: '14px 20px',
-                    borderBottom: index < paginatedMarkets.length - 1 ? `1px solid ${colors.glass.border}` : 'none',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s ease',
-                    alignItems: 'center',
-                  }}
-                >
-                  {/* Star */}
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(market.symbol); }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: favorites.includes(market.symbol) ? '#F7931A' : colors.text.tertiary,
-                      padding: '4px',
-                    }}
-                  >
-                    <Star size={16} fill={favorites.includes(market.symbol) ? '#F7931A' : 'none'} />
-                  </motion.button>
-
-                  {/* Market Info */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <CryptoIcon symbol={market.symbol} size={36} />
-                    <div>
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        color: colors.text.primary,
-                      }}>
-                        {market.pair}
-                      </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: colors.text.tertiary,
-                      }}>
-                        {market.name}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <div style={{
-                    textAlign: 'right',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: colors.text.primary,
-                  }}>
-                    {formatPrice(market.price)}
-                  </div>
-
-                  {/* 24h Change */}
-                  <div style={{
-                    textAlign: 'right',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: '4px',
-                  }}>
-                    <span style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      background: market.change24h >= 0 ? 'rgba(0, 200, 83, 0.1)' : 'rgba(255, 71, 87, 0.1)',
-                      color: market.change24h >= 0 ? colors.trading.buy : colors.trading.sell,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}>
-                      {market.change24h >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                      {market.change24h >= 0 ? '+' : ''}{market.change24h.toFixed(2)}%
-                    </span>
-                  </div>
-
-                  {/* 24h High */}
-                  <div style={{
-                    textAlign: 'right',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '13px',
-                    color: colors.text.secondary,
-                  }}>
-                    {formatPrice(market.high)}
-                  </div>
-
-                  {/* 24h Low */}
-                  <div style={{
-                    textAlign: 'right',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '13px',
-                    color: colors.text.secondary,
-                  }}>
-                    {formatPrice(market.low)}
-                  </div>
-
-                  {/* Volume */}
-                  <div style={{
-                    textAlign: 'right',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '13px',
-                    color: colors.text.secondary,
-                  }}>
-                    ${market.volume}
-                  </div>
-
-                  {/* Trade Button */}
-                  <div style={{ textAlign: 'center' }}>
-                    <motion.button
-                      whileHover={{ scale: 1.02, boxShadow: '0 2px 12px rgba(0, 255, 136, 0.3)' }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={(e) => { e.stopPropagation(); handleTrade(market.symbol); }}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #00ff88 0%, #00e67a 100%)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        color: '#0b0e11',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                      }}
-                    >
-                      Trade
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
-          {/* Mobile List View */}
-          {isMobile && (
-            <div style={{
-              border: `1px solid ${colors.glass.border}`,
-              borderRadius: '10px',
-              overflow: 'hidden',
-            }}>
-              {/* Mobile Header */}
+        {/* Outer border wrapper */}
+        <div style={{
+          border: isDark ? `2px solid ${colors.glass.border}` : '2px solid #000000',
+          borderRadius: '16px',
+          padding: '2px',
+          background: isDark ? 'transparent' : '#ffffff',
+        }}>
+          <GlassCard variant="elevated" padding="none">
+            <div style={{ padding: isMobile ? '12px' : '16px' }}>
+              {/* Header */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                padding: '10px 12px',
-                background: 'linear-gradient(135deg, rgba(26, 143, 255, 0.03), rgba(0, 210, 106, 0.02))',
-                borderBottom: `1px solid ${colors.glass.border}`,
-                fontSize: '10px',
-                fontWeight: 600,
-                color: colors.text.tertiary,
-                textTransform: 'uppercase',
+                alignItems: 'center',
+                marginBottom: '12px',
+                flexWrap: 'wrap',
+                gap: '10px',
               }}>
-                <span>Market</span>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <button
-                    onClick={() => { setSortBy('price'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000' }}>
+                    Markets
+                  </h2>
+                  {/* Tabs */}
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {(['hot', 'gainers', 'losers', 'new'] as const).map((tab) => (
+                      <motion.button
+                        key={tab}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setActiveMarketTab(tab)}
+                        style={{
+                          padding: '6px 12px',
+                          background: activeMarketTab === tab ? (isDark ? colors.primary[400] : '#000000') : 'transparent',
+                          border: activeMarketTab === tab ? 'none' : `1px solid ${isDark ? colors.glass.border : '#000000'}`,
+                          borderRadius: '6px',
+                          color: activeMarketTab === tab ? '#ffffff' : (isDark ? colors.text.secondary : '#000000'),
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {tab === 'hot' ? '🔥 Hot' : tab === 'gainers' ? '📈 Gainers' : tab === 'losers' ? '📉 Losers' : '✨ New'}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Search */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  background: isDark ? colors.background.card : '#ffffff',
+                  border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
+                  borderRadius: '8px',
+                  width: isMobile ? '100%' : '240px',
+                }}>
+                  <Search size={16} color={colors.text.tertiary} />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
-                      background: 'none',
+                      flex: 1,
+                      background: 'transparent',
                       border: 'none',
-                      color: sortBy === 'price' ? colors.primary[400] : colors.text.tertiary,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '2px',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
+                      outline: 'none',
+                      color: isDark ? colors.text.primary : '#000000',
+                      fontSize: '13px',
                     }}
-                  >
-                    Price <ArrowUpDown size={10} />
-                  </button>
-                  <button
-                    onClick={() => { setSortBy('change'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: sortBy === 'change' ? colors.primary[400] : colors.text.tertiary,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '2px',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    24h <ArrowUpDown size={10} />
-                  </button>
+                  />
+                  {searchQuery && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setSearchQuery('')}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                    >
+                      <X size={14} color={colors.text.tertiary} />
+                    </motion.button>
+                  )}
                 </div>
               </div>
 
-              {/* Mobile Market Rows */}
-              {paginatedMarkets.map((market, index) => (
-                <motion.div
-                  key={market.pair}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.03 * index }}
-                  whileHover={{ background: 'rgba(26, 143, 255, 0.06)' }}
-                  onClick={() => handleTrade(market.symbol)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px',
-                    borderBottom: index < paginatedMarkets.length - 1 ? `1px solid ${colors.glass.border}` : 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {/* Left: Star + Market Info */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(market.symbol); }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: favorites.includes(market.symbol) ? '#F7931A' : colors.text.tertiary,
-                        padding: '2px',
-                      }}
-                    >
-                      <Star size={14} fill={favorites.includes(market.symbol) ? '#F7931A' : 'none'} />
-                    </motion.button>
-                    <CryptoIcon symbol={market.symbol} size={28} />
-                    <div>
-                      <div style={{
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: colors.text.primary,
-                      }}>
-                        {market.symbol}
-                      </div>
-                      <div style={{
-                        fontSize: '10px',
-                        color: colors.text.tertiary,
-                      }}>
-                        {market.name}
-                      </div>
-                    </div>
-                  </div>
+              {/* Table Header - Desktop */}
+              {!isMobile && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 80px',
+                  gap: '10px',
+                  padding: '10px 12px',
+                  background: isDark ? colors.background.card : '#f3f4f6',
+                  borderRadius: '6px',
+                  marginBottom: '4px',
+                  border: isDark ? 'none' : '1px solid #e5e7eb',
+                }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#374151', textTransform: 'uppercase' }}>Pair</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#374151', textTransform: 'uppercase', textAlign: 'right' }}>Price</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#374151', textTransform: 'uppercase', textAlign: 'right' }}>24h</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#374151', textTransform: 'uppercase', textAlign: 'right' }}>High</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#374151', textTransform: 'uppercase', textAlign: 'right' }}>Vol</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#374151', textTransform: 'uppercase', textAlign: 'center' }}>Trade</span>
+                </div>
+              )}
 
-                  {/* Right: Price + Change */}
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: colors.text.primary,
-                      marginBottom: '2px',
-                    }}>
-                      {formatPrice(market.price)}
-                    </div>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      background: market.change24h >= 0 ? 'rgba(0, 200, 83, 0.1)' : 'rgba(255, 71, 87, 0.1)',
-                    }}>
-                      {market.change24h >= 0 ? (
-                        <TrendingUp size={10} color={colors.trading.buy} />
-                      ) : (
-                        <TrendingDown size={10} color={colors.trading.sell} />
-                      )}
-                      <span style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: market.change24h >= 0 ? colors.trading.buy : colors.trading.sell,
-                      }}>
-                        {market.change24h >= 0 ? '+' : ''}{market.change24h.toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'space-between',
-            alignItems: isMobile ? 'stretch' : 'center',
-            marginTop: isMobile ? '12px' : '20px',
-            padding: '0 4px',
-            gap: isMobile ? '10px' : '0',
-          }}>
-            <span style={{
-              fontSize: isMobile ? '11px' : '13px',
-              color: colors.text.tertiary,
-              textAlign: isMobile ? 'center' : 'left',
-            }}>
-              Showing {startIndex + 1}-{Math.min(endIndex, sortedMarkets.length)} of {sortedMarkets.length} markets
-            </span>
-
-            <div style={{ display: 'flex', gap: isMobile ? '4px' : '8px', justifyContent: 'center', alignItems: 'center' }}>
-              {/* Previous Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                style={{
-                  padding: isMobile ? '6px 10px' : '8px 12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${colors.glass.border}`,
-                  background: 'transparent',
-                  color: currentPage === 1 ? colors.text.muted : colors.text.secondary,
-                  fontSize: isMobile ? '11px' : '13px',
-                  fontWeight: 500,
-                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                  opacity: currentPage === 1 ? 0.5 : 1,
-                }}
-              >
-                Prev
-              </motion.button>
-
-              {/* Page Numbers */}
-              {(() => {
-                const pages: (number | string)[] = [];
-                const maxVisible = isMobile ? 3 : 5;
-
-                if (totalPages <= maxVisible + 2) {
-                  for (let i = 1; i <= totalPages; i++) pages.push(i);
-                } else {
-                  pages.push(1);
-                  if (currentPage > 3) pages.push('...');
-
-                  const start = Math.max(2, currentPage - 1);
-                  const end = Math.min(totalPages - 1, currentPage + 1);
-
-                  for (let i = start; i <= end; i++) pages.push(i);
-
-                  if (currentPage < totalPages - 2) pages.push('...');
-                  pages.push(totalPages);
-                }
-
-                return pages.map((page, i) => (
-                  <motion.button
-                    key={i}
-                    whileHover={typeof page === 'number' ? { scale: 1.05 } : {}}
-                    whileTap={typeof page === 'number' ? { scale: 0.95 } : {}}
-                    onClick={() => typeof page === 'number' && setCurrentPage(page)}
-                    disabled={typeof page !== 'number'}
+              {/* Market Rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {paginatedMarkets.map((market, index) => (
+                  <motion.div
+                    key={market.symbol}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                      backgroundColor: priceAnimations[market.symbol] === 'up'
+                        ? 'rgba(0, 200, 83, 0.12)'
+                        : priceAnimations[market.symbol] === 'down'
+                          ? 'rgba(255, 71, 87, 0.12)'
+                          : 'transparent'
+                    }}
+                    transition={{ delay: 0.02 * index, backgroundColor: { duration: 0.3 } }}
+                    whileHover={{ background: isDark ? colors.background.hover : '#f9fafb', scale: 1.002 }}
+                    onClick={() => navigate(`/trade/${market.symbol.toLowerCase()}`)}
                     style={{
-                      width: isMobile ? '28px' : '32px',
-                      height: isMobile ? '28px' : '32px',
-                      borderRadius: '8px',
-                      border: page === currentPage ? 'none' : `1px solid ${colors.glass.border}`,
-                      background: page === currentPage
-                        ? colors.gradients.primarySolid
-                        : 'transparent',
-                      color: page === currentPage ? '#ffffff' : colors.text.tertiary,
-                      fontSize: isMobile ? '11px' : '13px',
-                      fontWeight: page === currentPage ? 700 : 500,
-                      cursor: typeof page === 'number' ? 'pointer' : 'default',
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 1fr 1fr 80px',
+                      gap: isMobile ? '6px' : '10px',
+                      alignItems: 'center',
+                      padding: isMobile ? '10px 8px' : '10px 12px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
                     }}
                   >
-                    {page}
-                  </motion.button>
-                ));
-              })()}
+                    {/* Pair Info */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <CryptoIcon symbol={market.symbol} size={isMobile ? 28 : 32} />
+                      <div>
+                        <p style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000' }}>
+                          {market.pair}
+                        </p>
+                        <p style={{ fontSize: '11px', color: colors.text.tertiary }}>{market.name}</p>
+                      </div>
+                    </div>
 
-              {/* Next Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                style={{
-                  padding: isMobile ? '6px 10px' : '8px 12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${colors.glass.border}`,
-                  background: 'transparent',
-                  color: currentPage === totalPages ? colors.text.muted : colors.text.secondary,
-                  fontSize: isMobile ? '11px' : '13px',
-                  fontWeight: 500,
-                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                  opacity: currentPage === totalPages ? 0.5 : 1,
-                }}
-              >
-                Next
-              </motion.button>
+                    {/* Price - Desktop */}
+                    {!isMobile && (
+                      <p style={{
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        color: isDark ? colors.text.primary : '#000000',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        textAlign: 'right',
+                      }}>
+                        {formatPrice(market.price)}
+                      </p>
+                    )}
+
+                    {/* 24h Change */}
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: '4px 8px',
+                        background: market.change24h >= 0 ? colors.trading.buyBg : colors.trading.sellBg,
+                        borderRadius: '5px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: market.change24h >= 0 ? colors.trading.buy : colors.trading.sell,
+                      }}>
+                        {market.change24h >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        {market.change24h >= 0 ? '+' : ''}{market.change24h.toFixed(2)}%
+                      </span>
+                      {isMobile && (
+                        <p style={{ fontSize: '12px', color: isDark ? colors.text.primary : '#000000', marginTop: '4px', fontWeight: 600 }}>
+                          {formatPrice(market.price)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* High - Desktop */}
+                    {!isMobile && (
+                      <p style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: colors.text.secondary,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        textAlign: 'right',
+                      }}>
+                        {formatPrice(market.high24h)}
+                      </p>
+                    )}
+
+                    {/* Volume - Desktop */}
+                    {!isMobile && (
+                      <p style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: colors.text.secondary,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        textAlign: 'right',
+                      }}>
+                        ${market.volume}
+                      </p>
+                    )}
+
+                    {/* Trade Button - Desktop */}
+                    {!isMobile && (
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/trade/${market.symbol.toLowerCase()}`); }}
+                          style={{
+                            padding: '6px 14px',
+                            background: colors.gradients.primarySolid,
+                            border: 'none',
+                            borderRadius: '6px',
+                            color: colors.background.primary,
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Trade
+                        </motion.button>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '16px',
+                  padding: '0 4px',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                }}>
+                  <span style={{ fontSize: '12px', color: colors.text.tertiary }}>
+                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, sortedMarkets.length)} of {sortedMarkets.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '6px',
+                        border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
+                        background: 'transparent',
+                        color: currentPage === 1 ? colors.text.muted : (isDark ? colors.text.secondary : '#000000'),
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        opacity: currentPage === 1 ? 0.5 : 1,
+                      }}
+                    >
+                      Prev
+                    </motion.button>
+                    <span style={{
+                      padding: '8px 14px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: isDark ? colors.text.primary : '#000000',
+                    }}>
+                      {currentPage} / {totalPages}
+                    </span>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '6px',
+                        border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
+                        background: 'transparent',
+                        color: currentPage === totalPages ? colors.text.muted : (isDark ? colors.text.secondary : '#000000'),
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                        opacity: currentPage === totalPages ? 0.5 : 1,
+                      }}
+                    >
+                      Next
+                    </motion.button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </GlassCard>
+          </GlassCard>
+        </div>
       </motion.div>
     </ResponsiveLayout>
   );

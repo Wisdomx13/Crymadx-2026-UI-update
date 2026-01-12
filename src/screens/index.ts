@@ -28,3 +28,7 @@ export { TicketsScreen } from './tickets/TicketsScreen';
 // Earn Screens
 export { SavingsVaultScreen } from './earn/SavingsVaultScreen';
 export { VaultScreen } from './earn/VaultScreen';
+
+// NFT & Fiat Screens
+export { NFTScreen } from './nft/NFTScreen';
+export { FiatScreen } from './fiat/FiatScreen';

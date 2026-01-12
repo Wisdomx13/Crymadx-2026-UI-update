@@ -462,19 +462,19 @@ export const Glass3DCard: React.FC<Glass3DCardProps> = ({
 
   const lightDepthStyles = {
     1: {
-      background: `linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(236, 254, 255, 0.6) 100%)`,
-      blur: '16px',
-      shadow: '0 4px 20px rgba(5, 150, 105, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04)',
+      background: '#ffffff',
+      blur: '0px',
+      shadow: 'none',
     },
     2: {
-      background: `linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(236, 254, 255, 0.7) 100%)`,
-      blur: '20px',
-      shadow: '0 8px 32px rgba(5, 150, 105, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05)',
+      background: '#ffffff',
+      blur: '0px',
+      shadow: 'none',
     },
     3: {
-      background: `linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(236, 254, 255, 0.8) 100%)`,
-      blur: '24px',
-      shadow: '0 12px 40px rgba(5, 150, 105, 0.1), 0 4px 12px rgba(15, 23, 42, 0.06)',
+      background: '#ffffff',
+      blur: '0px',
+      shadow: 'none',
     },
   };
 
@@ -483,11 +483,11 @@ export const Glass3DCard: React.FC<Glass3DCardProps> = ({
 
   const glowGradient = isDark
     ? themeColors.gradients.glow
-    : 'radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(5, 150, 105, 0.08) 50%, transparent 70%)';
+    : 'none';
 
   const highlightLine = isDark
     ? themeColors.gradients.neonLine
-    : 'linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.3), rgba(5, 150, 105, 0.2), transparent)';
+    : 'none';
 
   return (
     <motion.div
@@ -509,19 +509,19 @@ export const Glass3DCard: React.FC<Glass3DCardProps> = ({
       }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
     >
-      {/* Glow layer */}
-      {glow && (
+      {/* Glow layer - Dark mode only */}
+      {glow && isDark && (
         <motion.div
           style={{
             position: 'absolute',
             inset: '-2px',
             borderRadius: '20px',
             background: glowGradient,
-            opacity: isDark ? 0.5 : 0.6,
-            filter: `blur(${isDark ? 20 : 16}px)`,
+            opacity: 0.5,
+            filter: 'blur(20px)',
             zIndex: -1,
           }}
-          whileHover={{ opacity: isDark ? 0.8 : 0.7, scale: 1.05 }}
+          whileHover={{ opacity: 0.8, scale: 1.05 }}
         />
       )}
 
@@ -529,9 +529,9 @@ export const Glass3DCard: React.FC<Glass3DCardProps> = ({
       <div
         style={{
           background: currentDepth.background,
-          backdropFilter: `blur(${currentDepth.blur})`,
-          WebkitBackdropFilter: `blur(${currentDepth.blur})`,
-          border: `1px solid ${isDark ? themeColors.glass.border : 'rgba(5, 150, 105, 0.12)'}`,
+          backdropFilter: isDark ? `blur(${currentDepth.blur})` : 'none',
+          WebkitBackdropFilter: isDark ? `blur(${currentDepth.blur})` : 'none',
+          border: `1px solid ${isDark ? themeColors.glass.border : '#000000'}`,
           borderRadius: '20px',
           boxShadow: currentDepth.shadow,
           overflow: 'hidden',
@@ -554,20 +554,20 @@ export const Glass3DCard: React.FC<Glass3DCardProps> = ({
         {/* Content */}
         {children}
 
-        {/* Inner glow effect */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '40%',
-            background: isDark
-              ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%)'
-              : 'linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, transparent 100%)',
-            pointerEvents: 'none',
-          }}
-        />
+        {/* Inner glow effect - Dark mode only */}
+        {isDark && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '40%',
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
       </div>
     </motion.div>
   );
@@ -722,43 +722,45 @@ export const Glass3DStat: React.FC<Glass3DStatProps> = ({
 
   const cardBg = isDark
     ? themeColors.gradients.glassSurface
-    : themeColors.gradients.glassSurface;
+    : '#ffffff';
 
   const glowBg = isDark
     ? themeColors.gradients.glow
-    : 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, rgba(5, 150, 105, 0.06) 50%, transparent 70%)';
+    : 'none';
 
   const hoverShadow = isDark
     ? themeColors.shadows.glassHover
-    : '0 12px 40px rgba(5, 150, 105, 0.12), 0 4px 16px rgba(15, 23, 42, 0.08)';
+    : 'none';
 
   return (
     <motion.div
-      whileHover={{ y: -4, boxShadow: hoverShadow }}
+      whileHover={{ y: isDark ? -4 : -2, boxShadow: hoverShadow }}
       style={{
         padding: '20px 24px',
         background: cardBg,
-        backdropFilter: 'blur(16px)',
-        border: `1px solid ${isDark ? themeColors.glass.border : 'rgba(5, 150, 105, 0.12)'}`,
+        backdropFilter: isDark ? 'blur(16px)' : 'none',
+        border: `1px solid ${isDark ? themeColors.glass.border : '#000000'}`,
         borderRadius: '16px',
-        boxShadow: isDark ? themeColors.shadows.glass : '0 4px 24px rgba(5, 150, 105, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04)',
+        boxShadow: 'none',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Background glow */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-50%',
-          right: '-50%',
-          width: '100%',
-          height: '100%',
-          background: glowBg,
-          opacity: isDark ? 0.3 : 0.5,
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Background glow - Dark mode only */}
+      {isDark && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-50%',
+            right: '-50%',
+            width: '100%',
+            height: '100%',
+            background: glowBg,
+            opacity: 0.3,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{
@@ -769,14 +771,14 @@ export const Glass3DStat: React.FC<Glass3DStatProps> = ({
         }}>
           <span style={{
             fontSize: '13px',
-            color: themeColors.text.tertiary,
+            color: isDark ? themeColors.text.tertiary : '#374151',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
           }}>
             {label}
           </span>
           {icon && (
-            <span style={{ color: themeColors.primary[400], opacity: 0.7 }}>
+            <span style={{ color: isDark ? themeColors.primary[400] : '#000000', opacity: 0.7 }}>
               {icon}
             </span>
           )}
@@ -785,7 +787,7 @@ export const Glass3DStat: React.FC<Glass3DStatProps> = ({
           fontSize: '28px',
           fontWeight: 700,
           fontFamily: "'JetBrains Mono', monospace",
-          color: themeColors.text.primary,
+          color: isDark ? themeColors.text.primary : '#000000',
           textShadow: isDark ? themeColors.shadows.neonText : 'none',
         }}>
           {value}

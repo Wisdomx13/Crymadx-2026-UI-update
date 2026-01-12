@@ -36,6 +36,8 @@ import {
   Bot,
   Sun,
   Moon,
+  Bell,
+  Building2,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -482,360 +484,261 @@ interface HologramCarouselProps {
 
 const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, isMobile }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState(1); // 1 = next, -1 = prev
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-
-  // Refs for momentum tracking
   const dragStartX = React.useRef(0);
-  const lastX = React.useRef(0);
-  const lastTime = React.useRef(0);
-  const velocity = React.useRef(0);
-  const momentumRef = React.useRef<number | null>(null);
+  const dragCurrentX = React.useRef(0);
 
   const total = features.length;
-  const cardWidth = isMobile ? 260 : 300;
-  const cardHeight = isMobile ? 280 : 320;
-  const spacing = isMobile ? 200 : 280;
+  const cardWidth = isMobile ? 280 : 320;
+  const cardHeight = isMobile ? 300 : 350;
+  const spacing = isMobile ? 220 : 300;
 
-  // Auto-rotation
+  // Auto-rotation - runs automatically
   useEffect(() => {
-    if (!isAutoPlaying || isDragging) return;
-    const interval = setInterval(() => {
+    if (!isAutoPlaying) return;
+    const timer = setInterval(() => {
+      setDirection(1);
       setActiveIndex((prev) => (prev + 1) % total);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, isDragging, total]);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [isAutoPlaying, total]);
 
-  // Cleanup momentum on unmount
-  useEffect(() => {
-    return () => {
-      if (momentumRef.current) cancelAnimationFrame(momentumRef.current);
-    };
-  }, []);
-
-  const goToIndex = (index: number) => {
-    setActiveIndex(((index % total) + total) % total);
+  const goToPrev = () => {
+    setDirection(-1);
+    setActiveIndex((prev) => (prev - 1 + total) % total);
   };
 
-  const goToPrev = () => goToIndex(activeIndex - 1);
-  const goToNext = () => goToIndex(activeIndex + 1);
+  const goToNext = () => {
+    setDirection(1);
+    setActiveIndex((prev) => (prev + 1) % total);
+  };
 
-  // Start drag
-  const startDrag = (clientX: number) => {
-    if (momentumRef.current) {
-      cancelAnimationFrame(momentumRef.current);
-      momentumRef.current = null;
-    }
+  const goToIndex = (index: number) => {
+    setDirection(index > activeIndex ? 1 : -1);
+    setActiveIndex(index);
+  };
+
+  // Drag handlers
+  const handleDragStart = (clientX: number) => {
     setIsDragging(true);
     setIsAutoPlaying(false);
     dragStartX.current = clientX;
-    lastX.current = clientX;
-    lastTime.current = Date.now();
-    velocity.current = 0;
-    setDragOffset(0);
+    dragCurrentX.current = clientX;
   };
 
-  // During drag - track velocity
-  const onDrag = (clientX: number) => {
+  const handleDragMove = (clientX: number) => {
     if (!isDragging) return;
-
-    const now = Date.now();
-    const dt = now - lastTime.current;
-
-    if (dt > 0) {
-      velocity.current = (clientX - lastX.current) / dt;
-    }
-
-    lastX.current = clientX;
-    lastTime.current = now;
-
+    dragCurrentX.current = clientX;
     const diff = clientX - dragStartX.current;
-    setDragOffset(diff);
-
-    // Change slide if dragged far enough
-    if (Math.abs(diff) > spacing * 0.5) {
-      if (diff > 0) {
-        goToPrev();
-      } else {
-        goToNext();
-      }
+    if (Math.abs(diff) > 100) {
+      if (diff > 0) goToPrev();
+      else goToNext();
       dragStartX.current = clientX;
-      setDragOffset(0);
     }
   };
 
-  // End drag - apply momentum
-  const endDrag = () => {
-    if (!isDragging) return;
+  const handleDragEnd = () => {
     setIsDragging(false);
-
-    const v = velocity.current;
-    const threshold = 0.3;
-
-    // If velocity is high enough, keep sliding
-    if (Math.abs(v) > threshold) {
-      let currentVelocity = v * 150;
-      let accumulated = 0;
-
-      const applyMomentum = () => {
-        accumulated += currentVelocity;
-        currentVelocity *= 0.92; // Friction
-
-        // Change slides based on accumulated distance
-        while (Math.abs(accumulated) > spacing * 0.6) {
-          if (accumulated > 0) {
-            goToPrev();
-            accumulated -= spacing * 0.6;
-          } else {
-            goToNext();
-            accumulated += spacing * 0.6;
-          }
-        }
-
-        if (Math.abs(currentVelocity) > 2) {
-          momentumRef.current = requestAnimationFrame(applyMomentum);
-        } else {
-          momentumRef.current = null;
-          setDragOffset(0);
-          setTimeout(() => setIsAutoPlaying(true), 3000);
-        }
-      };
-
-      momentumRef.current = requestAnimationFrame(applyMomentum);
-    } else {
-      // Snap to nearest
-      if (Math.abs(dragOffset) > spacing * 0.2) {
-        if (dragOffset > 0) goToPrev();
-        else goToNext();
-      }
-      setDragOffset(0);
-      setTimeout(() => setIsAutoPlaying(true), 3000);
-    }
+    setTimeout(() => setIsAutoPlaying(true), 3000);
   };
 
-  // Mouse handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    startDrag(e.clientX);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    onDrag(e.clientX);
-  };
-
-  const handleMouseUp = () => endDrag();
-  const handleMouseLeave = () => { if (isDragging) endDrag(); };
-
-  // Touch handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startDrag(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    onDrag(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = () => endDrag();
-
-  // Get visible cards (5 for smoother transitions)
-  const getVisibleCards = () => {
-    const cards = [];
-    for (let i = -2; i <= 2; i++) {
-      const index = ((activeIndex + i) % total + total) % total;
-      cards.push({ feature: features[index], offset: i, index });
-    }
-    return cards;
-  };
-
-  // Calculate card transform with drag offset
-  const getCardStyle = (offset: number) => {
-    const dragInfluence = dragOffset / spacing;
-    const adjustedOffset = offset - dragInfluence;
-
-    const x = adjustedOffset * spacing;
-    const absOffset = Math.abs(adjustedOffset);
-    const z = -absOffset * 60;
-    const rotateY = adjustedOffset * -20;
-    const scale = Math.max(0.6, 1 - absOffset * 0.15);
-    const opacity = Math.max(0, 1 - absOffset * 0.35);
-
-    return {
-      transform: `translateX(${x}px) translateZ(${z}px) rotateY(${rotateY}deg) scale(${scale})`,
-      opacity,
-      zIndex: 10 - Math.abs(Math.round(adjustedOffset)),
-    };
+  // Get 3 visible cards
+  const getCards = () => {
+    const prev = (activeIndex - 1 + total) % total;
+    const next = (activeIndex + 1) % total;
+    return [
+      { feature: features[prev], pos: -1 },
+      { feature: features[activeIndex], pos: 0 },
+      { feature: features[next], pos: 1 },
+    ];
   };
 
   return (
     <div
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onMouseDown={(e) => handleDragStart(e.clientX)}
+      onMouseMove={(e) => handleDragMove(e.clientX)}
+      onMouseUp={handleDragEnd}
+      onMouseLeave={() => isDragging && handleDragEnd()}
+      onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
+      onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
+      onTouchEnd={handleDragEnd}
       style={{
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        minHeight: isMobile ? '480px' : '560px',
+        minHeight: isMobile ? '500px' : '580px',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         overflow: 'hidden',
-        touchAction: 'pan-y',
       }}
     >
       {/* Hologram Beam */}
       <div style={{
         position: 'absolute',
-        bottom: '80px',
+        bottom: '90px',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: isMobile ? '95%' : '85%',
-        height: isMobile ? '380px' : '440px',
-        background: 'linear-gradient(to top, rgba(0, 200, 255, 0.22) 0%, rgba(0, 200, 255, 0.08) 35%, rgba(0, 200, 255, 0.02) 60%, transparent 85%)',
-        clipPath: 'polygon(15% 100%, 85% 100%, 100% 0%, 0% 0%)',
+        width: isMobile ? '100%' : '90%',
+        height: isMobile ? '400px' : '460px',
+        background: 'linear-gradient(to top, rgba(0, 180, 220, 0.18) 0%, rgba(0, 180, 220, 0.06) 40%, transparent 75%)',
+        clipPath: 'polygon(12% 100%, 88% 100%, 100% 0%, 0% 0%)',
         zIndex: 0,
-        transition: 'opacity 0.3s ease',
-        opacity: isDragging ? 0.7 : 1,
       }} />
 
       {/* 3D Carousel */}
       <div style={{
         position: 'relative',
         width: '100%',
-        height: isMobile ? '360px' : '420px',
+        height: isMobile ? '380px' : '440px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        perspective: '1200px',
-        perspectiveOrigin: '50% 50%',
+        perspective: '1400px',
       }}>
-        <div style={{
-          position: 'relative',
-          width: cardWidth,
-          height: cardHeight,
-          transformStyle: 'preserve-3d',
-        }}>
-          {getVisibleCards().map(({ feature, offset, index }) => {
-            const style = getCardStyle(offset);
-            const isCenter = Math.abs(offset - dragOffset / spacing) < 0.5;
+        <AnimatePresence initial={false} mode="popLayout">
+          {getCards().map(({ feature, pos }) => {
+            const isCenter = pos === 0;
+            const x = pos * spacing;
+            const z = isCenter ? 0 : -120;
+            const rotateY = pos * -30;
+            const scale = isCenter ? 1 : 0.75;
+            const opacity = isCenter ? 1 : 0.4;
 
             return (
-              <div
-                key={`${index}-${offset}`}
-                onClick={() => {
-                  if (!isDragging && offset !== 0) {
-                    goToIndex(index);
-                  }
+              <motion.div
+                key={`${feature.title}-${pos}`}
+                initial={{
+                  x: direction > 0 ? spacing * 2 : -spacing * 2,
+                  scale: 0.5,
+                  opacity: 0,
+                  rotateY: direction > 0 ? -60 : 60,
                 }}
+                animate={{
+                  x,
+                  z,
+                  rotateY,
+                  scale,
+                  opacity,
+                }}
+                exit={{
+                  x: direction > 0 ? -spacing * 2 : spacing * 2,
+                  scale: 0.5,
+                  opacity: 0,
+                  rotateY: direction > 0 ? 60 : -60,
+                }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 200,
+                  damping: 30,
+                  mass: 1,
+                }}
+                onClick={() => !isCenter && (pos === -1 ? goToPrev() : goToNext())}
                 style={{
                   position: 'absolute',
                   width: cardWidth,
                   height: cardHeight,
-                  left: 0,
-                  top: 0,
-                  ...style,
-                  transition: isDragging ? 'none' : 'all 0.6s cubic-bezier(0.25, 0.1, 0.25, 1)',
-                  cursor: offset === 0 ? 'grab' : 'pointer',
-                  willChange: 'transform, opacity',
+                  cursor: isCenter ? 'grab' : 'pointer',
+                  zIndex: isCenter ? 10 : 5,
                   transformStyle: 'preserve-3d',
-                  backfaceVisibility: 'hidden',
                 }}
               >
-                {/* Card */}
+                {/* Clean Card */}
                 <div style={{
                   width: '100%',
                   height: '100%',
-                  background: '#fff',
-                  borderRadius: '14px',
-                  padding: isMobile ? '22px' : '28px',
-                  boxShadow: isCenter && !isDragging
-                    ? '0 35px 70px rgba(0, 0, 0, 0.15), 0 0 50px rgba(0, 200, 255, 0.12)'
-                    : '0 20px 40px rgba(0, 0, 0, 0.1)',
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  padding: isMobile ? '24px' : '32px',
+                  boxShadow: isCenter
+                    ? '0 40px 80px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.05)'
+                    : '0 20px 50px rgba(0, 0, 0, 0.12)',
                   display: 'flex',
                   flexDirection: 'column',
-                  transition: 'box-shadow 0.4s ease',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
                 }}>
                   {/* Header */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '14px',
-                    paddingBottom: '16px',
-                    borderBottom: '2px solid #111',
-                    marginBottom: '16px',
+                    gap: '16px',
+                    paddingBottom: '18px',
+                    borderBottom: '3px solid #000000',
+                    marginBottom: '18px',
                   }}>
                     <div style={{
-                      width: isMobile ? '40px' : '48px',
-                      height: isMobile ? '40px' : '48px',
-                      borderRadius: '10px',
-                      background: '#111',
+                      width: isMobile ? '44px' : '52px',
+                      height: isMobile ? '44px' : '52px',
+                      borderRadius: '12px',
+                      background: '#000000',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#fff',
+                      color: '#ffffff',
                       flexShrink: 0,
                     }}>
-                      {React.cloneElement(feature.icon, { size: isMobile ? 20 : 24 })}
+                      {React.cloneElement(feature.icon, { size: isMobile ? 22 : 26 })}
                     </div>
                     <h3 style={{
-                      fontSize: isMobile ? '15px' : '18px',
-                      fontWeight: 800,
-                      color: '#000',
+                      fontSize: isMobile ? '17px' : '20px',
+                      fontWeight: 900,
+                      color: '#000000',
                       margin: 0,
-                      lineHeight: 1.25,
-                      fontFamily: 'Georgia, serif',
+                      lineHeight: 1.2,
+                      fontFamily: 'Georgia, "Times New Roman", serif',
+                      letterSpacing: '-0.02em',
                     }}>
                       {feature.title}
                     </h3>
                   </div>
 
-                  {/* Content */}
+                  {/* Content - DARKER TEXT */}
                   <p style={{
-                    fontSize: isMobile ? '13px' : '15px',
-                    color: '#333',
-                    lineHeight: 1.7,
+                    fontSize: isMobile ? '14px' : '16px',
+                    color: '#1a1a1a',
+                    lineHeight: 1.75,
                     margin: 0,
                     flex: 1,
-                    fontFamily: 'Georgia, serif',
+                    fontFamily: 'Georgia, "Times New Roman", serif',
+                    fontWeight: 500,
                   }}>
                     {feature.description}
                   </p>
 
                   {/* Footer */}
                   <div style={{
-                    paddingTop: '14px',
-                    borderTop: '1px solid #e0e0e0',
+                    paddingTop: '16px',
+                    borderTop: '2px solid #000000',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     marginTop: 'auto',
                   }}>
                     <span style={{
-                      fontSize: '10px',
-                      color: '#000',
-                      fontWeight: 800,
-                      letterSpacing: '0.12em',
+                      fontSize: '11px',
+                      color: '#000000',
+                      fontWeight: 900,
+                      letterSpacing: '0.15em',
+                      fontFamily: 'Arial, sans-serif',
                     }}>
                       CRYMADX
                     </span>
                     <span style={{
-                      fontSize: '10px',
-                      color: '#888',
-                      fontWeight: 500,
+                      fontSize: '11px',
+                      color: '#000000',
+                      fontWeight: 600,
+                      fontFamily: 'Arial, sans-serif',
                     }}>
-                      Feature
+                      FEATURE
                     </span>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </AnimatePresence>
       </div>
 
       {/* Navigation Arrows */}
@@ -843,31 +746,31 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         onClick={(e) => { e.stopPropagation(); goToPrev(); }}
         style={{
           position: 'absolute',
-          left: isMobile ? '10px' : '40px',
-          top: '42%',
-          width: isMobile ? '44px' : '54px',
-          height: isMobile ? '44px' : '54px',
+          left: isMobile ? '8px' : '35px',
+          top: '40%',
+          width: isMobile ? '48px' : '58px',
+          height: isMobile ? '48px' : '58px',
           borderRadius: '50%',
-          background: '#fff',
-          border: 'none',
+          background: '#ffffff',
+          border: '2px solid #000000',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#000',
-          fontSize: isMobile ? '24px' : '28px',
-          fontWeight: 300,
+          color: '#000000',
+          fontSize: isMobile ? '26px' : '30px',
+          fontWeight: 400,
           zIndex: 20,
-          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.15)',
-          transition: 'all 0.25s ease',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
+          transition: 'all 0.2s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.12)';
-          e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.2)';
+          e.currentTarget.style.background = '#000000';
+          e.currentTarget.style.color = '#ffffff';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.background = '#ffffff';
+          e.currentTarget.style.color = '#000000';
         }}
       >
         ‹
@@ -877,31 +780,31 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         onClick={(e) => { e.stopPropagation(); goToNext(); }}
         style={{
           position: 'absolute',
-          right: isMobile ? '10px' : '40px',
-          top: '42%',
-          width: isMobile ? '44px' : '54px',
-          height: isMobile ? '44px' : '54px',
+          right: isMobile ? '8px' : '35px',
+          top: '40%',
+          width: isMobile ? '48px' : '58px',
+          height: isMobile ? '48px' : '58px',
           borderRadius: '50%',
-          background: '#fff',
-          border: 'none',
+          background: '#ffffff',
+          border: '2px solid #000000',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#000',
-          fontSize: isMobile ? '24px' : '28px',
-          fontWeight: 300,
+          color: '#000000',
+          fontSize: isMobile ? '26px' : '30px',
+          fontWeight: 400,
           zIndex: 20,
-          boxShadow: '0 6px 25px rgba(0, 0, 0, 0.15)',
-          transition: 'all 0.25s ease',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
+          transition: 'all 0.2s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.12)';
-          e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.2)';
+          e.currentTarget.style.background = '#000000';
+          e.currentTarget.style.color = '#ffffff';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.background = '#ffffff';
+          e.currentTarget.style.color = '#000000';
         }}
       >
         ›
@@ -1041,15 +944,6 @@ const HologramCarousel: React.FC<HologramCarouselProps> = ({ features, isDark, i
         ))}
       </div>
 
-      {/* Hint */}
-      <p style={{
-        fontSize: '11px',
-        color: 'rgba(255, 255, 255, 0.3)',
-        marginTop: '16px',
-        textAlign: 'center',
-      }}>
-        Swipe or drag to explore
-      </p>
     </div>
   );
 };
@@ -1134,7 +1028,7 @@ const StakeIcon: React.FC<{ size: number; color: string; animationDelay: number 
   </motion.div>
 );
 
-// Glass Panel Component with Theme Support - BOLD 3D Glass Effect
+// Glass Panel Component with Theme Support - Clean Glassy Black for Light Mode
 const GlassPanel: React.FC<{
   children: React.ReactNode;
   style?: React.CSSProperties;
@@ -1143,12 +1037,12 @@ const GlassPanel: React.FC<{
   isDark?: boolean;
   glowColor?: string;
 }> = ({ children, style, hover = false, glow = false, isDark = true, glowColor = '#00D26A' }) => {
-  // Bold 3D Glass - Deep depth with strong shadows
+  // Glassy black tinted background for light mode - clean and modern
   const glassBg = isDark
     ? 'linear-gradient(145deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 50%, rgba(0,0,0,0.15) 100%)'
-    : 'linear-gradient(145deg, rgba(20,40,60,0.75) 0%, rgba(30,50,80,0.65) 50%, rgba(15,35,55,0.7) 100%)';
+    : 'linear-gradient(145deg, rgba(40,50,60,0.92) 0%, rgba(35,45,55,0.88) 50%, rgba(30,40,50,0.94) 100%)';
 
-  const borderColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(100,180,255,0.4)';
+  const borderColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(80,90,100,0.5)';
 
   return (
     <motion.div
@@ -1157,21 +1051,21 @@ const GlassPanel: React.FC<{
         y: -8,
         boxShadow: isDark
           ? `0 30px 80px rgba(0,0,0,0.6), 0 0 60px ${glowColor}25, inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(0,0,0,0.3)`
-          : `0 25px 60px rgba(0,30,60,0.5), 0 0 40px rgba(0,180,255,0.15), inset 0 2px 0 rgba(255,255,255,0.25)`,
+          : `0 25px 60px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)`,
       } : undefined}
       style={{
         background: glassBg,
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderRadius: '20px',
-        border: `2px solid ${borderColor}`,
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '16px',
+        border: `1px solid ${borderColor}`,
         boxShadow: glow
           ? isDark
             ? `0 20px 60px rgba(0,0,0,0.5), 0 0 80px ${glowColor}20, inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.25)`
-            : `0 20px 50px rgba(0,30,60,0.45), 0 0 50px rgba(0,180,255,0.12), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,40,80,0.3)`
+            : `0 20px 50px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08)`
           : isDark
             ? `0 15px 50px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.25)`
-            : `0 15px 40px rgba(0,30,60,0.4), inset 0 2px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,40,80,0.25)`,
+            : `0 10px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06)`,
         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
         position: 'relative',
@@ -2344,9 +2238,9 @@ export const HomeScreen: React.FC = () => {
                   : '0 4px 20px rgba(0,0,0,0.3), 0 0 30px rgba(16, 185, 129, 0.4)',
               }}
             >
-              <Star size={12} color={isDark ? colors.primary[400] : '#ffffff'} fill={isDark ? colors.primary[400] : '#ffffff'} />
+              <Star size={14} color={isDark ? colors.primary[400] : '#ffffff'} fill={isDark ? colors.primary[400] : '#ffffff'} />
               <span style={{
-                fontSize: '11px',
+                fontSize: '13px',
                 fontWeight: 700,
                 color: isDark ? colors.primary[400] : '#ffffff',
                 textShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
@@ -2361,10 +2255,10 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05, duration: 0.3 }}
               style={{
-                fontSize: isMobile ? '30px' : '46px',
+                fontSize: isMobile ? '34px' : '52px',
                 fontWeight: 900,
                 lineHeight: 1.1,
-                marginBottom: '12px',
+                marginBottom: '14px',
                 color: isDark ? '#ffffff' : '#000000',
                 textShadow: isDark
                   ? '0 2px 15px rgba(0,0,0,0.8), 0 0 30px rgba(0, 210, 106, 0.3)'
@@ -2390,12 +2284,12 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
               style={{
-                fontSize: isMobile ? '14px' : '16px',
+                fontSize: isMobile ? '16px' : '18px',
                 fontWeight: 600,
                 color: isDark ? 'rgba(255,255,255,0.95)' : '#000000',
                 lineHeight: 1.5,
-                marginBottom: '18px',
-                maxWidth: isMobile ? '100%' : '440px',
+                marginBottom: '20px',
+                maxWidth: isMobile ? '100%' : '480px',
                 textShadow: isDark
                   ? '0 1px 4px rgba(0,0,0,0.6)'
                   : 'none',
@@ -2418,8 +2312,8 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.3 }}
               style={{
-                marginBottom: '16px',
-                maxWidth: isMobile ? '100%' : '400px',
+                marginBottom: '20px',
+                maxWidth: isMobile ? '100%' : '440px',
               }}
             >
               <div style={{
@@ -2445,11 +2339,11 @@ export const HomeScreen: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   style={{
                     flex: 1,
-                    padding: '12px 16px',
+                    padding: '14px 18px',
                     background: 'transparent',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '14px',
+                    fontSize: '15px',
                     fontWeight: 500,
                     color: isDark ? '#ffffff' : '#000000',
                     outline: 'none',
@@ -2461,10 +2355,10 @@ export const HomeScreen: React.FC = () => {
                   onClick={() => navigate('/register')}
                   style={{
                     whiteSpace: 'nowrap',
-                    padding: '12px 24px',
+                    padding: '14px 28px',
                     borderRadius: '8px',
                     fontWeight: 700,
-                    fontSize: '14px',
+                    fontSize: '15px',
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     border: 'none',
                     boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
@@ -2709,7 +2603,7 @@ export const HomeScreen: React.FC = () => {
         padding: isMobile ? '48px 20px' : '80px 48px',
         position: 'relative',
       }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -2718,25 +2612,24 @@ export const HomeScreen: React.FC = () => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '32px',
+              marginBottom: '20px',
               flexWrap: 'wrap',
-              gap: '16px',
+              gap: '12px',
             }}
           >
             <div>
               <h2 style={{
-                fontSize: isMobile ? '26px' : '36px',
-                fontWeight: 700,
-                color: isDark ? colors.text.primary : '#ffffff',
-                marginBottom: '8px',
-                textShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.5)',
+                fontSize: isMobile ? '24px' : '28px',
+                fontWeight: 800,
+                color: isDark ? colors.text.primary : '#000000',
+                marginBottom: '4px',
               }}>
                 Popular Cryptocurrencies
               </h2>
               <p style={{
-                fontSize: '15px',
-                color: isDark ? colors.text.tertiary : 'rgba(255,255,255,0.9)',
-                textShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.4)',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: isDark ? colors.text.tertiary : '#666',
               }}>
                 Trade the most popular digital assets with zero fees
               </p>
@@ -2746,160 +2639,202 @@ export const HomeScreen: React.FC = () => {
             </Button>
           </motion.div>
 
-          {/* Market Table - Glass Style */}
-          <GlassPanel style={{ overflow: 'hidden' }} isDark={isDark}>
-            {/* Table Header */}
-            {!isMobile && (
+          {/* Market List - Newspaper Style for Light Mode */}
+          <div style={{
+            background: isDark ? 'rgba(255,255,255,0.03)' : '#faf9f7',
+            borderRadius: isDark ? '12px' : '2px',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '2px solid #1a1a1a',
+            overflow: 'hidden',
+            boxShadow: isDark ? 'none' : '4px 4px 0 #1a1a1a',
+          }}>
+            {/* Newspaper Header - Light Mode Only */}
+            {!isDark && (
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr 1fr 1fr 140px',
-                padding: '16px 28px',
-                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)'}`,
-                fontSize: '12px',
-                fontWeight: 700,
-                color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                textShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.4)',
+                background: '#1a1a1a',
+                padding: '12px 20px',
+                borderBottom: '3px double #1a1a1a',
               }}>
-                <span>Name</span>
-                <span style={{ textAlign: 'right' }}>Price</span>
-                <span style={{ textAlign: 'right' }}>24h Change</span>
-                <span style={{ textAlign: 'right' }}>Market Cap</span>
-                <span style={{ textAlign: 'center' }}>Action</span>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: '#faf9f7',
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                  }}>
+                    MARKET WATCH
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: '#faf9f7',
+                    fontFamily: "'Georgia', serif",
+                  }}>
+                    Live Prices
+                  </span>
+                </div>
               </div>
             )}
 
-            {/* Table Rows */}
+            {/* Column Headers */}
+            {!isMobile && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '2fr 1fr 1fr 100px',
+                padding: '10px 20px',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #d0d0d0',
+                background: isDark ? 'transparent' : '#f5f4f2',
+              }}>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Asset</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Price</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Change</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>Action</span>
+              </div>
+            )}
+
+            {/* Crypto List */}
             {cryptoPrices.map((crypto, i) => (
               <motion.div
                 key={crypto.symbol}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                whileHover={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.1)' }}
+                transition={{ delay: i * 0.03 }}
+                whileHover={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : '#f0eeeb',
+                }}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr 1fr 140px',
-                  padding: isMobile ? '18px 20px' : '18px 28px',
-                  borderBottom: i < cryptoPrices.length - 1 ? `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.1)'}` : 'none',
+                  gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 100px',
                   alignItems: 'center',
+                  padding: isMobile ? '12px 16px' : '12px 20px',
+                  borderBottom: i < cryptoPrices.length - 1
+                    ? `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e0e0e0'}`
+                    : 'none',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  transition: 'background 0.15s ease',
                 }}
                 onClick={() => navigate(`/trade/${crypto.symbol.toLowerCase()}`)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                {/* Asset */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
-                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: isDark ? '8px' : '50%',
+                    background: isDark ? 'rgba(255,255,255,0.08)' : '#ffffff',
+                    border: isDark ? 'none' : '1px solid #d0d0d0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}>
-                    <CryptoIcon symbol={crypto.symbol} size={28} />
+                    <CryptoIcon symbol={crypto.symbol} size={22} />
                   </div>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-                        {crypto.name}
-                      </span>
-                      <span style={{
-                        fontSize: '11px',
-                        color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.9)',
-                        padding: '3px 8px',
-                        background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)',
-                        borderRadius: '6px',
-                        fontWeight: 600,
-                        textShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
-                      }}>
-                        {crypto.symbol}
-                      </span>
-                    </div>
-                    {isMobile && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '8px' }}>
-                        <span style={{
-                          fontSize: '15px',
-                          fontWeight: 700,
-                          fontFamily: "'JetBrains Mono', monospace",
-                          color: '#ffffff',
-                          textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-                        }}>
-                          ${crypto.price < 1 ? crypto.price.toFixed(4) : crypto.price.toLocaleString()}
-                        </span>
-                        <span style={{
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          color: crypto.change >= 0 ? colors.trading.buy : colors.trading.sell,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}>
-                          {crypto.change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                          {crypto.change >= 0 ? '+' : ''}{crypto.change}%
-                        </span>
-                      </div>
-                    )}
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      color: isDark ? '#ffffff' : '#1a1a1a',
+                      display: 'block',
+                      fontFamily: isDark ? 'inherit' : "'Georgia', serif",
+                    }}>
+                      {crypto.name}
+                    </span>
+                    <span style={{
+                      fontSize: '11px',
+                      color: isDark ? 'rgba(255,255,255,0.5)' : '#888',
+                      fontWeight: 500,
+                    }}>
+                      {crypto.symbol}
+                    </span>
                   </div>
                 </div>
 
-                {!isMobile && (
-                  <>
-                    <span style={{
-                      textAlign: 'right',
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: '#ffffff',
-                      textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+                {/* Price */}
+                <div style={{ textAlign: isMobile ? 'right' : 'right' }}>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    color: isDark ? '#ffffff' : '#1a1a1a',
+                  }}>
+                    ${crypto.price < 1 ? crypto.price.toFixed(4) : crypto.price.toLocaleString()}
+                  </span>
+                  {isMobile && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: '3px',
+                      marginTop: '2px',
                     }}>
-                      ${crypto.price < 1 ? crypto.price.toFixed(4) : crypto.price.toLocaleString()}
-                    </span>
-                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                      {crypto.change >= 0 ? <ArrowUpRight size={14} color={colors.trading.buy} /> : <ArrowDownRight size={14} color={colors.trading.sell} />}
+                      {crypto.change >= 0
+                        ? <ArrowUpRight size={11} color={colors.trading.buy} />
+                        : <ArrowDownRight size={11} color={colors.trading.sell} />
+                      }
                       <span style={{
-                        fontSize: '14px',
+                        fontSize: '11px',
                         fontWeight: 700,
                         color: crypto.change >= 0 ? colors.trading.buy : colors.trading.sell,
                       }}>
                         {Math.abs(crypto.change)}%
                       </span>
                     </div>
+                  )}
+                </div>
+
+                {/* Change - Desktop Only */}
+                {!isMobile && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: '4px',
+                  }}>
+                    {crypto.change >= 0
+                      ? <ArrowUpRight size={14} color={colors.trading.buy} />
+                      : <ArrowDownRight size={14} color={colors.trading.sell} />
+                    }
                     <span style={{
-                      textAlign: 'right',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.85)',
-                      textShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.3)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: crypto.change >= 0 ? colors.trading.buy : colors.trading.sell,
                     }}>
-                      ${(crypto.price * 1000000).toLocaleString().slice(0, -3)}M
+                      {crypto.change >= 0 ? '+' : ''}{crypto.change}%
                     </span>
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <motion.button
-                        whileHover={{ scale: 1.05, boxShadow: '0 4px 20px rgba(0, 210, 106, 0.4)' }}
-                        whileTap={{ scale: 0.95 }}
-                        style={{
-                          padding: '10px 20px',
-                          background: 'linear-gradient(135deg, #00D26A 0%, #00e67a 100%)',
-                          border: 'none',
-                          borderRadius: '10px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          color: '#0b0e11',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Trade
-                      </motion.button>
-                    </div>
-                  </>
+                  </div>
+                )}
+
+                {/* Trade Button - Desktop Only */}
+                {!isMobile && (
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        padding: '6px 14px',
+                        background: isDark ? '#00D26A' : '#1a1a1a',
+                        border: 'none',
+                        borderRadius: isDark ? '6px' : '2px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: isDark ? '#0b0e11' : '#ffffff',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Trade
+                    </motion.button>
+                  </div>
                 )}
               </motion.div>
             ))}
-          </GlassPanel>
+
+          </div>
         </div>
       </section>
 
@@ -2918,25 +2853,20 @@ export const HomeScreen: React.FC = () => {
             <h2 style={{
               fontSize: isMobile ? '28px' : '44px',
               fontWeight: 800,
-              color: isDark ? colors.text.primary : '#ffffff',
+              color: isDark ? colors.text.primary : '#000000',
               marginBottom: '16px',
-              textShadow: isDark ? 'none' : '0 3px 12px rgba(0,0,0,0.9), 0 6px 24px rgba(0,0,0,0.6)',
             }}>
               Why Traders Choose{' '}
-              <span style={{
-                color: '#00D26A',
-                textShadow: '0 0 20px rgba(0,255,136,0.5), 0 2px 4px rgba(0,0,0,0.3)',
-              }}>
+              <span style={{ color: '#00D26A' }}>
                 CrymadX
               </span>
             </h2>
             <p style={{
               fontSize: isMobile ? '15px' : '17px',
-              color: isDark ? colors.text.secondary : '#ffffff',
+              color: isDark ? colors.text.secondary : '#1a1a1a',
               maxWidth: '600px',
               margin: '0 auto',
-              fontWeight: 700,
-              textShadow: isDark ? 'none' : '0 3px 12px rgba(0,0,0,0.9), 0 6px 24px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.8)',
+              fontWeight: 600,
             }}>
               Built for serious traders who demand speed, security, and reliability.
             </p>
@@ -3049,475 +2979,778 @@ export const HomeScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* Mobile App Download Section - Glassmorphism */}
+      {/* Fiat On-Ramp & Off-Ramp Section */}
       <section style={{
-        padding: isMobile ? '60px 20px' : '100px 48px',
+        padding: isMobile ? '50px 20px' : '80px 48px',
         position: 'relative',
         overflow: 'hidden',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,30,20,0.4) 50%, rgba(0,0,0,0.5) 100%)'
+          : '#ffffff',
+        borderTop: isDark ? '1px solid rgba(0, 210, 106, 0.1)' : '1px solid #e5e7eb',
+        borderBottom: isDark ? '1px solid rgba(0, 210, 106, 0.1)' : '1px solid #e5e7eb',
       }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gap: isMobile ? '40px' : '60px',
+          alignItems: 'center',
+        }}>
+          {/* Left Content */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <GlassPanel
-              style={{
-                padding: isMobile ? '32px 24px' : '48px 64px',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-              glow
-              isDark={isDark}
-              glowColor={colors.primary[400]}
-            >
-              {/* Background gradient orbs - ONLY in dark mode */}
-              {isDark && (
-                <>
-                  <div style={{
-                    position: 'absolute',
-                    top: '-30%',
-                    right: '-10%',
-                    width: '400px',
-                    height: '400px',
-                    background: `radial-gradient(circle, ${colors.primary[400]}20 0%, transparent 70%)`,
-                    filter: 'blur(60px)',
-                    pointerEvents: 'none',
-                  }} />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-20%',
-                    left: '10%',
-                    width: '300px',
-                    height: '300px',
-                    background: 'radial-gradient(circle, rgba(0, 255, 213, 0.15) 0%, transparent 70%)',
-                    filter: 'blur(50px)',
-                    pointerEvents: 'none',
-                  }} />
-                </>
-              )}
+            <h2 style={{
+              fontSize: isMobile ? '28px' : '40px',
+              fontWeight: 800,
+              color: isDark ? '#ffffff' : '#000000',
+              marginBottom: '16px',
+              lineHeight: 1.1,
+            }}>
+              FIAT ON-RAMP &{' '}
+              <span style={{
+                background: 'linear-gradient(135deg, #00D26A 0%, #00ffd5 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>OFF-RAMP</span>
+            </h2>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: isMobile ? '40px' : '64px',
-                alignItems: 'center',
-                position: 'relative',
-                zIndex: 1,
-              }}>
-                {/* Left Content */}
-                <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+            <p style={{
+              fontSize: isMobile ? '14px' : '15px',
+              color: isDark ? 'rgba(255,255,255,0.7)' : '#4b5563',
+              marginBottom: '32px',
+              lineHeight: 1.7,
+              maxWidth: '480px',
+            }}>
+              Invest in tokenized real estate using traditional currencies. Convert your digital assets back to fiat seamlessly. No crypto expertise required — just regulated, secure transactions.
+            </p>
+
+            {/* Features List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {[
+                { icon: <CreditCard size={20} />, title: 'Buy with Fiat', description: 'Use Bank Transfers, Cards, Or Local Payment Methods To Acquire Tokenized Assets.' },
+                { icon: <Banknote size={20} />, title: 'Cash Out Anytime', description: 'Convert Your Digital Holdings Back To Your Preferred Fiat Currency.' },
+                { icon: <ShieldCheck size={20} />, title: 'Regulated & Compliant', description: 'All Transactions Follow KYC/AML Standards And Regulatory Frameworks.' },
+              ].map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                  }}
+                >
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    minWidth: '44px',
+                    borderRadius: '12px',
+                    background: isDark ? 'rgba(0, 210, 106, 0.15)' : 'rgba(0, 210, 106, 0.1)',
+                    border: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.3)' : 'rgba(0, 210, 106, 0.2)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#00D26A',
+                  }}>
+                    {feature.icon}
+                  </div>
+                  <div>
+                    <h4 style={{
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: isDark ? '#ffffff' : '#000000',
+                      marginBottom: '4px',
+                    }}>
+                      {feature.title}
+                    </h4>
+                    <p style={{
+                      fontSize: '13px',
+                      color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280',
+                      lineHeight: 1.5,
+                    }}>
+                      {feature.description}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Right - Enterprise Grade Fintech Diagram */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            style={{
+              background: isDark
+                ? 'linear-gradient(145deg, rgba(0, 30, 25, 0.8), rgba(0, 20, 15, 0.9))'
+                : '#f8fafc',
+              borderRadius: '24px',
+              padding: isMobile ? '24px' : '40px',
+              border: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.2)' : '#e5e7eb'}`,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <h3 style={{
+              fontSize: isMobile ? '18px' : '22px',
+              fontWeight: 700,
+              textAlign: 'center',
+              marginBottom: '32px',
+            }}>
+              <span style={{ color: isDark ? '#ffffff' : '#000000' }}>Enterprise-Grade </span>
+              <span style={{ color: '#00D26A' }}>Fintech Aesthetic</span>
+            </h3>
+
+            {/* Flow Diagram */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: isMobile ? '8px' : '16px',
+              flexWrap: 'wrap',
+            }}>
+              {[
+                { icon: <CreditCard size={24} />, label: 'Fiat Entry', bg: 'rgba(0, 210, 106, 0.1)' },
+                { icon: <Building2 size={24} />, label: '', bg: 'rgba(0, 210, 106, 0.15)' },
+                { icon: <Shield size={24} />, label: 'Secure Conversion Layer', bg: 'rgba(0, 210, 106, 0.2)', large: true },
+                { icon: <Layers size={24} />, label: 'Tokenized Assets & Cash-Out', bg: 'rgba(0, 210, 106, 0.15)' },
+              ].map((item, i) => (
+                <React.Fragment key={i}>
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
                     viewport={{ once: true }}
-                    transition={{ delay: 0.1 }}
+                    transition={{ delay: i * 0.15 }}
                     style={{
-                      display: 'inline-flex',
+                      display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       gap: '8px',
-                      padding: '6px 14px',
-                      background: `${colors.primary[400]}15`,
-                      border: `1px solid ${colors.primary[400]}30`,
-                      borderRadius: '50px',
-                      marginBottom: '20px',
                     }}
                   >
-                    <Smartphone size={14} color={colors.primary[400]} />
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: colors.primary[400] }}>
-                      Mobile App Available
-                    </span>
-                  </motion.div>
-
-                  <motion.h2
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.2 }}
-                    style={{
-                      fontSize: isMobile ? '28px' : '40px',
-                      fontWeight: 800,
-                      color: '#ffffff',
-                      marginBottom: '16px',
-                      lineHeight: 1.2,
-                      textShadow: isDark ? 'none' : '0 2px 4px rgba(0,0,0,0.4)',
-                    }}
-                  >
-                    Trade Anywhere,{' '}
-                    <span style={{
-                      background: 'linear-gradient(135deg, #00D26A 0%, #00ffd5 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
+                    <div style={{
+                      width: item.large ? '70px' : '56px',
+                      height: item.large ? '70px' : '56px',
+                      borderRadius: '16px',
+                      background: item.bg,
+                      border: `1px solid ${isDark ? 'rgba(0, 210, 106, 0.3)' : 'rgba(0, 210, 106, 0.2)'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#00D26A',
                     }}>
-                      Anytime
-                    </span>
-                  </motion.h2>
-
-                  <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.3 }}
-                    style={{
-                      fontSize: isMobile ? '14px' : '16px',
-                      color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.9)',
-                      lineHeight: 1.7,
-                      marginBottom: '28px',
-                      maxWidth: isMobile ? '100%' : '420px',
-                      textShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.3)',
-                    }}
-                  >
-                    Download the CrymadX app for a seamless trading experience.
-                    Real-time price alerts, instant deposits, biometric security,
-                    and full trading capabilities in your pocket.
-                  </motion.p>
-
-                  {/* App Features */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.4 }}
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '12px',
-                      marginBottom: '32px',
-                      justifyContent: isMobile ? 'center' : 'flex-start',
-                    }}
-                  >
-                    {['Real-time Alerts', 'Face ID/Touch ID', 'Instant Deposits', 'P2P Trading'].map((feature) => (
-                      <div
-                        key={feature}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          background: 'rgba(255,255,255,0.1)',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(255,255,255,0.25)',
-                          backdropFilter: 'blur(8px)',
-                        }}
-                      >
-                        <div style={{
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '50%',
-                          background: colors.primary[400],
-                          boxShadow: `0 0 8px ${colors.primary[400]}`,
-                        }} />
-                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                          {feature}
-                        </span>
-                      </div>
-                    ))}
+                      {item.icon}
+                    </div>
+                    {item.label && (
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280',
+                        textAlign: 'center',
+                        maxWidth: '80px',
+                      }}>
+                        {item.label}
+                      </span>
+                    )}
                   </motion.div>
+                  {i < 3 && (
+                    <ChevronRight size={16} color={isDark ? 'rgba(255,255,255,0.3)' : '#d1d5db'} />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
 
-                  {/* Google Play Button Only - App Store Coming Soon */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.5 }}
+            {/* Decorative elements */}
+            <div style={{
+              position: 'absolute',
+              top: '-50px',
+              right: '-50px',
+              width: '150px',
+              height: '150px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(0, 210, 106, 0.1) 0%, transparent 70%)',
+              pointerEvents: 'none',
+            }} />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* NFT Marketplace Section */}
+      <section style={{
+        padding: isMobile ? '50px 20px' : '80px 48px',
+        position: 'relative',
+        overflow: 'hidden',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,25,15,0.3) 50%, rgba(0,0,0,0.4) 100%)'
+          : '#f8fafc',
+      }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            style={{ textAlign: 'center', marginBottom: '40px' }}
+          >
+            <h2 style={{
+              fontSize: isMobile ? '28px' : '40px',
+              fontWeight: 800,
+              marginBottom: '16px',
+            }}>
+              <span style={{ color: isDark ? '#ffffff' : '#000000' }}>NFT </span>
+              <span style={{
+                background: 'linear-gradient(135deg, #00D26A 0%, #00ffd5 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>MARKETPLACE</span>
+            </h2>
+
+            {/* Search Bar */}
+            <div style={{
+              maxWidth: '600px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
+              borderRadius: '14px',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`,
+            }}>
+              <Search size={18} color={isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af'} />
+              <input
+                type="text"
+                placeholder="Search Tokenized Properties, Locations, Or Asset Types..."
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  color: isDark ? '#ffffff' : '#000000',
+                }}
+              />
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate('/nft')}
+                style={{
+                  padding: '10px 24px',
+                  background: '#00D26A',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: '#000000',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Search
+              </motion.button>
+            </div>
+          </motion.div>
+
+          {/* NFT Property Cards Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: isMobile ? '12px' : '20px',
+          }}>
+            {[
+              { type: 'Commercial', location: 'Dubai Marina', tokens: '10,000', image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=300&fit=crop', available: true },
+              { type: 'Residential', location: 'Downtown Dubai', tokens: '12,000', image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=300&fit=crop', available: true },
+              { type: 'Mixed Use', location: 'Jumeirah Beach', tokens: '8,500', image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop', available: false },
+              { type: 'Residential', location: 'Downtown Dubai', tokens: '15,000', image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop', available: true },
+              { type: 'Residential', location: 'Downtown Dubai', tokens: '12,000', image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop', available: false },
+              { type: 'Commercial', location: 'Business Bay', tokens: '15,500', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop', available: true },
+              { type: 'Retail', location: 'The Dubai Mall', tokens: '20,000', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop', available: false },
+              { type: 'Industrial', location: 'Jumeirah Beach', tokens: '8,500', image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&h=300&fit=crop', available: true },
+            ].map((property, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -5, boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}
+                onClick={() => navigate('/nft')}
+                style={{
+                  background: isDark ? 'rgba(20, 25, 30, 0.9)' : '#ffffff',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb'}`,
+                  cursor: 'pointer',
+                }}
+              >
+                {/* Image */}
+                <div style={{ position: 'relative', height: isMobile ? '100px' : '140px' }}>
+                  <img
+                    src={property.image}
+                    alt={property.type}
                     style={{
-                      display: 'flex',
-                      gap: '14px',
-                      flexWrap: 'wrap',
-                      justifyContent: isMobile ? 'center' : 'flex-start',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
                     }}
-                  >
-                    {/* Google Play Button */}
+                  />
+                  {/* Status Badge */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    padding: '4px 10px',
+                    background: property.available ? '#00D26A' : 'rgba(255,255,255,0.9)',
+                    borderRadius: '6px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: property.available ? '#000000' : '#6b7280',
+                  }}>
+                    {property.available ? 'Available' : 'Coming Soon'}
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div style={{ padding: isMobile ? '12px' : '16px' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '8px',
+                  }}>
+                    <span style={{
+                      fontSize: isMobile ? '13px' : '15px',
+                      fontWeight: 700,
+                      color: isDark ? '#ffffff' : '#000000',
+                    }}>
+                      {property.type}
+                    </span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '10px',
+                      color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280',
+                    }}>
+                      <Globe size={10} />
+                      {property.location}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                    <div>
+                      <p style={{ fontSize: '10px', color: isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af', marginBottom: '2px' }}>
+                        Total Tokens
+                      </p>
+                      <p style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 700, color: '#00D26A' }}>
+                        {property.tokens}
+                      </p>
+                    </div>
                     <motion.button
-                      whileHover={{ scale: 1.03, boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.4)' : '0 8px 30px rgba(0,0,0,0.15)' }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '14px 24px',
-                        background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.85)',
-                        borderRadius: '14px',
-                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'transparent'}`,
+                        padding: '6px 14px',
+                        background: '#00D26A',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#000000',
+                        fontSize: '11px',
+                        fontWeight: 700,
                         cursor: 'pointer',
                       }}
                     >
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill={isDark ? '#fff' : '#fff'}>
-                        <path d="M3.609 1.814a2.21 2.21 0 0 0-.8 1.776v16.82c0 .717.277 1.35.8 1.776l.093.076 9.433-9.428v-.223L3.702 1.738l-.093.076z"/>
-                        <path d="M16.278 15.977l-3.143-3.14v-.223l3.143-3.14.071.04 3.723 2.114c1.063.604 1.063 1.594 0 2.199l-3.723 2.114-.071.036z"/>
-                        <path d="M16.349 15.941l-3.214-3.213L3.609 22.186c.35.372.928.395 1.584.04l11.156-6.285"/>
-                        <path d="M16.349 8.514L5.193 2.229c-.656-.355-1.234-.332-1.584.04l9.526 9.459 3.214-3.214z"/>
-                      </svg>
-                      <div style={{ textAlign: 'left' }}>
-                        <p style={{ fontSize: '10px', color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.7)', marginBottom: '2px' }}>
-                          Get it on
-                        </p>
-                        <p style={{ fontSize: '16px', fontWeight: 600, color: '#fff' }}>
-                          Google Play
-                        </p>
-                      </div>
+                      View Asset
                     </motion.button>
-                  </motion.div>
-
-                  {/* QR Code hint - White text for visibility */}
-                  {!isMobile && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.6 }}
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        color: '#ffffff',
-                        marginTop: '20px',
-                        textShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                      }}
-                    >
-                      Scan QR code with your phone camera to download
-                    </motion.p>
-                  )}
+                  </div>
                 </div>
+              </motion.div>
+            ))}
+          </div>
 
-                {/* Right Content - Phone Mockup */}
-                {!isMobile && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 50 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.3, duration: 0.6 }}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      position: 'relative',
-                    }}
-                  >
-                    {/* Phone Frame */}
-                    <div style={{
-                      position: 'relative',
-                      width: '280px',
-                      height: '560px',
-                      background: isDark
-                        ? 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)'
-                        : 'linear-gradient(145deg, #f5f5f5 0%, #e0e0e0 100%)',
-                      borderRadius: '44px',
-                      padding: '12px',
-                      boxShadow: isDark
-                        ? '0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(0, 210, 106, 0.1), inset 0 1px 0 rgba(255,255,255,0.1)'
-                        : '0 40px 80px rgba(0,0,0,0.2), 0 0 60px rgba(0, 210, 106, 0.05)',
-                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                    }}>
-                      {/* Notch */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '12px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: '120px',
+          {/* View All Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            style={{ textAlign: 'center', marginTop: '40px' }}
+          >
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate('/nft')}
+              style={{
+                padding: '14px 40px',
+                background: isDark ? 'rgba(0, 210, 106, 0.15)' : '#ffffff',
+                border: `2px solid #00D26A`,
+                borderRadius: '12px',
+                color: '#00D26A',
+                fontSize: '15px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              Explore NFT Marketplace
+              <ArrowRight size={18} />
+            </motion.button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Mobile App Download Section - Centered Layout */}
+      <section style={{
+        padding: isMobile ? '50px 20px' : '70px 48px',
+        position: 'relative',
+        overflow: 'hidden',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,20,10,0.3) 50%, rgba(0,0,0,0.4) 100%)'
+          : '#f8fafc',
+      }}>
+        <div style={{
+          maxWidth: '900px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: isMobile ? '32px' : '60px',
+          padding: isDark ? '0' : '40px',
+          background: isDark ? 'transparent' : '#ffffff',
+          borderRadius: isDark ? '0' : '24px',
+          border: isDark ? 'none' : '1.5px solid #1a1a1a',
+          boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.08)',
+        }}>
+          {/* Left Content */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            style={{ flex: 'none', maxWidth: isMobile ? '100%' : '380px' }}
+          >
+            {/* Badge */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              background: isDark ? 'rgba(0,210,106,0.15)' : '#dcfce7',
+              borderRadius: '100px',
+              marginBottom: '16px',
+              border: `1px solid ${isDark ? 'rgba(0,210,106,0.3)' : '#bbf7d0'}`,
+            }}>
+              <Smartphone size={16} color="#00D26A" />
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#00D26A', letterSpacing: '0.5px' }}>
+                MOBILE APP
+              </span>
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              fontSize: isMobile ? '28px' : '36px',
+              fontWeight: 800,
+              color: isDark ? '#ffffff' : '#000000',
+              marginBottom: '14px',
+              lineHeight: 1.15,
+            }}>
+              Trade Crypto{' '}
+              <span style={{
+                background: 'linear-gradient(135deg, #00D26A 0%, #10b981 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>Anywhere</span>
+            </h2>
+
+            <p style={{
+              fontSize: isMobile ? '14px' : '15px',
+              color: isDark ? 'rgba(255,255,255,0.7)' : '#374151',
+              marginBottom: '24px',
+              lineHeight: 1.6,
+              fontWeight: isDark ? 400 : 500,
+            }}>
+              Get real-time price alerts, execute instant trades, and manage your portfolio securely on the go.
+            </p>
+
+            {/* Features - Inline */}
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '10px',
+              marginBottom: '24px',
+            }}>
+              {[
+                { icon: <Bell size={14} />, label: 'Price Alerts' },
+                { icon: <Zap size={14} />, label: 'Instant Trades' },
+                { icon: <ShieldCheck size={14} />, label: 'Face ID' },
+              ].map((feature) => (
+                <div
+                  key={feature.label}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                    borderRadius: '10px',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#cbd5e1'}`,
+                  }}
+                >
+                  <span style={{ color: '#00D26A' }}>{feature.icon}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: isDark ? '#fff' : '#000000' }}>{feature.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Download Button */}
+            <motion.a
+              href="https://play.google.com/store"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 24px 12px 18px',
+                background: '#000000',
+                borderRadius: '14px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 512 512">
+                <path fill="#2196F3" d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1z"/>
+                <path fill="#4CAF50" d="M47 0C34.5 0 24 10.5 24 23v466c0 12.5 10.5 23 23 23 6 0 11.5-2.5 15.5-6.5l256-256L47 0z"/>
+                <path fill="#FFC107" d="M325.3 277.7l-60.1 60.1L104.6 499l220.7-127.4 60.1-60.1-60.1-33.8z"/>
+                <path fill="#F44336" d="M486 256l-95.3 55-65.4-65.4 65.4-65.4L486 236c15.3 8.8 15.3 11.2 0 20z"/>
+              </svg>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginBottom: '1px', fontWeight: 500, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                  Get it on
+                </p>
+                <p style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', letterSpacing: '-0.3px' }}>
+                  Google Play
+                </p>
+              </div>
+            </motion.a>
+
+            {/* Stats */}
+            <div style={{
+              display: 'flex',
+              gap: '24px',
+              marginTop: '24px',
+              paddingTop: '20px',
+              borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#d1d5db'}`,
+            }}>
+              {[
+                { value: '500K+', label: 'Downloads' },
+                { value: '4.8', label: 'Rating' },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: isDark ? '#fff' : '#000000', marginBottom: '2px' }}>
+                    {stat.value}
+                  </p>
+                  <p style={{ fontSize: '12px', fontWeight: 500, color: isDark ? 'rgba(255,255,255,0.5)' : '#4b5563' }}>
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Right - Compact Phone Mockup */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            style={{
+              flex: 'none',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {/* Phone Device */}
+            <motion.div
+              animate={{ y: [-5, 5, -5] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                position: 'relative',
+                width: isMobile ? '180px' : '200px',
+                background: '#1c1c1e',
+                borderRadius: '36px',
+                padding: '8px',
+                boxShadow: '0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)',
+              }}
+            >
+              {/* Screen */}
+              <div style={{
+                width: '100%',
+                height: isMobile ? '340px' : '380px',
+                background: isDark
+                  ? 'linear-gradient(180deg, #0a0a0a 0%, #111111 100%)'
+                  : 'linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%)',
+                borderRadius: '30px',
+                overflow: 'hidden',
+                position: 'relative',
+              }}>
+                {/* Dynamic Island */}
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '60px',
+                  height: '20px',
+                  background: '#000',
+                  borderRadius: '12px',
+                  zIndex: 20,
+                }} />
+
+                {/* App Content */}
+                <div style={{ padding: '40px 14px 14px' }}>
+                  {/* Real CrymadX Logo */}
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '14px' }}>
+                    <img
+                      src="/crymadx-logo.png"
+                      alt="CrymadX"
+                      style={{
                         height: '28px',
-                        background: isDark ? '#1a1a1a' : '#2a2a2a',
-                        borderRadius: '20px',
-                        zIndex: 10,
-                      }} />
+                        width: 'auto',
+                        objectFit: 'contain',
+                      }}
+                    />
+                  </div>
 
-                      {/* Screen */}
-                      <div style={{
-                        width: '100%',
-                        height: '100%',
-                        background: isDark
-                          ? 'linear-gradient(180deg, #0a0e14 0%, #0d1117 100%)'
-                          : 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
-                        borderRadius: '36px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                      }}>
-                        {/* App Header */}
-                        <div style={{
-                          padding: '48px 20px 16px',
+                  {/* Portfolio Balance */}
+                  <div style={{
+                    background: isDark ? 'rgba(0,210,106,0.1)' : '#d1fae5',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    marginBottom: '12px',
+                    border: isDark ? 'none' : '1px solid #a7f3d0',
+                  }}>
+                    <p style={{ fontSize: '10px', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.5)' : '#374151', marginBottom: '4px' }}>Total Balance</p>
+                    <p style={{ fontSize: '24px', fontWeight: 700, color: isDark ? '#fff' : '#000000' }}>$24,856.80</p>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '4px 8px',
+                      background: 'rgba(0,210,106,0.2)',
+                      borderRadius: '8px',
+                      marginTop: '6px',
+                    }}>
+                      <ArrowUpRight size={12} color="#00D26A" strokeWidth={3} />
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#00D26A' }}>+12.4% today</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                    {[
+                      { icon: <ArrowUpRight size={14} />, label: 'Buy' },
+                      { icon: <ArrowDownRight size={14} />, label: 'Sell' },
+                      { icon: <Repeat size={14} />, label: 'Swap' },
+                    ].map((action) => (
+                      <div
+                        key={action.label}
+                        style={{
+                          flex: 1,
+                          padding: '8px 4px',
+                          background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
+                          border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#d1d5db'}`,
+                          borderRadius: '10px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <div style={{ color: '#00D26A', marginBottom: '4px', display: 'flex', justifyContent: 'center' }}>{action.icon}</div>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.7)' : '#1f2937' }}>{action.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Crypto Assets List */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
+                    borderRadius: '12px',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#d1d5db'}`,
+                    overflow: 'hidden',
+                  }}>
+                    {[
+                      { name: 'Bitcoin', symbol: 'BTC', icon: '₿', color: '#F7931A', price: '$87,234', change: '+2.4%', positive: true },
+                      { name: 'Ethereum', symbol: 'ETH', icon: 'Ξ', color: '#627EEA', price: '$3,456', change: '+1.8%', positive: true },
+                      { name: 'Solana', symbol: 'SOL', icon: 'S', color: '#9945FF', price: '$126.50', change: '-0.5%', positive: false },
+                    ].map((crypto, i) => (
+                      <div
+                        key={crypto.symbol}
+                        style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <img
-                              src="/crymadx-logo.png"
-                              alt="CrymadX"
-                              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Portfolio Balance */}
-                        <div style={{ padding: '8px 20px 20px' }}>
-                          <p style={{ fontSize: '11px', color: colors.text.tertiary, marginBottom: '4px' }}>
-                            Total Balance
-                          </p>
-                          <p style={{
-                            fontSize: '28px',
-                            fontWeight: 700,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            color: colors.text.primary,
-                            marginBottom: '4px',
+                          padding: '10px 12px',
+                          borderBottom: i < 2 ? `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}` : 'none',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '8px',
+                            background: crypto.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}>
-                            $24,856.42
-                          </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <TrendingUp size={12} color={colors.trading.buy} />
-                            <span style={{ fontSize: '12px', fontWeight: 600, color: colors.trading.buy }}>
-                              +12.4%
-                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{crypto.icon}</span>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#fff' : '#000000' }}>{crypto.name}</p>
+                            <p style={{ fontSize: '9px', fontWeight: 500, color: isDark ? 'rgba(255,255,255,0.4)' : '#6b7280' }}>{crypto.symbol}</p>
                           </div>
                         </div>
-
-                        {/* Mini Chart */}
-                        <div style={{
-                          margin: '0 20px 16px',
-                          height: '80px',
-                          background: isDark ? 'rgba(0, 210, 106, 0.05)' : 'rgba(0, 204, 108, 0.05)',
-                          borderRadius: '12px',
-                          display: 'flex',
-                          alignItems: 'flex-end',
-                          padding: '12px',
-                        }}>
-                          {[40, 55, 45, 60, 50, 75, 65, 80, 70, 85].map((h, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                flex: 1,
-                                height: `${h}%`,
-                                background: `linear-gradient(to top, ${colors.primary[400]} 0%, ${colors.primary[400]}40 100%)`,
-                                borderRadius: '2px',
-                                marginRight: i < 9 ? '4px' : 0,
-                              }}
-                            />
-                          ))}
-                        </div>
-
-                        {/* Quick Actions */}
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-around',
-                          padding: '0 20px 20px',
-                        }}>
-                          {[
-                            { icon: <ArrowUpRight size={16} />, label: 'Send' },
-                            { icon: <ArrowDownRight size={16} />, label: 'Receive' },
-                            { icon: <Repeat size={14} />, label: 'Swap' },
-                          ].map((action) => (
-                            <div
-                              key={action.label}
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '6px',
-                              }}
-                            >
-                              <div style={{
-                                width: '44px',
-                                height: '44px',
-                                borderRadius: '12px',
-                                background: `${colors.primary[400]}15`,
-                                border: `1px solid ${colors.primary[400]}25`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: colors.primary[400],
-                              }}>
-                                {action.icon}
-                              </div>
-                              <span style={{ fontSize: '10px', color: colors.text.tertiary }}>
-                                {action.label}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Asset List */}
-                        <div style={{ padding: '0 20px' }}>
-                          {[
-                            { symbol: 'BTC', name: 'Bitcoin', amount: '0.5234', value: '$23,456', change: 2.4 },
-                            { symbol: 'ETH', name: 'Ethereum', amount: '4.2145', value: '$8,234', change: -1.2 },
-                          ].map((asset) => (
-                            <div
-                              key={asset.symbol}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '12px 0',
-                                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <CryptoIcon symbol={asset.symbol} size={28} />
-                                <div>
-                                  <p style={{ fontSize: '13px', fontWeight: 600, color: colors.text.primary }}>
-                                    {asset.symbol}
-                                  </p>
-                                  <p style={{ fontSize: '10px', color: colors.text.tertiary }}>
-                                    {asset.amount}
-                                  </p>
-                                </div>
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <p style={{ fontSize: '13px', fontWeight: 600, color: colors.text.primary }}>
-                                  {asset.value}
-                                </p>
-                                <p style={{
-                                  fontSize: '10px',
-                                  fontWeight: 500,
-                                  color: asset.change >= 0 ? colors.trading.buy : colors.trading.sell,
-                                }}>
-                                  {asset.change >= 0 ? '+' : ''}{asset.change}%
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Bottom Nav */}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          display: 'flex',
-                          justifyContent: 'space-around',
-                          padding: '14px 20px 24px',
-                          background: isDark
-                            ? 'linear-gradient(to top, rgba(10,14,20,1) 0%, transparent 100%)'
-                            : 'linear-gradient(to top, rgba(248,250,252,1) 0%, transparent 100%)',
-                        }}>
-                          {['Home', 'Markets', 'Trade', 'Wallet'].map((tab, i) => (
-                            <div
-                              key={tab}
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '4px',
-                                color: i === 0 ? colors.primary[400] : colors.text.tertiary,
-                              }}
-                            >
-                              <div style={{
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '4px',
-                                background: i === 0 ? `${colors.primary[400]}20` : 'transparent',
-                              }} />
-                              <span style={{ fontSize: '9px', fontWeight: 500 }}>{tab}</span>
-                            </div>
-                          ))}
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#fff' : '#000000' }}>{crypto.price}</p>
+                          <p style={{ fontSize: '9px', fontWeight: 600, color: crypto.positive ? '#00D26A' : '#ef4444' }}>{crypto.change}</p>
                         </div>
                       </div>
-                    </div>
+                    ))}
+                  </div>
+                </div>
 
-                  </motion.div>
-                )}
+                {/* Home Indicator */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '8px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '80px',
+                  height: '4px',
+                  background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+                  borderRadius: '4px',
+                }} />
               </div>
-            </GlassPanel>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -3596,16 +3829,18 @@ export const HomeScreen: React.FC = () => {
         </motion.div>
       </section>
 
-      {/* Footer - Plain white for light mode */}
+      {/* Footer - Visible in both modes */}
       <footer style={{
         padding: isMobile ? '40px 20px 28px' : '72px 48px 40px',
-        borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb'}`,
+        borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#d1d5db'}`,
         background: isDark
           ? 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%)'
-          : '#ffffff',
+          : '#e2e8f0',
         backdropFilter: isDark ? 'blur(20px)' : 'none',
         WebkitBackdropFilter: isDark ? 'blur(20px)' : 'none',
-        boxShadow: isDark ? 'none' : 'none',
+        boxShadow: isDark ? 'none' : '0 -4px 20px rgba(0,0,0,0.08)',
+        position: 'relative',
+        zIndex: 10,
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {!isMobile && (
@@ -3632,7 +3867,7 @@ export const HomeScreen: React.FC = () => {
                 <p style={{
                   fontSize: '14px',
                   fontWeight: 600,
-                  color: isDark ? 'rgba(255,255,255,0.7)' : '#1f2937',
+                  color: isDark ? 'rgba(255,255,255,0.7)' : '#0a0a0a',
                   lineHeight: 1.7,
                   maxWidth: '300px',
                   marginBottom: '20px',
@@ -3659,8 +3894,8 @@ export const HomeScreen: React.FC = () => {
                           width: '42px',
                           height: '42px',
                           borderRadius: '12px',
-                          background: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6',
-                          border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e5e7eb',
+                          background: isDark ? 'rgba(255,255,255,0.1)' : '#ffffff',
+                          border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid #d1d5db',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -3685,8 +3920,8 @@ export const HomeScreen: React.FC = () => {
                 <div key={section.title}>
                   <h4 style={{
                     fontSize: '13px',
-                    fontWeight: 700,
-                    color: isDark ? '#10b981' : '#059669',
+                    fontWeight: 800,
+                    color: isDark ? '#10b981' : '#000000',
                     marginBottom: '20px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
@@ -3700,13 +3935,13 @@ export const HomeScreen: React.FC = () => {
                           href="#"
                           style={{
                             fontSize: '14px',
-                            fontWeight: 500,
-                            color: isDark ? 'rgba(255,255,255,0.7)' : '#374151',
+                            fontWeight: 600,
+                            color: isDark ? 'rgba(255,255,255,0.7)' : '#1a1a1a',
                             textDecoration: 'none',
                             transition: 'color 0.2s',
                           }}
                           onMouseEnter={(e) => (e.currentTarget.style.color = colors.primary[400])}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.7)' : '#374151')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.7)' : '#1a1a1a')}
                         >
                           {link}
                         </a>
@@ -3726,7 +3961,7 @@ export const HomeScreen: React.FC = () => {
             flexWrap: 'wrap',
             gap: '16px',
             paddingTop: isMobile ? '0' : '28px',
-            borderTop: isMobile ? 'none' : `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.1)'}`,
+            borderTop: isMobile ? 'none' : `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#d1d5db'}`,
             flexDirection: isMobile ? 'column' : 'row',
           }}>
             {isMobile && (
@@ -3742,7 +3977,7 @@ export const HomeScreen: React.FC = () => {
                 />
               </div>
             )}
-            <p style={{ fontSize: '13px', fontWeight: 500, color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.5)' : '#374151' }}>
               © 2025 CrymadX. All rights reserved.
             </p>
             {!isMobile && (
@@ -3751,9 +3986,9 @@ export const HomeScreen: React.FC = () => {
                   <a
                     key={link}
                     href="#"
-                    style={{ fontSize: '13px', fontWeight: 500, color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280', textDecoration: 'none', transition: 'color 0.2s' }}
+                    style={{ fontSize: '13px', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.5)' : '#374151', textDecoration: 'none', transition: 'color 0.2s' }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = colors.primary[400])}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.5)' : '#6b7280')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.5)' : '#374151')}
                   >
                     {link}
                   </a>

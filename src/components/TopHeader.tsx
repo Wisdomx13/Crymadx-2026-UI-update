@@ -110,6 +110,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     ]},
     { label: 'Earn', href: '/earn' },
     { label: 'Vault', href: '/vault' },
+    { label: 'NFT', href: '/nft' },
+    { label: 'Fiat', href: '/fiat' },
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;

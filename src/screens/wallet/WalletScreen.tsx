@@ -92,11 +92,15 @@ const WalletTab: React.FC<{
       flex: 1,
       padding: '16px',
       background: isActive
-        ? `linear-gradient(135deg, ${colors.primary[400]}15, ${colors.secondary[400]}10)`
-        : isDark ? 'transparent' : 'rgba(255,255,255,0.4)',
+        ? isDark
+          ? `linear-gradient(135deg, ${colors.primary[400]}15, ${colors.secondary[400]}10)`
+          : '#f3f4f6'
+        : isDark ? 'transparent' : '#ffffff',
       border: isActive
-        ? `1px solid ${colors.primary[400]}40`
-        : isDark ? `1px solid ${colors.glass.border}` : '1px solid rgba(255,255,255,0.5)',
+        ? isDark
+          ? `1px solid ${colors.primary[400]}40`
+          : '1px solid #000000'
+        : isDark ? `1px solid ${colors.glass.border}` : '1px solid #d1d5db',
       borderRadius: '14px',
       cursor: 'pointer',
       display: 'flex',
@@ -104,7 +108,7 @@ const WalletTab: React.FC<{
       alignItems: 'center',
       gap: '8px',
       transition: 'all 0.2s ease',
-      boxShadow: isDark ? 'none' : '0 4px 16px rgba(0,0,0,0.1)',
+      boxShadow: 'none',
     }}
   >
     <div style={{
@@ -112,19 +116,21 @@ const WalletTab: React.FC<{
       height: '44px',
       borderRadius: '12px',
       background: isActive
-        ? `linear-gradient(135deg, ${colors.primary[400]}25, ${colors.secondary[400]}15)`
-        : isDark ? colors.background.card : 'rgba(255,255,255,0.5)',
+        ? isDark
+          ? `linear-gradient(135deg, ${colors.primary[400]}25, ${colors.secondary[400]}15)`
+          : '#e5e7eb'
+        : isDark ? colors.background.card : '#f9fafb',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: isActive ? colors.primary[400] : (isDark ? colors.text.tertiary : '#374151'),
+      color: isActive ? (isDark ? colors.primary[400] : '#000000') : (isDark ? colors.text.tertiary : '#374151'),
     }}>
       {icon}
     </div>
     <span style={{
       fontSize: '13px',
       fontWeight: 700,
-      color: isDark ? (isActive ? colors.text.primary : colors.text.tertiary) : (isActive ? '#059669' : '#1f2937'),
+      color: isDark ? (isActive ? colors.text.primary : colors.text.tertiary) : (isActive ? '#000000' : '#374151'),
     }}>
       {label}
     </span>
@@ -132,7 +138,7 @@ const WalletTab: React.FC<{
       fontSize: '15px',
       fontWeight: 700,
       fontFamily: "'JetBrains Mono', monospace",
-      color: isDark ? (isActive ? colors.primary[400] : colors.text.secondary) : (isActive ? '#059669' : '#059669'),
+      color: isDark ? (isActive ? colors.primary[400] : colors.text.secondary) : '#000000',
     }}>
       {balance}
     </span>
@@ -216,27 +222,31 @@ export const WalletScreen: React.FC = () => {
 
   return (
     <ResponsiveLayout activeNav="wallet" title="Wallet">
-      {/* Premium Liquid Glass Background */}
-      <LiquidGlassBackground
-        intensity="low"
-        showOrbs={true}
-        showRings={false}
-        showCubes={false}
-      />
-      <LiquidOrb
-        size={170}
-        color="gold"
-        style={{ position: 'fixed', top: '8%', right: '-5%', zIndex: 0 }}
-        delay={0}
-        duration={12}
-      />
-      <LiquidOrb
-        size={140}
-        color="green"
-        style={{ position: 'fixed', bottom: '15%', left: '-4%', zIndex: 0 }}
-        delay={3}
-        duration={14}
-      />
+      {/* Premium Liquid Glass Background - Dark mode only */}
+      {isDark && (
+        <>
+          <LiquidGlassBackground
+            intensity="low"
+            showOrbs={true}
+            showRings={false}
+            showCubes={false}
+          />
+          <LiquidOrb
+            size={170}
+            color="gold"
+            style={{ position: 'fixed', top: '8%', right: '-5%', zIndex: 0 }}
+            delay={0}
+            duration={12}
+          />
+          <LiquidOrb
+            size={140}
+            color="green"
+            style={{ position: 'fixed', bottom: '15%', left: '-4%', zIndex: 0 }}
+            delay={3}
+            duration={14}
+          />
+        </>
+      )}
 
       {/* Page Header */}
       <motion.div
@@ -255,12 +265,11 @@ export const WalletScreen: React.FC = () => {
           <h1 style={{
             fontSize: isMobile ? '24px' : '32px',
             fontWeight: 800,
-            color: isDark ? colors.text.primary : '#ffffff',
+            color: isDark ? colors.text.primary : '#000000',
             marginBottom: '8px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            textShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.3)',
           }}>
             <motion.div
               animate={{ rotate: [0, 10, 0] }}
@@ -281,9 +290,8 @@ export const WalletScreen: React.FC = () => {
           </h1>
           <p style={{
             fontSize: isMobile ? '14px' : '15px',
-            color: isDark ? colors.text.tertiary : '#ffffff',
+            color: isDark ? colors.text.tertiary : '#374151',
             fontWeight: 600,
-            textShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.5)',
           }}>
             Manage your Spot & Funding wallets
           </p>

@@ -164,9 +164,9 @@ export const RewardsScreen: React.FC = () => {
       style={{
         padding: '20px',
         background: task.completed
-          ? isDark ? 'rgba(0, 255, 170, 0.05)' : 'rgba(16, 185, 129, 0.08)'
+          ? isDark ? 'rgba(0, 255, 170, 0.05)' : '#f3f4f6'
           : isDark ? 'rgba(4, 26, 15, 0.5)' : '#ffffff',
-        border: `1px solid ${task.completed ? colors.primary[400] : colors.glass.border}`,
+        border: `1px solid ${task.completed ? (isDark ? colors.primary[400] : '#000000') : (isDark ? colors.glass.border : '#d1d5db')}`,
         borderRadius: '16px',
         display: 'flex',
         alignItems: 'center',
@@ -179,12 +179,12 @@ export const RewardsScreen: React.FC = () => {
           height: '48px',
           borderRadius: '12px',
           background: task.completed
-            ? colors.gradients.primary
-            : isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+            ? isDark ? colors.gradients.primary : '#000000'
+            : isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: task.completed ? colors.background.primary : colors.primary[400],
+          color: task.completed ? (isDark ? colors.background.primary : '#ffffff') : (isDark ? colors.primary[400] : '#000000'),
           flexShrink: 0,
         }}
       >
@@ -204,7 +204,7 @@ export const RewardsScreen: React.FC = () => {
             style={{
               fontSize: '15px',
               fontWeight: 600,
-              color: colors.text.primary,
+              color: isDark ? colors.text.primary : '#000000',
             }}
           >
             {task.title}
@@ -213,7 +213,7 @@ export const RewardsScreen: React.FC = () => {
             style={{
               fontSize: '14px',
               fontWeight: 600,
-              color: colors.primary[400],
+              color: isDark ? colors.primary[400] : '#000000',
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
@@ -223,7 +223,7 @@ export const RewardsScreen: React.FC = () => {
         <p
           style={{
             fontSize: '13px',
-            color: colors.text.tertiary,
+            color: isDark ? colors.text.tertiary : '#374151',
             marginBottom: '8px',
           }}
         >
@@ -234,7 +234,7 @@ export const RewardsScreen: React.FC = () => {
         <div
           style={{
             height: '4px',
-            background: isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.15)',
+            background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#e5e7eb',
             borderRadius: '2px',
             overflow: 'hidden',
           }}
@@ -246,8 +246,8 @@ export const RewardsScreen: React.FC = () => {
             style={{
               height: '100%',
               background: task.completed
-                ? colors.primary[400]
-                : colors.gradients.primary,
+                ? isDark ? colors.primary[400] : '#000000'
+                : isDark ? colors.gradients.primary : '#000000',
               borderRadius: '2px',
             }}
           />
@@ -259,13 +259,13 @@ export const RewardsScreen: React.FC = () => {
             marginTop: '4px',
           }}
         >
-          <span style={{ fontSize: '11px', color: colors.text.tertiary }}>
+          <span style={{ fontSize: '11px', color: isDark ? colors.text.tertiary : '#6b7280' }}>
             Progress
           </span>
           <span
             style={{
               fontSize: '11px',
-              color: colors.text.secondary,
+              color: isDark ? colors.text.secondary : '#374151',
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
@@ -278,9 +278,10 @@ export const RewardsScreen: React.FC = () => {
         <div
           style={{
             padding: '8px 16px',
-            background: isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+            background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
             borderRadius: '8px',
-            color: colors.primary[400],
+            border: isDark ? 'none' : '1px solid #000000',
+            color: isDark ? colors.primary[400] : '#000000',
             fontSize: '12px',
             fontWeight: 600,
           }}
@@ -296,14 +297,14 @@ export const RewardsScreen: React.FC = () => {
             padding: '8px 16px',
             background:
               task.progress >= task.total
-                ? colors.gradients.primary
-                : isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                ? isDark ? colors.gradients.primary : '#000000'
+                : isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
             border: 'none',
             borderRadius: '8px',
             color:
               task.progress >= task.total
-                ? colors.background.primary
-                : colors.text.tertiary,
+                ? isDark ? colors.background.primary : '#ffffff'
+                : isDark ? colors.text.tertiary : '#9ca3af',
             fontSize: '12px',
             fontWeight: 600,
             cursor: task.progress >= task.total ? 'pointer' : 'not-allowed',
@@ -318,17 +319,19 @@ export const RewardsScreen: React.FC = () => {
 
   return (
     <ResponsiveLayout activeNav="rewards" title="Rewards">
-      {/* Background effects */}
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: colors.gradients.mesh,
-          opacity: 0.6,
-          pointerEvents: 'none',
-          zIndex: -1,
-        }}
-      />
+      {/* Background effects - Dark mode only */}
+      {isDark && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: colors.gradients.mesh,
+            opacity: 0.6,
+            pointerEvents: 'none',
+            zIndex: -1,
+          }}
+        />
+      )}
         {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -347,7 +350,7 @@ export const RewardsScreen: React.FC = () => {
                 style={{
                   fontSize: '32px',
                   fontWeight: 700,
-                  color: colors.text.primary,
+                  color: isDark ? colors.text.primary : '#000000',
                 }}
               >
                 Rewards Hub
@@ -366,7 +369,7 @@ export const RewardsScreen: React.FC = () => {
                 New
               </span>
             </div>
-            <p style={{ fontSize: '15px', color: colors.text.tertiary }}>
+            <p style={{ fontSize: '15px', color: isDark ? colors.text.tertiary : '#374151' }}>
               Complete tasks and earn rewards
             </p>
           </div>
@@ -429,13 +432,13 @@ export const RewardsScreen: React.FC = () => {
                     style={{
                       fontSize: '16px',
                       fontWeight: 600,
-                      color: colors.text.primary,
+                      color: isDark ? colors.text.primary : '#000000',
                       marginBottom: '4px',
                     }}
                   >
                     Tier Progress
                   </h3>
-                  <p style={{ fontSize: '13px', color: colors.text.tertiary }}>
+                  <p style={{ fontSize: '13px', color: isDark ? colors.text.tertiary : '#374151' }}>
                     {userRewards.tierProgress}% to {userRewards.nextTier}
                   </p>
                 </div>
@@ -472,7 +475,7 @@ export const RewardsScreen: React.FC = () => {
               <div
                 style={{
                   height: '8px',
-                  background: isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.15)',
+                  background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#e5e7eb',
                   borderRadius: '4px',
                   overflow: 'hidden',
                 }}
@@ -483,9 +486,9 @@ export const RewardsScreen: React.FC = () => {
                   transition={{ duration: 1, ease: 'easeOut' }}
                   style={{
                     height: '100%',
-                    background: colors.gradients.primary,
+                    background: isDark ? colors.gradients.primary : '#000000',
                     borderRadius: '4px',
-                    boxShadow: colors.shadows.glow,
+                    boxShadow: isDark ? colors.shadows.glow : 'none',
                   }}
                 />
               </div>
@@ -624,10 +627,10 @@ export const RewardsScreen: React.FC = () => {
                       style={{
                         padding: '24px',
                         background: tier.current
-                          ? isDark ? 'rgba(0, 255, 170, 0.05)' : 'rgba(16, 185, 129, 0.08)'
+                          ? isDark ? 'rgba(0, 255, 170, 0.05)' : '#f3f4f6'
                           : isDark ? 'rgba(4, 26, 15, 0.5)' : '#ffffff',
                         border: `1px solid ${
-                          tier.current ? colors.primary[400] : colors.glass.border
+                          tier.current ? (isDark ? colors.primary[400] : '#000000') : (isDark ? colors.glass.border : '#d1d5db')
                         }`,
                         borderRadius: '16px',
                         textAlign: 'center',
@@ -642,11 +645,11 @@ export const RewardsScreen: React.FC = () => {
                             left: '50%',
                             transform: 'translateX(-50%)',
                             padding: '4px 12px',
-                            background: colors.gradients.primary,
+                            background: isDark ? colors.gradients.primary : '#000000',
                             borderRadius: '12px',
                             fontSize: '10px',
                             fontWeight: 700,
-                            color: colors.background.primary,
+                            color: isDark ? colors.background.primary : '#ffffff',
                             textTransform: 'uppercase',
                           }}
                         >
@@ -683,7 +686,7 @@ export const RewardsScreen: React.FC = () => {
                       <p
                         style={{
                           fontSize: '12px',
-                          color: colors.text.tertiary,
+                          color: isDark ? colors.text.tertiary : '#6b7280',
                           marginBottom: '16px',
                         }}
                       >
@@ -705,10 +708,10 @@ export const RewardsScreen: React.FC = () => {
                               alignItems: 'center',
                               gap: '8px',
                               fontSize: '12px',
-                              color: colors.text.secondary,
+                              color: isDark ? colors.text.secondary : '#374151',
                             }}
                           >
-                            <CheckCircle size={12} color={colors.primary[400]} />
+                            <CheckCircle size={12} color={isDark ? colors.primary[400] : '#000000'} />
                             {benefit}
                           </div>
                         ))}

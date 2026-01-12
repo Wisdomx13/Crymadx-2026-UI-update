@@ -129,6 +129,11 @@ export const ProfileScreen: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showLoginHistory, setShowLoginHistory] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showKycModal, setShowKycModal] = useState(false);
+  const [show2faModal, setShow2faModal] = useState(false);
+  const [kycStep, setKycStep] = useState(1);
+  const [twoFaStep, setTwoFaStep] = useState(1);
+  const [verificationCode, setVerificationCode] = useState('');
 
   // Edit form states
   const [editName, setEditName] = useState(userName);
@@ -175,6 +180,7 @@ export const ProfileScreen: React.FC = () => {
       status: user.kycVerified ? 'Verified' : 'Not Verified',
       verified: user.kycVerified,
       action: 'Start Verification',
+      onClick: () => setShowKycModal(true),
     },
     {
       id: '2fa',
@@ -184,15 +190,7 @@ export const ProfileScreen: React.FC = () => {
       status: user.twoFactorEnabled ? 'Enabled' : 'Not Enabled',
       verified: user.twoFactorEnabled,
       action: 'Enable 2FA',
-    },
-    {
-      id: 'anti-phishing',
-      icon: <AlertTriangle size={20} />,
-      title: 'Anti-Phishing Code',
-      subtitle: 'Protect yourself from phishing attacks',
-      status: user.antiPhishingSet ? 'Set' : 'Not Set',
-      verified: user.antiPhishingSet,
-      action: 'Set Code',
+      onClick: () => setShow2faModal(true),
     },
   ];
 
@@ -470,36 +468,13 @@ export const ProfileScreen: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                color: colors.text.tertiary,
-                fontSize: '13px',
-                marginBottom: '12px',
+                color: isDark ? colors.text.tertiary : '#374151',
+                fontSize: '14px',
+                fontWeight: 500,
               }}>
                 <Mail size={14} />
                 {userEmail}
               </div>
-
-              {/* UID */}
-              <motion.button
-                whileHover={{ background: `${colors.primary[400]}15` }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleCopyUID}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  background: `${colors.primary[400]}08`,
-                  border: `1px solid ${colors.glass.border}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  color: colors.text.secondary,
-                  fontSize: '12px',
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}
-              >
-                UID: {user.uid}
-                {copied ? <Check size={14} color={colors.status.success} /> : <Copy size={14} />}
-              </motion.button>
             </div>
 
             {/* Account Info */}
@@ -791,13 +766,14 @@ export const ProfileScreen: React.FC = () => {
                       <motion.button
                         whileHover={{ scale: 1.02, boxShadow: `0 2px 12px ${colors.primary[400]}30` }}
                         whileTap={{ scale: 0.98 }}
+                        onClick={item.onClick}
                         style={{
                           padding: '8px 16px',
-                          background: `linear-gradient(135deg, ${colors.primary[400]}20, ${colors.secondary[400]}15)`,
-                          border: `1px solid ${colors.primary[400]}40`,
+                          background: isDark ? `linear-gradient(135deg, ${colors.primary[400]}20, ${colors.secondary[400]}15)` : '#000000',
+                          border: `1px solid ${isDark ? colors.primary[400] : '#000000'}40`,
                           borderRadius: '8px',
                           cursor: 'pointer',
-                          color: colors.primary[400],
+                          color: isDark ? colors.primary[400] : '#ffffff',
                           fontSize: '12px',
                           fontWeight: 600,
                         }}
@@ -1560,6 +1536,415 @@ export const ProfileScreen: React.FC = () => {
             <Save size={18} />
             Save Preferences
           </motion.button>
+        </div>
+      </Modal>
+
+      {/* KYC Verification Modal */}
+      <Modal show={showKycModal} onClose={() => { setShowKycModal(false); setKycStep(1); }} title="Identity Verification" maxWidth="500px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Progress Steps */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+            {[1, 2, 3].map((step) => (
+              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: kycStep >= step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: kycStep >= step ? (isDark ? '#0a0e14' : '#ffffff') : colors.text.tertiary,
+                  fontSize: '14px',
+                  fontWeight: 700,
+                }}>
+                  {kycStep > step ? <Check size={16} /> : step}
+                </div>
+                {step < 3 && (
+                  <div style={{
+                    width: '40px',
+                    height: '3px',
+                    background: kycStep > step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
+                    borderRadius: '2px',
+                  }} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Step Content */}
+          {kycStep === 1 && (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '20px',
+                background: isDark ? `${colors.primary[400]}15` : '#f3f4f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+              }}>
+                <FileCheck size={40} color={isDark ? colors.primary[400] : '#000000'} />
+              </div>
+              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
+                Personal Information
+              </h4>
+              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '24px' }}>
+                Enter your legal name as it appears on your ID
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
+                <input placeholder="Legal First Name" style={{ width: '100%', padding: '14px 16px', background: isDark ? colors.background.card : '#f9fafb', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`, borderRadius: '10px', color: isDark ? colors.text.primary : '#000000', fontSize: '14px', outline: 'none' }} />
+                <input placeholder="Legal Last Name" style={{ width: '100%', padding: '14px 16px', background: isDark ? colors.background.card : '#f9fafb', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`, borderRadius: '10px', color: isDark ? colors.text.primary : '#000000', fontSize: '14px', outline: 'none' }} />
+                <input placeholder="Date of Birth (MM/DD/YYYY)" style={{ width: '100%', padding: '14px 16px', background: isDark ? colors.background.card : '#f9fafb', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`, borderRadius: '10px', color: isDark ? colors.text.primary : '#000000', fontSize: '14px', outline: 'none' }} />
+              </div>
+            </div>
+          )}
+
+          {kycStep === 2 && (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '20px',
+                background: isDark ? `${colors.primary[400]}15` : '#f3f4f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+              }}>
+                <Camera size={40} color={isDark ? colors.primary[400] : '#000000'} />
+              </div>
+              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
+                Upload ID Document
+              </h4>
+              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '24px' }}>
+                Upload a clear photo of your government-issued ID
+              </p>
+              <div style={{
+                padding: '40px',
+                border: `2px dashed ${isDark ? colors.glass.border : '#d1d5db'}`,
+                borderRadius: '12px',
+                background: isDark ? `${colors.primary[400]}05` : '#f9fafb',
+                cursor: 'pointer',
+              }}>
+                <Camera size={32} color={isDark ? colors.text.tertiary : '#6b7280'} style={{ margin: '0 auto 12px', display: 'block' }} />
+                <p style={{ fontSize: '14px', fontWeight: 600, color: isDark ? colors.text.primary : '#000000', marginBottom: '4px' }}>
+                  Click to upload or drag and drop
+                </p>
+                <p style={{ fontSize: '12px', color: isDark ? colors.text.tertiary : '#6b7280' }}>
+                  PNG, JPG up to 10MB
+                </p>
+              </div>
+            </div>
+          )}
+
+          {kycStep === 3 && (
+            <div style={{ textAlign: 'center' }}>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  background: `${colors.status.success}20`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                }}
+              >
+                <Check size={40} color={colors.status.success} />
+              </motion.div>
+              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
+                Verification Submitted!
+              </h4>
+              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '16px' }}>
+                Your documents have been submitted for review. This usually takes 1-3 business days.
+              </p>
+              <div style={{
+                padding: '16px',
+                background: isDark ? `${colors.status.warning}10` : '#fef3c7',
+                border: `1px solid ${colors.status.warning}30`,
+                borderRadius: '10px',
+              }}>
+                <p style={{ fontSize: '13px', color: colors.status.warning, fontWeight: 500 }}>
+                  You will receive an email notification once your verification is complete.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {kycStep > 1 && kycStep < 3 && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setKycStep(kycStep - 1)}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'transparent',
+                  border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
+                  borderRadius: '12px',
+                  color: isDark ? colors.text.primary : '#000000',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Back
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                if (kycStep < 3) setKycStep(kycStep + 1);
+                else { setShowKycModal(false); setKycStep(1); }
+              }}
+              style={{
+                flex: 1,
+                padding: '14px',
+                background: isDark ? `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})` : '#000000',
+                border: 'none',
+                borderRadius: '12px',
+                color: isDark ? '#0a0e14' : '#ffffff',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {kycStep === 3 ? 'Done' : 'Continue'}
+            </motion.button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 2FA Setup Modal */}
+      <Modal show={show2faModal} onClose={() => { setShow2faModal(false); setTwoFaStep(1); setVerificationCode(''); }} title="Enable Two-Factor Authentication" maxWidth="450px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Progress Steps */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+            {[1, 2, 3].map((step) => (
+              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: twoFaStep >= step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: twoFaStep >= step ? (isDark ? '#0a0e14' : '#ffffff') : colors.text.tertiary,
+                  fontSize: '14px',
+                  fontWeight: 700,
+                }}>
+                  {twoFaStep > step ? <Check size={16} /> : step}
+                </div>
+                {step < 3 && (
+                  <div style={{
+                    width: '40px',
+                    height: '3px',
+                    background: twoFaStep > step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
+                    borderRadius: '2px',
+                  }} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Step Content */}
+          {twoFaStep === 1 && (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '20px',
+                background: isDark ? `${colors.primary[400]}15` : '#f3f4f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+              }}>
+                <Smartphone size={40} color={isDark ? colors.primary[400] : '#000000'} />
+              </div>
+              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
+                Download Authenticator App
+              </h4>
+              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '20px' }}>
+                Download Google Authenticator or Authy on your mobile device
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <div style={{ padding: '12px 20px', background: isDark ? colors.background.card : '#f3f4f6', borderRadius: '10px', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}` }}>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.primary : '#000000' }}>Google Authenticator</p>
+                </div>
+                <div style={{ padding: '12px 20px', background: isDark ? colors.background.card : '#f3f4f6', borderRadius: '10px', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}` }}>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.primary : '#000000' }}>Authy</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {twoFaStep === 2 && (
+            <div style={{ textAlign: 'center' }}>
+              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
+                Scan QR Code
+              </h4>
+              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '20px' }}>
+                Scan this QR code with your authenticator app
+              </p>
+              {/* Mock QR Code */}
+              <div style={{
+                width: '180px',
+                height: '180px',
+                background: '#ffffff',
+                borderRadius: '12px',
+                margin: '0 auto 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+              }}>
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  background: `repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50% / 12px 12px`,
+                  borderRadius: '8px',
+                }} />
+              </div>
+              <p style={{ fontSize: '12px', color: isDark ? colors.text.tertiary : '#6b7280', marginBottom: '12px' }}>
+                Or enter this code manually:
+              </p>
+              <div style={{
+                padding: '12px 16px',
+                background: isDark ? colors.background.card : '#f3f4f6',
+                borderRadius: '8px',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '14px',
+                fontWeight: 600,
+                color: isDark ? colors.primary[400] : '#000000',
+                letterSpacing: '0.1em',
+              }}>
+                CRYM-4DX2-FA8K-9Y2Z
+              </div>
+            </div>
+          )}
+
+          {twoFaStep === 3 && (
+            <div style={{ textAlign: 'center' }}>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  background: `${colors.status.success}20`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                }}
+              >
+                <Check size={40} color={colors.status.success} />
+              </motion.div>
+              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
+                2FA Enabled Successfully!
+              </h4>
+              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '16px' }}>
+                Your account is now protected with two-factor authentication.
+              </p>
+              <div style={{
+                padding: '16px',
+                background: isDark ? `${colors.status.success}10` : '#d1fae5',
+                border: `1px solid ${colors.status.success}30`,
+                borderRadius: '10px',
+              }}>
+                <p style={{ fontSize: '13px', color: colors.status.success, fontWeight: 500 }}>
+                  You will need to enter a 6-digit code from your authenticator app when logging in.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Verification Code Input for Step 2 */}
+          {twoFaStep === 2 && (
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#374151', marginBottom: '8px', display: 'block' }}>
+                Enter 6-digit verification code
+              </label>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: isDark ? colors.background.card : '#f9fafb',
+                  border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
+                  borderRadius: '10px',
+                  color: isDark ? colors.text.primary : '#000000',
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  letterSpacing: '0.3em',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  outline: 'none',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {twoFaStep > 1 && twoFaStep < 3 && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setTwoFaStep(twoFaStep - 1)}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'transparent',
+                  border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
+                  borderRadius: '12px',
+                  color: isDark ? colors.text.primary : '#000000',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Back
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                if (twoFaStep < 3) setTwoFaStep(twoFaStep + 1);
+                else { setShow2faModal(false); setTwoFaStep(1); setVerificationCode(''); }
+              }}
+              disabled={twoFaStep === 2 && verificationCode.length < 6}
+              style={{
+                flex: 1,
+                padding: '14px',
+                background: (twoFaStep === 2 && verificationCode.length < 6) ? colors.glass.border : (isDark ? `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})` : '#000000'),
+                border: 'none',
+                borderRadius: '12px',
+                color: (twoFaStep === 2 && verificationCode.length < 6) ? colors.text.tertiary : (isDark ? '#0a0e14' : '#ffffff'),
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: (twoFaStep === 2 && verificationCode.length < 6) ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {twoFaStep === 3 ? 'Done' : twoFaStep === 2 ? 'Verify & Enable' : 'Continue'}
+            </motion.button>
+          </div>
         </div>
       </Modal>
     </ResponsiveLayout>
