@@ -1,55 +1,33 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LogIn, AlertCircle } from 'lucide-react';
+import { X, LogIn, AlertCircle, Loader2 } from 'lucide-react';
 import { useThemeMode } from '../theme/ThemeContext';
+import { authService, tokenManager, AUTH_LOGOUT_EVENT } from '../services';
+import type { User } from '../types/api';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; error?: string }>;
+  verify2FA: (userId: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, fullName: string, referralCode?: string) => Promise<{ success: boolean; requiresVerification?: boolean; error?: string }>;
+  logout: () => Promise<void>;
   requireAuth: (action?: string, redirectPath?: string) => boolean;
   showLoginPrompt: boolean;
   pendingAction: string | null;
   closeLoginPrompt: () => void;
   updateAvatar: (avatarUrl: string) => void;
   userAvatar: string;
-}
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
+  refreshUser: () => Promise<void>;
 }
 
 // Default avatar
 const DEFAULT_AVATAR = 'https://api.dicebear.com/9.x/lorelei/svg?seed=Alexander&backgroundColor=b6e3f4';
 
-// LocalStorage keys
-const AUTH_STORAGE_KEY = 'crymadx_auth';
-const USER_STORAGE_KEY = 'crymadx_user';
+// LocalStorage keys for avatar only (other storage handled by tokenManager)
 const AVATAR_STORAGE_KEY = 'crymadx_avatar';
-
-// Helper functions to safely access localStorage
-const getStoredAuth = (): boolean => {
-  try {
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-    return stored === 'true';
-  } catch {
-    return false;
-  }
-};
-
-const getStoredUser = (): User | null => {
-  try {
-    const stored = localStorage.getItem(USER_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-};
 
 const getStoredAvatar = (): string => {
   try {
@@ -74,63 +52,180 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // Initialize state from localStorage
-  const [isAuthenticated, setIsAuthenticated] = useState(() => getStoredAuth());
-  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  // Initialize state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
   const [userAvatar, setUserAvatar] = useState<string>(() => getStoredAvatar());
+
+  // Handle forced logout from API (e.g., token refresh failed)
+  const handleForcedLogout = useCallback(() => {
+    console.log('Forced logout triggered - session expired');
+    setUser(null);
+    setIsAuthenticated(false);
+    // Don't redirect here - let the component handle it
+  }, []);
+
+  // Listen for logout events from API layer
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      handleForcedLogout();
+    };
+
+    window.addEventListener(AUTH_LOGOUT_EVENT, handleLogoutEvent);
+    return () => {
+      window.removeEventListener(AUTH_LOGOUT_EVENT, handleLogoutEvent);
+    };
+  }, [handleForcedLogout]);
+
+  // Check authentication status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      setIsLoading(true);
+
+      // Check if we have a token
+      if (tokenManager.isAuthenticated()) {
+        try {
+          // Verify token by fetching current user
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            tokenManager.setUser(currentUser);
+          } else {
+            // Token invalid, clear it
+            tokenManager.clearTokens();
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Auth check failed:', error);
+          tokenManager.clearTokens();
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+
+      setIsLoading(false);
+    };
+
+    checkAuth();
+  }, []);
 
   const updateAvatar = useCallback((avatarUrl: string) => {
     setUserAvatar(avatarUrl);
     try {
       localStorage.setItem(AVATAR_STORAGE_KEY, avatarUrl);
     } catch {}
-    if (user) {
-      const updatedUser = { ...user, avatar: avatarUrl };
-      setUser(updatedUser);
-      try {
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
-      } catch {}
-    }
-  }, [user]);
+  }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    // Simulate login - in real app, this would call API
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    if (email && password) {
-      const newUser = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        avatar: userAvatar,
-      };
-      setUser(newUser);
-      setIsAuthenticated(true);
-      setShowLoginPrompt(false);
-
-      // Persist to localStorage
-      try {
-        localStorage.setItem(AUTH_STORAGE_KEY, 'true');
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
-      } catch {}
-
-      return true;
-    }
-    return false;
-  }, [userAvatar]);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    setIsAuthenticated(false);
-
-    // Clear from localStorage
+  const refreshUser = useCallback(async () => {
     try {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
-    } catch {}
+      const currentUser = await authService.getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        tokenManager.setUser(currentUser);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; requires2FA?: boolean; userId?: string; error?: string }> => {
+    try {
+      const response = await authService.login({ email, password });
+
+      // Check if 2FA is required
+      if (response.requires2FA && response.userId) {
+        return { success: false, requires2FA: true, userId: response.userId };
+      }
+
+      // Login successful
+      if (response.user) {
+        setUser(response.user);
+        setIsAuthenticated(true);
+        setShowLoginPrompt(false);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Login failed' };
+    } catch (error: any) {
+      console.error('Login error:', error);
+      return { success: false, error: error.message || 'Invalid email or password' };
+    }
+  }, []);
+
+  const verify2FA = useCallback(async (userId: string, code: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await authService.verify2FA(userId, code);
+
+      if (response.tokens) {
+        // Fetch user data after successful 2FA
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+          setIsAuthenticated(true);
+          setShowLoginPrompt(false);
+          return { success: true };
+        }
+      }
+
+      return { success: false, error: '2FA verification failed' };
+    } catch (error: any) {
+      console.error('2FA verification error:', error);
+      return { success: false, error: error.message || 'Invalid 2FA code' };
+    }
+  }, []);
+
+  const register = useCallback(async (
+    email: string,
+    password: string,
+    fullName: string,
+    referralCode?: string
+  ): Promise<{ success: boolean; requiresVerification?: boolean; error?: string }> => {
+    try {
+      const response = await authService.register({
+        email,
+        password,
+        fullName,
+        referralCode,
+      });
+
+      // Check if verification is required (new flow)
+      if (response.requiresVerification) {
+        return { success: false, requiresVerification: true };
+      }
+
+      // Legacy flow: user registered and logged in immediately
+      if (response.user && response.tokens) {
+        setUser(response.user);
+        setIsAuthenticated(true);
+        setShowLoginPrompt(false);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Registration failed' };
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      return { success: false, error: error.message || 'Registration failed. Please try again.' };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
   }, []);
 
   const requireAuth = useCallback((action?: string, redirectPath?: string): boolean => {
@@ -155,7 +250,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       value={{
         isAuthenticated,
         user,
+        isLoading,
         login,
+        verify2FA,
+        register,
         logout,
         requireAuth,
         showLoginPrompt,
@@ -163,6 +261,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         closeLoginPrompt,
         updateAvatar,
         userAvatar,
+        refreshUser,
       }}
     >
       {children}

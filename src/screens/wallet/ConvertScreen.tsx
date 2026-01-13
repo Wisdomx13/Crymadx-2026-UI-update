@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,34 +7,66 @@ import {
   ChevronDown,
   CheckCircle,
   Zap,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { CryptoIcon, ResponsiveLayout, Button } from '../../components';
+import { balanceService, swapService, priceService } from '../../services';
+import type { SwapEstimate } from '../../types/api';
 
-const cryptoAssets = [
-  { symbol: 'BTC', name: 'Bitcoin', balance: '0.05234', price: 87345.50 },
-  { symbol: 'ETH', name: 'Ethereum', balance: '2.4521', price: 2987.40 },
-  { symbol: 'USDT', name: 'Tether', balance: '1250.00', price: 1.00 },
-  { symbol: 'BNB', name: 'BNB', balance: '5.234', price: 612.45 },
-  { symbol: 'SOL', name: 'Solana', balance: '45.23', price: 126.66 },
-  { symbol: 'XRP', name: 'Ripple', balance: '500.00', price: 1.93 },
-  { symbol: 'ADA', name: 'Cardano', balance: '1234.56', price: 0.46 },
-  { symbol: 'DOGE', name: 'Dogecoin', balance: '5000.00', price: 0.32 },
-  { symbol: 'DOT', name: 'Polkadot', balance: '100.00', price: 7.89 },
-  { symbol: 'MATIC', name: 'Polygon', balance: '2500.00', price: 0.85 },
-];
+interface CryptoAsset {
+  symbol: string;
+  name: string;
+  balance: string;
+  price: number;
+  chain: string;      // Chain identifier: ETH, TRX, SOL, MATIC, etc.
+  network?: string;   // Network display name
+}
+
+// Map chain IDs to wallet address column names
+const chainToWalletColumn: Record<string, string> = {
+  ETH: 'evm_address',
+  MATIC: 'evm_address',
+  BASE: 'evm_address',
+  ARB: 'evm_address',
+  OP: 'evm_address',
+  AVAX: 'evm_address',
+  SOL: 'sol_address',
+  BTC: 'btc_address',
+  LTC: 'ltc_address',
+  DOGE: 'doge_address',
+  XRP: 'xrp_address',
+  XLM: 'xlm_address',
+  BNB: 'bnb_address',
+  TRX: 'trx_address',
+};
 
 export const ConvertScreen: React.FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeMode();
-  const [fromAsset, setFromAsset] = useState(cryptoAssets[0]);
-  const [toAsset, setToAsset] = useState(cryptoAssets[2]);
+
+  // Asset and swap state
+  const [assets, setAssets] = useState<CryptoAsset[]>([]);
+  const [fromAsset, setFromAsset] = useState<CryptoAsset | null>(null);
+  const [toAsset, setToAsset] = useState<CryptoAsset | null>(null);
   const [fromAmount, setFromAmount] = useState('');
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // API state
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [estimate, setEstimate] = useState<SwapEstimate | null>(null);
+  const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
+  const [convertedAmount, setConvertedAmount] = useState('');
+
+  // User wallets for destination addresses
+  const [userWallets, setUserWallets] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const checkScreen = () => setIsMobile(window.innerWidth < 768);
@@ -43,24 +75,211 @@ export const ConvertScreen: React.FC = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  const exchangeRate = fromAsset.price / toAsset.price;
-  const toAmount = fromAmount ? (parseFloat(fromAmount) * exchangeRate).toFixed(6) : '';
+  // Fetch balances, prices, and user wallets
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const [balances, prices, walletsResponse] = await Promise.all([
+        balanceService.getAllBalances(),
+        priceService.getAllPrices(),
+        balanceService.getWallets().catch(() => ({ wallets: [] })),
+      ]);
+
+      // Build wallet addresses lookup by chain
+      const walletMap: Record<string, string> = {};
+      walletsResponse.wallets.forEach((wallet: { chain: string; address: string }) => {
+        // Map chain to address (e.g., 'eth' -> '0x...')
+        walletMap[wallet.chain.toUpperCase()] = wallet.address;
+      });
+      setUserWallets(walletMap);
+
+      // Build prices lookup - getAllPrices returns Record<string, PriceData>
+      const pricesMap: Record<string, number> = {};
+      Object.entries(prices).forEach(([symbol, priceData]) => {
+        pricesMap[symbol.toUpperCase()] = priceData.usd;
+      });
+
+      // Transform balances to assets
+      // balanceService.getAllBalances() returns Balance[] with {currency, available, locked, chain, name, network}
+      const transformedAssets: CryptoAsset[] = balances.map((balance) => {
+        const price = pricesMap[balance.currency.toUpperCase()] || 0;
+        return {
+          symbol: balance.currency,
+          name: balance.name || balance.currency,
+          balance: balance.available,
+          price,
+          chain: balance.chain || 'ETH',    // Default to ETH if not specified
+          network: balance.network || 'Ethereum',
+        };
+      });
+
+      setAssets(transformedAssets);
+
+      // Set defaults if available
+      if (transformedAssets.length > 0) {
+        const btc = transformedAssets.find(a => a.symbol === 'BTC');
+        const usdt = transformedAssets.find(a => a.symbol === 'USDT');
+        setFromAsset(btc || transformedAssets[0]);
+        setToAsset(usdt || transformedAssets[1] || transformedAssets[0]);
+      }
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      setError(err.message || 'Failed to load assets');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Normalize chain ID to uppercase for backend API
+  const normalizeChain = (chain: string): string => chain.toUpperCase();
+
+  // Get swap estimate when amount changes
+  useEffect(() => {
+    if (!fromAsset || !toAsset || !fromAmount || parseFloat(fromAmount) <= 0) {
+      setEstimate(null);
+      return;
+    }
+
+    const getEstimate = async () => {
+      setIsLoadingEstimate(true);
+      try {
+        const response = await swapService.getEstimate({
+          fromChain: normalizeChain(fromAsset.chain),
+          fromToken: fromAsset.symbol.toUpperCase(),
+          toChain: normalizeChain(toAsset.chain),
+          toToken: toAsset.symbol.toUpperCase(),
+          amount: fromAmount,
+        });
+        setEstimate(response.estimate);
+      } catch (err) {
+        // Use local calculation as fallback
+        console.log('Using local rate calculation');
+        setEstimate(null);
+      } finally {
+        setIsLoadingEstimate(false);
+      }
+    };
+
+    const timeoutId = setTimeout(getEstimate, 500); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [fromAsset, toAsset, fromAmount]);
+
+  const exchangeRate = fromAsset && toAsset && fromAsset.price > 0 && toAsset.price > 0
+    ? fromAsset.price / toAsset.price
+    : 0;
+
+  const toAmount = estimate?.toAmount
+    || (fromAmount && exchangeRate > 0 ? (parseFloat(fromAmount) * exchangeRate).toFixed(6) : '');
 
   const handleSwap = () => {
     const temp = fromAsset;
     setFromAsset(toAsset);
     setToAsset(temp);
     setFromAmount('');
+    setEstimate(null);
+  };
+
+  // Get user's wallet address for a specific chain
+  const getDestinationAddress = (chain: string): string | null => {
+    // Normalize chain to uppercase for lookup
+    const normalizedChain = chain.toUpperCase();
+
+    // Direct chain lookup
+    if (userWallets[normalizedChain]) {
+      return userWallets[normalizedChain];
+    }
+
+    // For EVM chains, they share the same address
+    const evmChains = ['ETH', 'MATIC', 'BASE', 'ARB', 'OP', 'AVAX', 'BSC'];
+    if (evmChains.includes(normalizedChain)) {
+      // Find any EVM address
+      for (const evmChain of evmChains) {
+        if (userWallets[evmChain]) {
+          return userWallets[evmChain];
+        }
+      }
+    }
+    return null;
   };
 
   const handleConvert = async () => {
+    if (!fromAsset || !toAsset || !fromAmount) return;
+
+    // Validate sufficient balance
+    const fromBalance = parseFloat(fromAsset.balance.replace(/,/g, ''));
+    const fromAmountNum = parseFloat(fromAmount);
+    if (fromAmountNum > fromBalance) {
+      setError(`Insufficient balance. You have ${fromAsset.balance} ${fromAsset.symbol} available.`);
+      return;
+    }
+
+    // Get the destination address for the receiving chain (use uppercase for lookup)
+    const normalizedToChain = normalizeChain(toAsset.chain);
+    const destinationAddress = getDestinationAddress(normalizedToChain);
+    if (!destinationAddress) {
+      setError(`No wallet address found for ${toAsset.chain}. Please set up your wallet first.`);
+      return;
+    }
+
     setIsConverting(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsConverting(false);
-    setShowSuccess(true);
+    setError(null);
+
+    try {
+      // Use normalized uppercase chain IDs for backend API
+      const response = await swapService.createSwap({
+        fromChain: normalizeChain(fromAsset.chain),
+        fromToken: fromAsset.symbol.toUpperCase(),
+        toChain: normalizedToChain,
+        toToken: toAsset.symbol.toUpperCase(),
+        amount: fromAmount,
+        destinationAddress, // User's wallet address for the destination chain
+        rateId: estimate?.rateId,
+      });
+
+      setConvertedAmount(toAmount);
+      setShowSuccess(true);
+
+      // Refresh balances
+      fetchData();
+    } catch (err: any) {
+      setError(err.message || 'Conversion failed. Please try again.');
+    } finally {
+      setIsConverting(false);
+    }
   };
 
-  if (showSuccess) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <ResponsiveLayout activeNav="wallet" title="Convert">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '80px 20px',
+        }}>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          >
+            <Loader2 size={40} color={colors.primary[400]} />
+          </motion.div>
+          <p style={{ color: colors.text.secondary, marginTop: '16px' }}>
+            Loading your assets...
+          </p>
+        </div>
+      </ResponsiveLayout>
+    );
+  }
+
+  if (showSuccess && fromAsset && toAsset) {
     return (
       <ResponsiveLayout activeNav="wallet" title="Convert">
         <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center', paddingTop: '60px' }}>
@@ -108,7 +327,7 @@ export const ConvertScreen: React.FC = () => {
               <div style={{ textAlign: 'center' }}>
                 <CryptoIcon symbol={toAsset.symbol} size={40} />
                 <p style={{ fontSize: '18px', fontWeight: 700, color: colors.status.success, marginTop: '8px' }}>
-                  +{toAmount} {toAsset.symbol}
+                  +{convertedAmount} {toAsset.symbol}
                 </p>
               </div>
             </div>
@@ -122,6 +341,7 @@ export const ConvertScreen: React.FC = () => {
               onClick={() => {
                 setShowSuccess(false);
                 setFromAmount('');
+                setConvertedAmount('');
               }}
             >
               Convert More
@@ -135,9 +355,69 @@ export const ConvertScreen: React.FC = () => {
     );
   }
 
+  // No assets available
+  if (!fromAsset || !toAsset) {
+    return (
+      <ResponsiveLayout activeNav="wallet" title="Convert">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '80px 20px',
+          textAlign: 'center',
+        }}>
+          <AlertCircle size={40} color={colors.text.tertiary} />
+          <p style={{ color: colors.text.secondary, marginTop: '16px', marginBottom: '16px' }}>
+            No assets available for conversion
+          </p>
+          <Button variant="primary" onClick={() => navigate('/wallet/deposit')}>
+            Deposit Funds
+          </Button>
+        </div>
+      </ResponsiveLayout>
+    );
+  }
+
   return (
     <ResponsiveLayout activeNav="wallet" title="Convert">
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        {/* Error Banner */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            <AlertCircle size={18} color={colors.status.error} />
+            <span style={{ flex: 1, fontSize: '13px', color: colors.status.error }}>
+              {error}
+            </span>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setError(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px',
+                cursor: 'pointer',
+                color: colors.status.error,
+              }}
+            >
+              ✕
+            </motion.button>
+          </motion.div>
+        )}
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -215,9 +495,17 @@ export const ConvertScreen: React.FC = () => {
                     }}
                   >
                     <CryptoIcon symbol={fromAsset.symbol} size={28} />
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: colors.text.primary }}>
-                      {fromAsset.symbol}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '16px', fontWeight: 600, color: colors.text.primary }}>
+                        {fromAsset.symbol}
+                      </span>
+                      <span style={{
+                        fontSize: '10px',
+                        color: colors.text.tertiary,
+                      }}>
+                        {fromAsset.chain}
+                      </span>
+                    </div>
                     <ChevronDown size={16} color={colors.text.tertiary} />
                   </motion.button>
 
@@ -230,7 +518,7 @@ export const ConvertScreen: React.FC = () => {
                         top: '100%',
                         left: 0,
                         marginTop: '8px',
-                        width: '200px',
+                        width: '240px',
                         maxHeight: '300px',
                         overflowY: 'auto',
                         background: colors.background.secondary,
@@ -240,9 +528,9 @@ export const ConvertScreen: React.FC = () => {
                         boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                       }}
                     >
-                      {cryptoAssets.filter(a => a.symbol !== toAsset.symbol).map((asset) => (
+                      {assets.filter(a => !(a.symbol === toAsset?.symbol && a.chain === toAsset?.chain)).map((asset) => (
                         <motion.div
-                          key={asset.symbol}
+                          key={`${asset.symbol}-${asset.chain}`}
                           whileHover={{ background: 'rgba(0, 255, 136, 0.1)' }}
                           onClick={() => {
                             setFromAsset(asset);
@@ -257,12 +545,23 @@ export const ConvertScreen: React.FC = () => {
                           }}
                         >
                           <CryptoIcon symbol={asset.symbol} size={24} />
-                          <div>
-                            <p style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary }}>
-                              {asset.symbol}
-                            </p>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <p style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary }}>
+                                {asset.symbol}
+                              </p>
+                              <span style={{
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                background: 'rgba(0, 255, 136, 0.15)',
+                                borderRadius: '4px',
+                                color: colors.primary[400],
+                              }}>
+                                {asset.chain}
+                              </span>
+                            </div>
                             <p style={{ fontSize: '11px', color: colors.text.tertiary }}>
-                              {asset.balance}
+                              {asset.balance} available
                             </p>
                           </div>
                         </motion.div>
@@ -370,9 +669,17 @@ export const ConvertScreen: React.FC = () => {
                     }}
                   >
                     <CryptoIcon symbol={toAsset.symbol} size={28} />
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: colors.text.primary }}>
-                      {toAsset.symbol}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '16px', fontWeight: 600, color: colors.text.primary }}>
+                        {toAsset.symbol}
+                      </span>
+                      <span style={{
+                        fontSize: '10px',
+                        color: colors.text.tertiary,
+                      }}>
+                        {toAsset.chain}
+                      </span>
+                    </div>
                     <ChevronDown size={16} color={colors.text.tertiary} />
                   </motion.button>
 
@@ -385,7 +692,7 @@ export const ConvertScreen: React.FC = () => {
                         top: '100%',
                         left: 0,
                         marginTop: '8px',
-                        width: '200px',
+                        width: '240px',
                         maxHeight: '300px',
                         overflowY: 'auto',
                         background: colors.background.secondary,
@@ -395,9 +702,9 @@ export const ConvertScreen: React.FC = () => {
                         boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                       }}
                     >
-                      {cryptoAssets.filter(a => a.symbol !== fromAsset.symbol).map((asset) => (
+                      {assets.filter(a => !(a.symbol === fromAsset?.symbol && a.chain === fromAsset?.chain)).map((asset) => (
                         <motion.div
-                          key={asset.symbol}
+                          key={`${asset.symbol}-${asset.chain}`}
                           whileHover={{ background: 'rgba(0, 255, 136, 0.1)' }}
                           onClick={() => {
                             setToAsset(asset);
@@ -412,10 +719,21 @@ export const ConvertScreen: React.FC = () => {
                           }}
                         >
                           <CryptoIcon symbol={asset.symbol} size={24} />
-                          <div>
-                            <p style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary }}>
-                              {asset.symbol}
-                            </p>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <p style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary }}>
+                                {asset.symbol}
+                              </p>
+                              <span style={{
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                background: 'rgba(0, 255, 136, 0.15)',
+                                borderRadius: '4px',
+                                color: colors.primary[400],
+                              }}>
+                                {asset.chain}
+                              </span>
+                            </div>
                             <p style={{ fontSize: '11px', color: colors.text.tertiary }}>
                               {asset.name}
                             </p>
@@ -455,11 +773,26 @@ export const ConvertScreen: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Zap size={18} color={colors.primary[400]} />
+            {isLoadingEstimate ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <RefreshCw size={18} color={colors.primary[400]} />
+              </motion.div>
+            ) : (
+              <Zap size={18} color={colors.primary[400]} />
+            )}
             <span style={{ fontSize: '14px', color: colors.text.secondary }}>Exchange Rate</span>
           </div>
           <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary }}>
-            1 {fromAsset.symbol} = {exchangeRate.toFixed(6)} {toAsset.symbol}
+            {isLoadingEstimate ? 'Loading...' : (
+              estimate?.rate
+                ? `1 ${fromAsset.symbol} = ${estimate.rate} ${toAsset.symbol}`
+                : exchangeRate > 0
+                  ? `1 ${fromAsset.symbol} = ${exchangeRate.toFixed(6)} ${toAsset.symbol}`
+                  : 'Rate unavailable'
+            )}
           </span>
         </div>
 

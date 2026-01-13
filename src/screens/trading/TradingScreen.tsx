@@ -1,7 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Star, ChevronDown, Search, ArrowUp, ArrowDown, Loader2, Sun, Moon } from 'lucide-react';
+import { Star, ChevronDown, Search, ArrowUp, ArrowDown, Loader2, Sun, Moon, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useThemeMode } from '../../theme';
+import { spotTradingService, balanceService, tokenManager } from '../../services';
+import type { SpotOrder } from '../../services/spotTradingService';
+import { getActivePairs, getPairBySymbol, getBinanceSymbol, type TradingPairConfig } from '../../config/tradingPairs';
+
+// Backend API URL for Binance proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backend.crymadx.io';
 
 // ============================================
 // TYPES
@@ -10,12 +16,19 @@ interface TradingPair {
   symbol: string;
   baseAsset: string;
   quoteAsset: string;
+  baseName: string;
   price: number;
   change: number;
   high: number;
   low: number;
   volume: number;
   quoteVolume: number;
+  // Reference to config for ChangeNow execution
+  config: TradingPairConfig;
+  // Binance symbol for price feed (may differ from symbol)
+  binanceSymbol: string | null;
+  // TradingView symbol for charts (e.g., "BINANCE:BTCUSDT" or "COINBASE:ARBUSD")
+  tradingViewSymbol: string;
 }
 
 interface OrderBookEntry {
@@ -121,80 +134,124 @@ export const TradingScreen: React.FC = () => {
   const [sliderValue, setSliderValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingPairs, setLoadingPairs] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Real balances
+  const [quoteBalance, setQuoteBalance] = useState<number>(0);
+  const [baseBalance, setBaseBalance] = useState<number>(0);
+  const [loadingBalances, setLoadingBalances] = useState(false);
+
+  // Order state
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
+  const [openOrders, setOpenOrders] = useState<SpotOrder[]>([]);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // Chain selection state - for explicit network selection
+  const [fromChain, setFromChain] = useState<string>('matic'); // Default to Polygon for USDC
+  const [toChain, setToChain] = useState<string>('arbitrum'); // Default to Arbitrum
+  const [showFromChainDropdown, setShowFromChainDropdown] = useState(false);
+  const [showToChainDropdown, setShowToChainDropdown] = useState(false);
+
+  // Available chains for selection
+  const availableChains = [
+    { id: 'eth', name: 'Ethereum', symbol: 'ETH' },
+    { id: 'matic', name: 'Polygon', symbol: 'MATIC' },
+    { id: 'arbitrum', name: 'Arbitrum', symbol: 'ARB' },
+    { id: 'base', name: 'Base', symbol: 'BASE' },
+    { id: 'op', name: 'Optimism', symbol: 'OP' },
+    { id: 'bsc', name: 'BNB Chain', symbol: 'BNB' },
+    { id: 'avaxc', name: 'Avalanche', symbol: 'AVAX' },
+    { id: 'sol', name: 'Solana', symbol: 'SOL' },
+    { id: 'trx', name: 'Tron', symbol: 'TRX' },
+  ];
 
   const chartRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const depthWsRef = useRef<WebSocket | null>(null);
-  const tradesWsRef = useRef<WebSocket | null>(null);
+  // WebSocket refs removed - using polling instead due to network restrictions
 
-  // Mock balances
-  const quoteBalance = 10000;
-  const baseBalance = 0.5;
-
-  // Colors - Enhanced for light mode visibility
+  // Colors
   const colors = {
     bg: isDark ? '#0b0e11' : '#ffffff',
     cardBg: isDark ? '#1e2329' : '#ffffff',
-    panelBg: isDark ? '#0f0f0f' : '#f8f9fa',
-    border: isDark ? '#2b3139' : '#000000',
-    text: isDark ? '#eaecef' : '#000000',
-    textSecondary: isDark ? '#848e9c' : '#374151',
+    panelBg: isDark ? '#181a20' : '#fafafa',
+    border: isDark ? '#2b3139' : '#eaecef',
+    text: isDark ? '#eaecef' : '#1e2329',
+    textSecondary: isDark ? '#848e9c' : '#707a8a',
     green: '#0ecb81',
     red: '#f6465d',
-    greenBg: isDark ? 'rgba(14, 203, 129, 0.1)' : 'rgba(14, 203, 129, 0.15)',
-    redBg: isDark ? 'rgba(246, 70, 93, 0.1)' : 'rgba(246, 70, 93, 0.15)',
+    greenBg: isDark ? 'rgba(14, 203, 129, 0.1)' : 'rgba(14, 203, 129, 0.1)',
+    redBg: isDark ? 'rgba(246, 70, 93, 0.1)' : 'rgba(246, 70, 93, 0.1)',
   };
 
-  // Fetch all USDT trading pairs from Binance
+  // Fetch trading pairs from our config + Binance price data
   useEffect(() => {
     const fetchPairs = async () => {
       try {
         setLoadingPairs(true);
+        setLoadError(null);
 
-        // Get exchange info for all symbols
-        const [exchangeInfo, tickers] = await Promise.all([
-          fetch('https://api.binance.com/api/v3/exchangeInfo').then(r => r.json()),
-          fetch('https://api.binance.com/api/v3/ticker/24hr').then(r => r.json()),
-        ]);
+        // Get our configured trading pairs (with ChangeNow mappings)
+        const configuredPairs = getActivePairs();
 
-        // Create a map of ticker data
+        // Get Binance ticker data for price feeds
+        const tickersRes = await fetch(`${API_BASE_URL}/api/binance/ticker/24hr`);
+
+        if (!tickersRes.ok) {
+          throw new Error('Failed to fetch market data');
+        }
+
+        const tickers = await tickersRes.json();
+
+        // Create a map of Binance ticker data
         const tickerMap = new Map<string, any>();
         tickers.forEach((t: any) => tickerMap.set(t.symbol, t));
 
-        // Filter USDT pairs that are trading
-        const usdtPairs = exchangeInfo.symbols
-          .filter((s: any) =>
-            s.quoteAsset === 'USDT' &&
-            s.status === 'TRADING' &&
-            tickerMap.has(s.symbol)
-          )
-          .map((s: any) => {
-            const ticker = tickerMap.get(s.symbol);
-            return {
-              symbol: s.symbol,
-              baseAsset: s.baseAsset,
-              quoteAsset: s.quoteAsset,
-              price: parseFloat(ticker?.lastPrice) || 0,
-              change: parseFloat(ticker?.priceChangePercent) || 0,
-              high: parseFloat(ticker?.highPrice) || 0,
-              low: parseFloat(ticker?.lowPrice) || 0,
-              volume: parseFloat(ticker?.volume) || 0,
-              quoteVolume: parseFloat(ticker?.quoteVolume) || 0,
-            };
-          })
-          .filter((p: TradingPair) => p.price > 0)
-          .sort((a: TradingPair, b: TradingPair) => b.quoteVolume - a.quoteVolume);
+        // Build trading pairs from our config, enriched with Binance price data
+        const tradingPairs: TradingPair[] = configuredPairs.map((config) => {
+          // Get Binance ticker data if available
+          const binanceSymbol = config.binanceSymbol;
+          const ticker = binanceSymbol ? tickerMap.get(binanceSymbol) : null;
 
-        setAllPairs(usdtPairs);
+          // TradingView symbol - use config if specified, otherwise default to Binance
+          const tradingViewSymbol = config.tradingViewSymbol ||
+            (binanceSymbol ? `BINANCE:${binanceSymbol}` : `BINANCE:${config.symbol}`);
+
+          return {
+            symbol: config.symbol,
+            baseAsset: config.baseAsset,
+            quoteAsset: config.quoteAsset,
+            baseName: config.baseName,
+            price: ticker ? parseFloat(ticker.lastPrice) || 0 : 0,
+            change: ticker ? parseFloat(ticker.priceChangePercent) || 0 : 0,
+            high: ticker ? parseFloat(ticker.highPrice) || 0 : 0,
+            low: ticker ? parseFloat(ticker.lowPrice) || 0 : 0,
+            volume: ticker ? parseFloat(ticker.volume) || 0 : 0,
+            quoteVolume: ticker ? parseFloat(ticker.quoteVolume) || 0 : 0,
+            config,
+            binanceSymbol,
+            tradingViewSymbol,
+          };
+        })
+        // Filter out pairs without price data (Binance doesn't have them)
+        .filter((p) => p.price > 0)
+        // Sort by volume
+        .sort((a, b) => b.quoteVolume - a.quoteVolume);
+
+        if (tradingPairs.length === 0) {
+          throw new Error('No trading pairs available');
+        }
+
+        setAllPairs(tradingPairs);
 
         // Set default or URL-based pair
         const urlSymbol = pair?.toUpperCase().replace('_', '');
-        const foundPair = usdtPairs.find((p: TradingPair) => p.symbol === urlSymbol) || usdtPairs[0];
+        const foundPair = tradingPairs.find((p) => p.symbol === urlSymbol) || tradingPairs[0];
         setSelectedPair(foundPair);
         setLoadingPairs(false);
       } catch (error) {
         console.error('Failed to fetch pairs:', error);
+        setLoadError(error instanceof Error ? error.message : 'Failed to load market data. Please try again.');
         setLoadingPairs(false);
       }
     };
@@ -211,143 +268,175 @@ export const TradingScreen: React.FC = () => {
     }
   }, [pair, allPairs]);
 
-  // WebSocket for real-time price updates
+  // Polling for price updates (since WebSocket is blocked)
   useEffect(() => {
-    if (!selectedPair) return;
+    if (!selectedPair || !selectedPair.binanceSymbol) return;
 
-    const symbol = selectedPair.symbol.toLowerCase();
-
-    // Close existing connections
-    if (wsRef.current) wsRef.current.close();
-
-    // Mini ticker WebSocket
-    wsRef.current = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@ticker`);
-
-    wsRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setSelectedPair(prev => prev ? {
-        ...prev,
-        price: parseFloat(data.c),
-        change: parseFloat(data.P),
-        high: parseFloat(data.h),
-        low: parseFloat(data.l),
-        volume: parseFloat(data.v),
-        quoteVolume: parseFloat(data.q),
-      } : null);
-    };
-
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-    };
-  }, [selectedPair?.symbol]);
-
-  // WebSocket for order book depth
-  useEffect(() => {
-    if (!selectedPair) return;
-
-    const symbol = selectedPair.symbol.toLowerCase();
-
-    if (depthWsRef.current) depthWsRef.current.close();
-
-    // Initial depth snapshot
-    fetch(`https://api.binance.com/api/v3/depth?symbol=${selectedPair.symbol}&limit=15`)
-      .then(r => r.json())
-      .then(data => {
-        const asks = data.asks.map(([price, amount]: [string, string]) => ({
-          price: parseFloat(price),
-          amount: parseFloat(amount),
-          total: parseFloat(price) * parseFloat(amount),
-        })).reverse();
-
-        const bids = data.bids.map(([price, amount]: [string, string]) => ({
-          price: parseFloat(price),
-          amount: parseFloat(amount),
-          total: parseFloat(price) * parseFloat(amount),
-        }));
-
-        setOrderBook({ asks, bids });
-      });
-
-    // Depth WebSocket
-    depthWsRef.current = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@depth@1000ms`);
-
-    depthWsRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data.a && data.a.length > 0) {
-        setOrderBook(prev => {
-          const newAsks = data.a
-            .filter(([_, amt]: [string, string]) => parseFloat(amt) > 0)
-            .slice(0, 15)
-            .map(([price, amount]: [string, string]) => ({
-              price: parseFloat(price),
-              amount: parseFloat(amount),
-              total: parseFloat(price) * parseFloat(amount),
-            }))
-            .reverse();
-
-          const newBids = data.b
-            .filter(([_, amt]: [string, string]) => parseFloat(amt) > 0)
-            .slice(0, 15)
-            .map(([price, amount]: [string, string]) => ({
-              price: parseFloat(price),
-              amount: parseFloat(amount),
-              total: parseFloat(price) * parseFloat(amount),
-            }));
-
-          return {
-            asks: newAsks.length > 0 ? newAsks : prev.asks,
-            bids: newBids.length > 0 ? newBids : prev.bids,
-          };
-        });
+    const fetchTicker = async () => {
+      try {
+        // Use binanceSymbol for API call (may differ from our internal symbol)
+        const res = await fetch(`${API_BASE_URL}/api/binance/ticker/24hr?symbol=${selectedPair.binanceSymbol}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSelectedPair(prev => prev ? {
+            ...prev,
+            price: parseFloat(data.lastPrice),
+            change: parseFloat(data.priceChangePercent),
+            high: parseFloat(data.highPrice),
+            low: parseFloat(data.lowPrice),
+            volume: parseFloat(data.volume),
+            quoteVolume: parseFloat(data.quoteVolume),
+          } : null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch ticker:', error);
       }
     };
 
-    return () => {
-      if (depthWsRef.current) depthWsRef.current.close();
-    };
-  }, [selectedPair?.symbol]);
+    // Poll every 5 seconds
+    const interval = setInterval(fetchTicker, 5000);
 
-  // WebSocket for recent trades
+    return () => clearInterval(interval);
+  }, [selectedPair?.binanceSymbol]);
+
+  // Polling for order book depth (since WebSocket is blocked)
   useEffect(() => {
+    if (!selectedPair || !selectedPair.binanceSymbol) return;
+
+    const fetchDepth = async () => {
+      try {
+        // Use binanceSymbol for API call
+        const res = await fetch(`${API_BASE_URL}/api/binance/depth?symbol=${selectedPair.binanceSymbol}&limit=15`);
+        if (res.ok) {
+          const data = await res.json();
+          const asks = data.asks.map(([price, amount]: [string, string]) => ({
+            price: parseFloat(price),
+            amount: parseFloat(amount),
+            total: parseFloat(price) * parseFloat(amount),
+          })).reverse();
+
+          const bids = data.bids.map(([price, amount]: [string, string]) => ({
+            price: parseFloat(price),
+            amount: parseFloat(amount),
+            total: parseFloat(price) * parseFloat(amount),
+          }));
+
+          setOrderBook({ asks, bids });
+        }
+      } catch (error) {
+        console.error('Failed to fetch depth:', error);
+      }
+    };
+
+    // Fetch immediately
+    fetchDepth();
+
+    // Poll every 3 seconds
+    const interval = setInterval(fetchDepth, 3000);
+
+    return () => clearInterval(interval);
+  }, [selectedPair?.binanceSymbol]);
+
+  // Polling for recent trades (since WebSocket is blocked)
+  useEffect(() => {
+    if (!selectedPair || !selectedPair.binanceSymbol) return;
+
+    const fetchTrades = async () => {
+      try {
+        // Use binanceSymbol for API call
+        const res = await fetch(`${API_BASE_URL}/api/binance/trades?symbol=${selectedPair.binanceSymbol}&limit=20`);
+        if (res.ok) {
+          const data = await res.json();
+          const trades = data.map((t: any) => ({
+            price: parseFloat(t.price),
+            amount: parseFloat(t.qty),
+            time: new Date(t.time).toLocaleTimeString(),
+            side: t.isBuyerMaker ? 'sell' : 'buy',
+          })).reverse();
+          setRecentTrades(trades);
+        }
+      } catch (error) {
+        console.error('Failed to fetch trades:', error);
+      }
+    };
+
+    // Fetch immediately
+    fetchTrades();
+
+    // Poll every 3 seconds
+    const interval = setInterval(fetchTrades, 3000);
+
+    return () => clearInterval(interval);
+  }, [selectedPair?.binanceSymbol]);
+
+  // Fetch real balances when pair changes
+  const fetchBalances = useCallback(async () => {
     if (!selectedPair) return;
 
-    const symbol = selectedPair.symbol.toLowerCase();
+    // Check if user is logged in
+    if (!tokenManager.isAuthenticated()) {
+      setQuoteBalance(0);
+      setBaseBalance(0);
+      return;
+    }
 
-    if (tradesWsRef.current) tradesWsRef.current.close();
+    try {
+      setLoadingBalances(true);
+      const balances = await balanceService.getAllBalances();
 
-    // Initial trades
-    fetch(`https://api.binance.com/api/v3/trades?symbol=${selectedPair.symbol}&limit=20`)
-      .then(r => r.json())
-      .then(data => {
-        const trades = data.map((t: any) => ({
-          price: parseFloat(t.price),
-          amount: parseFloat(t.qty),
-          time: new Date(t.time).toLocaleTimeString(),
-          side: t.isBuyerMaker ? 'sell' : 'buy',
-        })).reverse();
-        setRecentTrades(trades);
+      // Find balances for current pair assets
+      const quoteAsset = selectedPair.quoteAsset;
+      const baseAsset = selectedPair.baseAsset;
+
+      let quoteBal = 0;
+      let baseBal = 0;
+
+      // Sum up balances across all chains for each asset
+      balances.forEach(balance => {
+        if (balance.currency.toUpperCase() === quoteAsset) {
+          quoteBal += parseFloat(balance.available) || 0;
+        }
+        if (balance.currency.toUpperCase() === baseAsset) {
+          baseBal += parseFloat(balance.available) || 0;
+        }
       });
 
-    // Trades WebSocket
-    tradesWsRef.current = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@trade`);
+      setQuoteBalance(quoteBal);
+      setBaseBalance(baseBal);
+    } catch (error) {
+      console.error('Failed to fetch balances:', error);
+      setQuoteBalance(0);
+      setBaseBalance(0);
+    } finally {
+      setLoadingBalances(false);
+    }
+  }, [selectedPair?.quoteAsset, selectedPair?.baseAsset]);
 
-    tradesWsRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const newTrade: Trade = {
-        price: parseFloat(data.p),
-        amount: parseFloat(data.q),
-        time: new Date(data.T).toLocaleTimeString(),
-        side: data.m ? 'sell' : 'buy',
-      };
+  useEffect(() => {
+    fetchBalances();
+  }, [fetchBalances]);
 
-      setRecentTrades(prev => [newTrade, ...prev.slice(0, 19)]);
+  // Fetch open orders when authenticated
+  useEffect(() => {
+    const fetchOpenOrders = async () => {
+      if (!tokenManager.isAuthenticated()) {
+        setOpenOrders([]);
+        return;
+      }
+
+      try {
+        const { orders } = await spotTradingService.getOpenOrders();
+        setOpenOrders(orders || []);
+      } catch (error) {
+        console.error('Failed to fetch open orders:', error);
+      }
     };
 
-    return () => {
-      if (tradesWsRef.current) tradesWsRef.current.close();
-    };
-  }, [selectedPair?.symbol]);
+    fetchOpenOrders();
+    // Poll for order updates every 10 seconds
+    const interval = setInterval(fetchOpenOrders, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Update price input when pair changes
   useEffect(() => {
@@ -372,7 +461,8 @@ export const TradingScreen: React.FC = () => {
   useEffect(() => {
     if (!chartRef.current || !selectedPair) return;
 
-    const currentSymbol = `BINANCE:${selectedPair.symbol}`;
+    // Use tradingViewSymbol for chart (can be Binance, Coinbase, etc.)
+    const currentSymbol = selectedPair.tradingViewSymbol;
 
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
@@ -396,7 +486,7 @@ export const TradingScreen: React.FC = () => {
 
     chartRef.current.innerHTML = '';
     chartRef.current.appendChild(script);
-  }, [selectedPair?.symbol, isDark]);
+  }, [selectedPair?.tradingViewSymbol, isDark]);
 
   // Handle pair selection
   const handlePairSelect = (newPair: TradingPair) => {
@@ -431,14 +521,100 @@ export const TradingScreen: React.FC = () => {
   };
 
   // Handle order submit
-  const handleSubmit = () => {
-    if (!amount) return;
+  const handleSubmit = async () => {
+    if (!amount || !selectedPair) return;
+
+    // Clear previous messages
+    setOrderError(null);
+    setOrderSuccess(null);
+
+    // Check if user is authenticated
+    if (!tokenManager.isAuthenticated()) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    // Validate amount
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setOrderError('Please enter a valid amount');
+      return;
+    }
+
+    // Validate price for limit orders
+    if (orderType === 'limit') {
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum <= 0) {
+        setOrderError('Please enter a valid price');
+        return;
+      }
+    }
+
+    // Check balance
+    const requiredBalance = activeTab === 'buy'
+      ? amountNum * (orderType === 'limit' ? parseFloat(price) : selectedPair.price)
+      : amountNum;
+    const availableBalance = activeTab === 'buy' ? quoteBalance : baseBalance;
+
+    if (requiredBalance > availableBalance) {
+      setOrderError(`Insufficient ${activeTab === 'buy' ? selectedPair.quoteAsset : selectedPair.baseAsset} balance`);
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      const { order } = await spotTradingService.createOrder({
+        baseAsset: selectedPair.baseAsset,
+        quoteAsset: selectedPair.quoteAsset,
+        side: activeTab,
+        orderType: orderType,
+        amount: amount,
+        price: orderType === 'limit' ? price : undefined,
+        // Pass explicit chain selection from user
+        fromChain: fromChain,
+        toChain: toChain,
+      });
+
+      // Show success message
+      const orderTypeText = orderType === 'market' ? 'Market' : 'Limit';
+      const sideText = activeTab === 'buy' ? 'Buy' : 'Sell';
+      setOrderSuccess(`${orderTypeText} ${sideText} order placed successfully!`);
+
+      // Reset form
       setAmount('');
       setSliderValue(0);
-    }, 1500);
+
+      // Refresh balances
+      fetchBalances();
+
+      // Add to open orders if limit order
+      if (orderType === 'limit' && order) {
+        setOpenOrders(prev => [order, ...prev]);
+      }
+
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setOrderSuccess(null), 5000);
+
+    } catch (error: any) {
+      console.error('Order failed:', error);
+      setOrderError(error.message || 'Failed to place order. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle order cancellation
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      await spotTradingService.cancelOrder(orderId);
+      setOpenOrders(prev => prev.filter(o => o.orderId !== orderId));
+      setOrderSuccess('Order cancelled successfully');
+      fetchBalances();
+      setTimeout(() => setOrderSuccess(null), 3000);
+    } catch (error: any) {
+      setOrderError(error.message || 'Failed to cancel order');
+    }
   };
 
   // Calculate total
@@ -462,7 +638,7 @@ export const TradingScreen: React.FC = () => {
     return Math.max(...allTotals, 1);
   }, [orderBook]);
 
-  if (loadingPairs || !selectedPair) {
+  if (loadingPairs) {
     return (
       <div style={{
         width: '100%',
@@ -481,6 +657,70 @@ export const TradingScreen: React.FC = () => {
     );
   }
 
+  if (loadError || !selectedPair) {
+    return (
+      <div style={{
+        width: '100%',
+        height: '100vh',
+        background: colors.bg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: '16px',
+      }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          background: colors.redBg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <span style={{ fontSize: '32px' }}>!</span>
+        </div>
+        <span style={{ color: colors.text, fontSize: '18px', fontWeight: 600 }}>
+          Unable to Load Trading Data
+        </span>
+        <span style={{ color: colors.textSecondary, textAlign: 'center', maxWidth: '400px' }}>
+          {loadError || 'Could not connect to market data. This may be due to network restrictions or Binance API availability in your region.'}
+        </span>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            marginTop: '8px',
+            padding: '12px 24px',
+            background: colors.green,
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Try Again
+        </button>
+        <button
+          onClick={() => navigate('/markets')}
+          style={{
+            padding: '12px 24px',
+            background: 'transparent',
+            color: colors.textSecondary,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          Go to Markets
+        </button>
+      </div>
+    );
+  }
+
   const base = selectedPair.baseAsset;
   const quote = selectedPair.quoteAsset;
 
@@ -489,8 +729,8 @@ export const TradingScreen: React.FC = () => {
     { label: 'Buy Crypto', href: '/p2p' },
     { label: 'Markets', href: '/markets' },
     { label: 'Trade', href: '/trade' },
+    { label: 'Swap', href: '/wallet/convert' },
     { label: 'Earn', href: '/earn' },
-    { label: 'Vault', href: '/vault' },
   ];
 
   return (
@@ -532,7 +772,8 @@ export const TradingScreen: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {navLinks.map((link) => {
             const isActive = location.pathname === link.href ||
-              (link.label === 'Trade' && location.pathname.startsWith('/trade'));
+              (link.label === 'Trade' && location.pathname.startsWith('/trade')) ||
+              (link.label === 'Swap' && location.pathname === '/wallet/convert');
             return (
               <div
                 key={link.label}
@@ -770,13 +1011,7 @@ export const TradingScreen: React.FC = () => {
       </div>
 
       {/* ========== MAIN CONTENT ========== */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        minHeight: 0,
-        borderBottom: `2px solid ${colors.border}`,
-        marginBottom: '0',
-      }}>
+      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
         {/* LEFT: ORDER BOOK */}
         <div style={{
@@ -794,10 +1029,9 @@ export const TradingScreen: React.FC = () => {
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr 1fr',
-            padding: '10px 16px',
-            fontSize: isDark ? '11px' : '13px',
-            fontWeight: isDark ? 500 : 700,
-            color: isDark ? colors.textSecondary : '#000000',
+            padding: '8px 16px',
+            fontSize: '11px',
+            color: colors.textSecondary,
           }}>
             <span>Price({quote})</span>
             <span style={{ textAlign: 'right' }}>Amount({base})</span>
@@ -810,9 +1044,8 @@ export const TradingScreen: React.FC = () => {
               <div key={`ask-${i}`} style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
-                padding: isDark ? '4px 16px' : '6px 16px',
-                fontSize: isDark ? '12px' : '14px',
-                fontWeight: isDark ? 400 : 600,
+                padding: '4px 16px',
+                fontSize: '12px',
                 position: 'relative',
                 cursor: 'pointer',
               }}>
@@ -824,7 +1057,7 @@ export const TradingScreen: React.FC = () => {
                   width: `${(order.total / maxTotal) * 100}%`,
                   background: colors.redBg,
                 }} />
-                <span style={{ color: colors.red, position: 'relative', fontFamily: "'JetBrains Mono', monospace", fontWeight: isDark ? 400 : 700 }}>
+                <span style={{ color: colors.red, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
                   {formatPrice(order.price)}
                 </span>
                 <span style={{ textAlign: 'right', color: colors.text, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -862,9 +1095,8 @@ export const TradingScreen: React.FC = () => {
               <div key={`bid-${i}`} style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
-                padding: isDark ? '4px 16px' : '6px 16px',
-                fontSize: isDark ? '12px' : '14px',
-                fontWeight: isDark ? 400 : 600,
+                padding: '4px 16px',
+                fontSize: '12px',
                 position: 'relative',
                 cursor: 'pointer',
               }}>
@@ -876,7 +1108,7 @@ export const TradingScreen: React.FC = () => {
                   width: `${(order.total / maxTotal) * 100}%`,
                   background: colors.greenBg,
                 }} />
-                <span style={{ color: colors.green, position: 'relative', fontFamily: "'JetBrains Mono', monospace", fontWeight: isDark ? 400 : 700 }}>
+                <span style={{ color: colors.green, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
                   {formatPrice(order.price)}
                 </span>
                 <span style={{ textAlign: 'right', color: colors.text, position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -967,6 +1199,141 @@ export const TradingScreen: React.FC = () => {
                   {type}
                 </button>
               ))}
+            </div>
+
+            {/* Chain Selectors - From and To */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {/* From Chain */}
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <div style={{ fontSize: '11px', color: colors.textSecondary, marginBottom: '4px' }}>
+                    {activeTab === 'buy' ? 'Pay From' : 'Sell From'}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowFromChainDropdown(!showFromChainDropdown);
+                      setShowToChainDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      background: colors.panelBg,
+                      border: `1px solid ${showFromChainDropdown ? (activeTab === 'buy' ? colors.green : colors.red) : colors.border}`,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      color: colors.text,
+                      fontSize: '12px',
+                    }}
+                  >
+                    <span>{availableChains.find(c => c.id === fromChain)?.name || fromChain}</span>
+                    <ChevronDown size={14} color={colors.textSecondary} />
+                  </button>
+                  {showFromChainDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: colors.cardBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '4px',
+                      marginTop: '4px',
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      zIndex: 100,
+                    }}>
+                      {availableChains.map(chain => (
+                        <div
+                          key={chain.id}
+                          onClick={() => {
+                            setFromChain(chain.id);
+                            setShowFromChainDropdown(false);
+                          }}
+                          style={{
+                            padding: '8px 10px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: fromChain === chain.id ? (activeTab === 'buy' ? colors.green : colors.red) : colors.text,
+                            background: fromChain === chain.id ? colors.panelBg : 'transparent',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = colors.panelBg}
+                          onMouseLeave={(e) => e.currentTarget.style.background = fromChain === chain.id ? colors.panelBg : 'transparent'}
+                        >
+                          {chain.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* To Chain */}
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <div style={{ fontSize: '11px', color: colors.textSecondary, marginBottom: '4px' }}>
+                    Receive On
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowToChainDropdown(!showToChainDropdown);
+                      setShowFromChainDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      background: colors.panelBg,
+                      border: `1px solid ${showToChainDropdown ? (activeTab === 'buy' ? colors.green : colors.red) : colors.border}`,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      color: colors.text,
+                      fontSize: '12px',
+                    }}
+                  >
+                    <span>{availableChains.find(c => c.id === toChain)?.name || toChain}</span>
+                    <ChevronDown size={14} color={colors.textSecondary} />
+                  </button>
+                  {showToChainDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: colors.cardBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '4px',
+                      marginTop: '4px',
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      zIndex: 100,
+                    }}>
+                      {availableChains.map(chain => (
+                        <div
+                          key={chain.id}
+                          onClick={() => {
+                            setToChain(chain.id);
+                            setShowToChainDropdown(false);
+                          }}
+                          style={{
+                            padding: '8px 10px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: toChain === chain.id ? (activeTab === 'buy' ? colors.green : colors.red) : colors.text,
+                            background: toChain === chain.id ? colors.panelBg : 'transparent',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = colors.panelBg}
+                          onMouseLeave={(e) => e.currentTarget.style.background = toChain === chain.id ? colors.panelBg : 'transparent'}
+                        >
+                          {chain.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Price Input */}
@@ -1065,10 +1432,122 @@ export const TradingScreen: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span style={{ color: colors.textSecondary }}>Available</span>
                 <span style={{ color: colors.text, fontFamily: "'JetBrains Mono', monospace" }}>
-                  {activeTab === 'buy' ? `${quoteBalance.toFixed(2)} ${quote}` : `${baseBalance.toFixed(6)} ${base}`}
+                  {loadingBalances ? (
+                    <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : tokenManager.isAuthenticated() ? (
+                    activeTab === 'buy' ? `${quoteBalance.toFixed(2)} ${quote}` : `${baseBalance.toFixed(6)} ${base}`
+                  ) : (
+                    <span style={{ color: colors.textSecondary }}>Login to view</span>
+                  )}
                 </span>
               </div>
             </div>
+
+            {/* Order Error */}
+            {orderError && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '10px 12px',
+                background: 'rgba(246, 70, 93, 0.1)',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <AlertCircle size={16} color={colors.red} />
+                <span style={{ color: colors.red, fontSize: '12px', flex: 1 }}>{orderError}</span>
+                <X
+                  size={14}
+                  color={colors.red}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setOrderError(null)}
+                />
+              </div>
+            )}
+
+            {/* Order Success */}
+            {orderSuccess && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '10px 12px',
+                background: 'rgba(14, 203, 129, 0.1)',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <CheckCircle size={16} color={colors.green} />
+                <span style={{ color: colors.green, fontSize: '12px', flex: 1 }}>{orderSuccess}</span>
+                <X
+                  size={14}
+                  color={colors.green}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setOrderSuccess(null)}
+                />
+              </div>
+            )}
+
+            {/* Login Prompt */}
+            {showLoginPrompt && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '12px',
+                background: colors.panelBg,
+                borderRadius: '4px',
+                textAlign: 'center',
+              }}>
+                <p style={{ color: colors.text, fontSize: '13px', marginBottom: '12px' }}>
+                  Please login to start trading
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => navigate('/login')}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: colors.green,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={() => navigate('/register')}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: 'transparent',
+                      color: colors.text,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Register
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowLoginPrompt(false)}
+                  style={{
+                    marginTop: '8px',
+                    background: 'none',
+                    border: 'none',
+                    color: colors.textSecondary,
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
@@ -1094,6 +1573,63 @@ export const TradingScreen: React.FC = () => {
               {loading && <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />}
               {activeTab === 'buy' ? `Buy ${base}` : `Sell ${base}`}
             </button>
+
+            {/* Open Orders Section */}
+            {openOrders.length > 0 && (
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${colors.border}` }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: colors.text, marginBottom: '8px' }}>
+                  Open Orders ({openOrders.length})
+                </div>
+                {openOrders.slice(0, 3).map((order) => (
+                  <div
+                    key={order.orderId}
+                    style={{
+                      padding: '8px',
+                      marginBottom: '6px',
+                      background: colors.panelBg,
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ color: order.side === 'buy' ? colors.green : colors.red, fontWeight: 600 }}>
+                        {order.side.toUpperCase()} {order.baseAsset}
+                      </span>
+                      <X
+                        size={12}
+                        color={colors.textSecondary}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleCancelOrder(order.orderId)}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textSecondary }}>
+                      <span>Price: {order.price}</span>
+                      <span>Amt: {parseFloat(order.amount).toFixed(6)}</span>
+                    </div>
+                    <div style={{
+                      marginTop: '4px',
+                      color: spotTradingService.getStatusDisplay(order.status).color,
+                      fontSize: '10px',
+                    }}>
+                      {spotTradingService.getStatusDisplay(order.status).text}
+                    </div>
+                  </div>
+                ))}
+                {openOrders.length > 3 && (
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: colors.textSecondary,
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => navigate('/wallet/history')}
+                  >
+                    View all {openOrders.length} orders
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Recent Trades */}
@@ -1104,10 +1640,9 @@ export const TradingScreen: React.FC = () => {
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr 1fr',
-              padding: '10px 16px',
-              fontSize: isDark ? '11px' : '13px',
-              fontWeight: isDark ? 500 : 700,
-              color: isDark ? colors.textSecondary : '#000000',
+              padding: '8px 16px',
+              fontSize: '11px',
+              color: colors.textSecondary,
             }}>
               <span>Price({quote})</span>
               <span style={{ textAlign: 'right' }}>Amount({base})</span>
@@ -1118,17 +1653,16 @@ export const TradingScreen: React.FC = () => {
                 <div key={i} style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr 1fr',
-                  padding: isDark ? '4px 16px' : '6px 16px',
-                  fontSize: isDark ? '12px' : '14px',
-                  fontWeight: isDark ? 400 : 600,
+                  padding: '4px 16px',
+                  fontSize: '12px',
                 }}>
-                  <span style={{ color: trade.side === 'buy' ? colors.green : colors.red, fontFamily: "'JetBrains Mono', monospace", fontWeight: isDark ? 400 : 700 }}>
+                  <span style={{ color: trade.side === 'buy' ? colors.green : colors.red, fontFamily: "'JetBrains Mono', monospace" }}>
                     {formatPrice(trade.price)}
                   </span>
                   <span style={{ textAlign: 'right', color: colors.text, fontFamily: "'JetBrains Mono', monospace" }}>
                     {formatAmount(trade.amount)}
                   </span>
-                  <span style={{ textAlign: 'right', color: colors.textSecondary, fontWeight: isDark ? 400 : 600 }}>{trade.time}</span>
+                  <span style={{ textAlign: 'right', color: colors.textSecondary }}>{trade.time}</span>
                 </div>
               ))}
             </div>

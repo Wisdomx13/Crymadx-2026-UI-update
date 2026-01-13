@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Ticket,
@@ -17,10 +17,13 @@ import {
   Shield,
   CreditCard,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { Glass3DCard, Glass3DStat } from '../../components/Glass3D';
 import { ResponsiveLayout } from '../../components';
+import { supportService } from '../../services';
+import { useAuth } from '../../context/AuthContext';
 
 interface TicketItem {
   id: string;
@@ -35,10 +38,59 @@ interface TicketItem {
 
 export const TicketsScreen: React.FC = () => {
   const { colors, isDark } = useThemeMode();
+  const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'resolved'>('all');
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [_isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [tickets, setTickets] = useState<TicketItem[]>([]);
+  const [ticketStats, setTicketStats] = useState({
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+  });
+
+  // New ticket form state
+  const [newTicketSubject, setNewTicketSubject] = useState('');
+  const [newTicketCategory, setNewTicketCategory] = useState('general');
+  const [newTicketMessage, setNewTicketMessage] = useState('');
+  const [newTicketPriority, setNewTicketPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files).filter(file => {
+        // Limit file size to 10MB
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+          return false;
+        }
+        // Check allowed file types
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowedTypes.includes(file.type)) {
+          alert(`File type not allowed for "${file.name}". Allowed: images, PDF, DOC, TXT`);
+          return false;
+        }
+        return true;
+      });
+      setAttachments(prev => [...prev, ...newFiles].slice(0, 5)); // Max 5 files
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Remove attachment
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     const checkScreen = () => setIsMobile(window.innerWidth < 768);
@@ -47,66 +99,92 @@ export const TicketsScreen: React.FC = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Mock tickets data
-  const ticketStats = {
-    total: 5,
-    open: 2,
-    inProgress: 1,
-    resolved: 2,
-  };
+  // Fetch tickets from backend
+  useEffect(() => {
+    const fetchTickets = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
 
-  const tickets: TicketItem[] = [
-    {
-      id: 'TKT-001',
-      subject: 'Withdrawal delay issue',
-      category: 'Withdrawals',
-      status: 'in_progress',
-      priority: 'high',
-      createdAt: '2024-01-15 14:30',
-      updatedAt: '2024-01-16 09:15',
-      messages: 4,
-    },
-    {
-      id: 'TKT-002',
-      subject: 'KYC verification stuck',
-      category: 'Verification',
-      status: 'open',
-      priority: 'medium',
-      createdAt: '2024-01-14 10:00',
-      updatedAt: '2024-01-14 10:00',
-      messages: 1,
-    },
-    {
-      id: 'TKT-003',
-      subject: 'Trading fee question',
-      category: 'Trading',
-      status: 'resolved',
-      priority: 'low',
-      createdAt: '2024-01-10 16:45',
-      updatedAt: '2024-01-12 11:30',
-      messages: 6,
-    },
-    {
-      id: 'TKT-004',
-      subject: '2FA reset request',
-      category: 'Security',
-      status: 'resolved',
-      priority: 'high',
-      createdAt: '2024-01-08 09:20',
-      updatedAt: '2024-01-09 14:00',
-      messages: 3,
-    },
-    {
-      id: 'TKT-005',
-      subject: 'Deposit not credited',
-      category: 'Deposits',
-      status: 'open',
-      priority: 'high',
-      createdAt: '2024-01-16 08:00',
-      updatedAt: '2024-01-16 08:00',
-      messages: 1,
-    },
-  ];
+      setLoading(true);
+      try {
+        const response = await supportService.getTickets();
+        if (response.tickets) {
+          const mappedTickets: TicketItem[] = response.tickets.map((t: any) => ({
+            id: t.id || t.ticketId,
+            subject: t.subject || t.title,
+            category: t.category || 'General',
+            status: t.status || 'open',
+            priority: t.priority || 'medium',
+            createdAt: t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
+            updatedAt: t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '',
+            messages: t.messages || t.messageCount || 0,
+          }));
+          setTickets(mappedTickets);
+        }
+        if (response.stats) {
+          setTicketStats({
+            total: response.stats.total || 0,
+            open: response.stats.open || 0,
+            inProgress: response.stats.inProgress || 0,
+            resolved: response.stats.resolved || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error);
+        // Keep empty array on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, [isAuthenticated]);
+
+  // Handle creating new ticket
+  const handleCreateTicket = async () => {
+    if (!newTicketSubject || !newTicketMessage) return;
+
+    setSubmitting(true);
+    try {
+      await supportService.createTicket({
+        subject: newTicketSubject,
+        category: newTicketCategory,
+        priority: newTicketPriority,
+        message: newTicketMessage,
+      });
+
+      // Refresh tickets
+      const response = await supportService.getTickets();
+      if (response.tickets) {
+        const mappedTickets: TicketItem[] = response.tickets.map((t: any) => ({
+          id: t.id || t.ticketId,
+          subject: t.subject || t.title,
+          category: t.category || 'General',
+          status: t.status || 'open',
+          priority: t.priority || 'medium',
+          createdAt: t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
+          updatedAt: t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '',
+          messages: t.messages || t.messageCount || 0,
+        }));
+        setTickets(mappedTickets);
+      }
+
+      // Reset form and close modal
+      setNewTicketSubject('');
+      setNewTicketCategory('general');
+      setNewTicketMessage('');
+      setNewTicketPriority('medium');
+      setAttachments([]);
+      setShowNewTicket(false);
+    } catch (error) {
+      console.error('Failed to create ticket:', error);
+      alert('Failed to create ticket. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const categories = [
     { id: 'general', label: 'General', icon: <HelpCircle size={18} /> },
@@ -714,16 +792,19 @@ export const TicketsScreen: React.FC = () => {
                         key={cat.id}
                         whileHover={{ borderColor: colors.primary[400] }}
                         whileTap={{ scale: 0.98 }}
+                        onClick={() => setNewTicketCategory(cat.id)}
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           gap: '6px',
                           padding: '12px 8px',
-                          background: 'rgba(0, 255, 170, 0.03)',
-                          border: `1px solid ${colors.glass.border}`,
+                          background: newTicketCategory === cat.id
+                            ? 'rgba(0, 255, 170, 0.15)'
+                            : 'rgba(0, 255, 170, 0.03)',
+                          border: `1px solid ${newTicketCategory === cat.id ? colors.primary[400] : colors.glass.border}`,
                           borderRadius: '10px',
-                          color: colors.text.secondary,
+                          color: newTicketCategory === cat.id ? colors.primary[400] : colors.text.secondary,
                           cursor: 'pointer',
                         }}
                       >
@@ -752,6 +833,8 @@ export const TicketsScreen: React.FC = () => {
                   <input
                     type="text"
                     placeholder="Brief description of your issue"
+                    value={newTicketSubject}
+                    onChange={(e) => setNewTicketSubject(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '10px 14px',
@@ -781,6 +864,8 @@ export const TicketsScreen: React.FC = () => {
                   <textarea
                     placeholder="Provide detailed information about your issue..."
                     rows={4}
+                    value={newTicketMessage}
+                    onChange={(e) => setNewTicketMessage(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '10px 14px',
@@ -797,8 +882,18 @@ export const TicketsScreen: React.FC = () => {
                 </div>
 
                 {/* Attachment */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
                 <motion.button
-                  whileHover={{ borderColor: colors.glass.borderHover }}
+                  type="button"
+                  whileHover={{ borderColor: colors.primary[400], background: 'rgba(0, 255, 170, 0.05)' }}
+                  onClick={() => fileInputRef.current?.click()}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -811,17 +906,72 @@ export const TicketsScreen: React.FC = () => {
                     color: colors.text.tertiary,
                     fontSize: '13px',
                     cursor: 'pointer',
-                    marginBottom: '16px',
+                    marginBottom: attachments.length > 0 ? '8px' : '16px',
                   }}
                 >
                   <Paperclip size={16} />
-                  Attach files (optional)
+                  {attachments.length > 0 ? `Add more files (${attachments.length}/5)` : 'Attach files (optional)'}
                 </motion.button>
+
+                {/* Attached files list */}
+                {attachments.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    {attachments.map((file, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          background: 'rgba(0, 255, 170, 0.05)',
+                          borderRadius: '8px',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                          <Paperclip size={14} color={colors.primary[400]} />
+                          <span style={{
+                            fontSize: '12px',
+                            color: colors.text.secondary,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {file.name}
+                          </span>
+                          <span style={{ fontSize: '11px', color: colors.text.tertiary }}>
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <motion.button
+                          type="button"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => removeAttachment(index)}
+                          style={{
+                            padding: '4px',
+                            background: 'rgba(255, 51, 102, 0.1)',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: colors.status.error,
+                            cursor: 'pointer',
+                            display: 'flex',
+                          }}
+                        >
+                          <X size={12} />
+                        </motion.button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <motion.button
                   whileHover={{ scale: 1.02, boxShadow: colors.shadows.glowLg }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={handleCreateTicket}
+                  disabled={submitting || !newTicketSubject || !newTicketMessage}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -835,12 +985,13 @@ export const TicketsScreen: React.FC = () => {
                     color: colors.background.primary,
                     fontSize: '14px',
                     fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: submitting || !newTicketSubject || !newTicketMessage ? 'not-allowed' : 'pointer',
                     boxShadow: colors.shadows.glow,
+                    opacity: submitting || !newTicketSubject || !newTicketMessage ? 0.6 : 1,
                   }}
                 >
-                  <Send size={16} />
-                  Submit Ticket
+                  {submitting ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} />}
+                  {submitting ? 'Submitting...' : 'Submit Ticket'}
                 </motion.button>
               </div>
             </motion.div>

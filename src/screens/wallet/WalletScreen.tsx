@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -22,11 +22,15 @@ import {
   ChevronLeft,
   ArrowRight,
   Search,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { GlassCard, Button, CryptoIcon, ResponsiveLayout } from '../../components';
 import { usePresentationMode } from '../../components/PresentationMode';
 import { LiquidGlassBackground, LiquidOrb } from '../../components/Glass3D';
+import { balanceService, priceService, savingsService, stakingService } from '../../services';
+import type { WalletType as ServiceWalletType } from '../../services/balanceService';
 
 // Wallet Types
 type WalletType = 'overview' | 'spot' | 'funding' | 'earn';
@@ -34,45 +38,14 @@ type WalletType = 'overview' | 'spot' | 'funding' | 'earn';
 interface WalletAsset {
   symbol: string;
   name: string;
+  chain: string;
   spotAvailable: number;
   spotInOrder: number;
   fundingAvailable: number;
+  earnAvailable: number;
   price: number;
   change: number;
 }
-
-const assets: WalletAsset[] = [
-  { symbol: 'BTC', name: 'Bitcoin', spotAvailable: 0.4234, spotInOrder: 0.0123, fundingAvailable: 0.1, price: 43576, change: 2.34 },
-  { symbol: 'ETH', name: 'Ethereum', spotAvailable: 3.2156, spotInOrder: 0.5, fundingAvailable: 1.0, price: 2345.67, change: -1.25 },
-  { symbol: 'USDT', name: 'Tether', spotAvailable: 4000.00, spotInOrder: 1000, fundingAvailable: 2000, price: 1, change: 0.01 },
-  { symbol: 'SOL', name: 'Solana', spotAvailable: 35.67, spotInOrder: 0, fundingAvailable: 10, price: 98.50, change: 5.67 },
-  { symbol: 'BNB', name: 'BNB', spotAvailable: 10.34, spotInOrder: 2.5, fundingAvailable: 2, price: 305.45, change: -0.89 },
-  { symbol: 'XRP', name: 'Ripple', spotAvailable: 1200, spotInOrder: 0, fundingAvailable: 300, price: 0.52, change: 3.21 },
-  { symbol: 'ADA', name: 'Cardano', spotAvailable: 2000, spotInOrder: 500, fundingAvailable: 500, price: 0.45, change: 1.45 },
-  { symbol: 'DOGE', name: 'Dogecoin', spotAvailable: 8000, spotInOrder: 0, fundingAvailable: 2000, price: 0.082, change: -2.34 },
-  { symbol: 'AVAX', name: 'Avalanche', spotAvailable: 45.23, spotInOrder: 5.5, fundingAvailable: 12, price: 35.67, change: 4.56 },
-  { symbol: 'MATIC', name: 'Polygon', spotAvailable: 3500, spotInOrder: 200, fundingAvailable: 800, price: 0.89, change: 2.12 },
-  { symbol: 'DOT', name: 'Polkadot', spotAvailable: 150.5, spotInOrder: 25, fundingAvailable: 40, price: 7.23, change: -0.45 },
-  { symbol: 'LINK', name: 'Chainlink', spotAvailable: 85.3, spotInOrder: 10, fundingAvailable: 20, price: 14.56, change: 3.78 },
-  { symbol: 'UNI', name: 'Uniswap', spotAvailable: 120, spotInOrder: 0, fundingAvailable: 30, price: 6.89, change: -1.23 },
-  { symbol: 'ATOM', name: 'Cosmos', spotAvailable: 95.7, spotInOrder: 15, fundingAvailable: 25, price: 9.45, change: 1.89 },
-  { symbol: 'LTC', name: 'Litecoin', spotAvailable: 12.34, spotInOrder: 2, fundingAvailable: 5, price: 72.34, change: 0.67 },
-  { symbol: 'NEAR', name: 'NEAR Protocol', spotAvailable: 450, spotInOrder: 50, fundingAvailable: 100, price: 5.23, change: 6.45 },
-  { symbol: 'APT', name: 'Aptos', spotAvailable: 78.9, spotInOrder: 0, fundingAvailable: 20, price: 8.67, change: -2.34 },
-  { symbol: 'ARB', name: 'Arbitrum', spotAvailable: 890, spotInOrder: 100, fundingAvailable: 200, price: 1.12, change: 4.56 },
-  { symbol: 'OP', name: 'Optimism', spotAvailable: 560, spotInOrder: 40, fundingAvailable: 100, price: 2.34, change: 3.21 },
-  { symbol: 'FIL', name: 'Filecoin', spotAvailable: 67.8, spotInOrder: 0, fundingAvailable: 15, price: 5.67, change: -1.45 },
-  { symbol: 'SHIB', name: 'Shiba Inu', spotAvailable: 50000000, spotInOrder: 0, fundingAvailable: 10000000, price: 0.0000089, change: 2.34 },
-  { symbol: 'TRX', name: 'TRON', spotAvailable: 12000, spotInOrder: 1000, fundingAvailable: 3000, price: 0.11, change: 1.23 },
-  { symbol: 'INJ', name: 'Injective', spotAvailable: 23.45, spotInOrder: 5, fundingAvailable: 8, price: 28.90, change: 5.67 },
-  { symbol: 'AAVE', name: 'Aave', spotAvailable: 8.9, spotInOrder: 0, fundingAvailable: 2, price: 92.34, change: 2.89 },
-  { symbol: 'MKR', name: 'Maker', spotAvailable: 1.23, spotInOrder: 0, fundingAvailable: 0.5, price: 1456.78, change: -0.78 },
-  { symbol: 'FTM', name: 'Fantom', spotAvailable: 4500, spotInOrder: 500, fundingAvailable: 1000, price: 0.34, change: 7.89 },
-  { symbol: 'SAND', name: 'The Sandbox', spotAvailable: 2300, spotInOrder: 200, fundingAvailable: 500, price: 0.45, change: -3.21 },
-  { symbol: 'MANA', name: 'Decentraland', spotAvailable: 1800, spotInOrder: 150, fundingAvailable: 400, price: 0.52, change: -2.45 },
-  { symbol: 'IMX', name: 'Immutable X', spotAvailable: 670, spotInOrder: 0, fundingAvailable: 150, price: 1.78, change: 4.23 },
-  { symbol: 'RENDER', name: 'Render', spotAvailable: 145, spotInOrder: 20, fundingAvailable: 35, price: 7.89, change: 8.45 },
-];
 
 // Wallet Tab Button
 const WalletTab: React.FC<{
@@ -92,15 +65,11 @@ const WalletTab: React.FC<{
       flex: 1,
       padding: '16px',
       background: isActive
-        ? isDark
-          ? `linear-gradient(135deg, ${colors.primary[400]}15, ${colors.secondary[400]}10)`
-          : '#f3f4f6'
-        : isDark ? 'transparent' : '#ffffff',
+        ? `linear-gradient(135deg, ${colors.primary[400]}15, ${colors.secondary[400]}10)`
+        : isDark ? 'transparent' : 'rgba(255,255,255,0.4)',
       border: isActive
-        ? isDark
-          ? `1px solid ${colors.primary[400]}40`
-          : '1px solid #000000'
-        : isDark ? `1px solid ${colors.glass.border}` : '1px solid #d1d5db',
+        ? `1px solid ${colors.primary[400]}40`
+        : isDark ? `1px solid ${colors.glass.border}` : '1px solid rgba(255,255,255,0.5)',
       borderRadius: '14px',
       cursor: 'pointer',
       display: 'flex',
@@ -108,7 +77,7 @@ const WalletTab: React.FC<{
       alignItems: 'center',
       gap: '8px',
       transition: 'all 0.2s ease',
-      boxShadow: 'none',
+      boxShadow: isDark ? 'none' : '0 4px 16px rgba(0,0,0,0.1)',
     }}
   >
     <div style={{
@@ -116,21 +85,19 @@ const WalletTab: React.FC<{
       height: '44px',
       borderRadius: '12px',
       background: isActive
-        ? isDark
-          ? `linear-gradient(135deg, ${colors.primary[400]}25, ${colors.secondary[400]}15)`
-          : '#e5e7eb'
-        : isDark ? colors.background.card : '#f9fafb',
+        ? `linear-gradient(135deg, ${colors.primary[400]}25, ${colors.secondary[400]}15)`
+        : isDark ? colors.background.card : 'rgba(255,255,255,0.5)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: isActive ? (isDark ? colors.primary[400] : '#000000') : (isDark ? colors.text.tertiary : '#374151'),
+      color: isActive ? colors.primary[400] : (isDark ? colors.text.tertiary : '#374151'),
     }}>
       {icon}
     </div>
     <span style={{
       fontSize: '13px',
       fontWeight: 700,
-      color: isDark ? (isActive ? colors.text.primary : colors.text.tertiary) : (isActive ? '#000000' : '#374151'),
+      color: isDark ? (isActive ? colors.text.primary : colors.text.tertiary) : (isActive ? '#059669' : '#1f2937'),
     }}>
       {label}
     </span>
@@ -138,7 +105,7 @@ const WalletTab: React.FC<{
       fontSize: '15px',
       fontWeight: 700,
       fontFamily: "'JetBrains Mono', monospace",
-      color: isDark ? (isActive ? colors.primary[400] : colors.text.secondary) : '#000000',
+      color: isDark ? (isActive ? colors.primary[400] : colors.text.secondary) : (isActive ? '#059669' : '#059669'),
     }}>
       {balance}
     </span>
@@ -160,8 +127,164 @@ export const WalletScreen: React.FC = () => {
   const [transferDirection, setTransferDirection] = useState<'spot-to-funding' | 'funding-to-spot'>('spot-to-funding');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferSuccess, setTransferSuccess] = useState(false);
+  const [showAssetPicker, setShowAssetPicker] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = isMobile ? 6 : 8;
+
+  // Data loading state
+  const [assets, setAssets] = useState<WalletAsset[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [btcPrice, setBtcPrice] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [earnTotal, setEarnTotal] = useState(0);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+
+  // Fetch balances and prices
+  const fetchData = useCallback(async (showRefreshing = false) => {
+    if (showRefreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError(null);
+
+    try {
+      // Fetch all data in parallel: wallet summary, prices, savings stats, staking stats
+      const [walletSummary, pricesData, savingsStats, stakingStats] = await Promise.all([
+        balanceService.getWalletSummary(),
+        priceService.getAllPrices(),
+        savingsService.getStats().catch(() => ({ totalDeposited: '0', totalInterestEarned: '0' })),
+        stakingService.getStats().catch(() => ({ totalStaked: 0, totalRewards: 0 })),
+      ]);
+
+      // Build prices lookup from Record<symbol, PriceData>
+      const pricesMap: Record<string, { price: number; change24h: number }> = {};
+      Object.entries(pricesData).forEach(([symbol, data]) => {
+        pricesMap[symbol.toUpperCase()] = {
+          price: data.usd || 0,
+          change24h: data.change24h || 0,
+        };
+      });
+
+      // Ensure stablecoins always have price = 1 even if API fails
+      if (!pricesMap['USDC'] || pricesMap['USDC'].price === 0) {
+        pricesMap['USDC'] = { price: 1, change24h: 0 };
+      }
+      if (!pricesMap['USDT'] || pricesMap['USDT'].price === 0) {
+        pricesMap['USDT'] = { price: 1, change24h: 0 };
+      }
+      if (!pricesMap['DAI'] || pricesMap['DAI'].price === 0) {
+        pricesMap['DAI'] = { price: 1, change24h: 0 };
+      }
+
+      // Get BTC price for conversion
+      const btc = pricesMap['BTC'];
+      if (btc) {
+        setBtcPrice(btc.price);
+      }
+
+      // Calculate earn total from savings + staking
+      const savingsTotal = parseFloat(savingsStats?.totalDeposited || '0') + parseFloat(savingsStats?.totalInterestEarned || '0');
+      const stakingTotal = (stakingStats?.totalStaked || 0) + (stakingStats?.totalRewards || 0);
+      setEarnTotal(savingsTotal + stakingTotal);
+
+      // Group balances by chain+token and merge wallet types
+      const balanceMap = new Map<string, WalletAsset>();
+
+      // Process all balances from summary
+      (walletSummary.balances || []).forEach((bal) => {
+        const key = `${bal.chain.toUpperCase()}-${bal.token.toUpperCase()}`;
+        const existing = balanceMap.get(key);
+        const priceInfo = pricesMap[bal.token.toUpperCase()] || { price: 0, change24h: 0 };
+        const balanceNum = parseFloat(bal.balance) || 0;
+
+        if (existing) {
+          // Add to existing asset
+          if (bal.walletType === 'spot') {
+            existing.spotAvailable = balanceNum;
+          } else if (bal.walletType === 'funding') {
+            existing.fundingAvailable = balanceNum;
+          } else if (bal.walletType === 'earn') {
+            existing.earnAvailable = balanceNum;
+          }
+          // Update price if we have a better value
+          if (priceInfo.price > 0 && existing.price === 0) {
+            existing.price = priceInfo.price;
+            existing.change = priceInfo.change24h;
+          }
+        } else {
+          // Create new asset entry
+          balanceMap.set(key, {
+            symbol: bal.token,
+            name: bal.token, // Will be updated from config
+            chain: bal.chain,
+            spotAvailable: bal.walletType === 'spot' ? balanceNum : 0,
+            spotInOrder: 0,
+            fundingAvailable: bal.walletType === 'funding' ? balanceNum : 0,
+            earnAvailable: bal.walletType === 'earn' ? balanceNum : 0,
+            price: priceInfo.price,
+            change: priceInfo.change24h,
+          });
+        }
+      });
+
+      // Also fetch basic balances to ensure we have all assets
+      const basicBalances = await balanceService.getAllBalances();
+      basicBalances.forEach((balance) => {
+        const key = `${(balance.chain || '').toUpperCase()}-${balance.currency.toUpperCase()}`;
+        const priceInfo = pricesMap[balance.currency.toUpperCase()] || { price: 0, change24h: 0 };
+
+        const balanceNum = parseFloat(balance.available) || 0;
+        const walletType = balance.walletType || 'spot';
+
+        if (!balanceMap.has(key)) {
+          balanceMap.set(key, {
+            symbol: balance.currency,
+            name: balance.name || balance.currency,
+            chain: balance.chain || 'Unknown',
+            spotAvailable: walletType === 'spot' ? balanceNum : 0,
+            spotInOrder: parseFloat(balance.locked) || 0,
+            fundingAvailable: walletType === 'funding' ? balanceNum : 0,
+            earnAvailable: walletType === 'earn' ? balanceNum : 0,
+            price: priceInfo.price,
+            change: priceInfo.change24h,
+          });
+        } else {
+          // Update name from config and merge balances by wallet type
+          const existing = balanceMap.get(key)!;
+          existing.name = balance.name || existing.symbol;
+          // Update the correct wallet type balance if not already set
+          if (walletType === 'spot' && existing.spotAvailable === 0) {
+            existing.spotAvailable = balanceNum;
+          } else if (walletType === 'funding' && existing.fundingAvailable === 0) {
+            existing.fundingAvailable = balanceNum;
+          } else if (walletType === 'earn' && existing.earnAvailable === 0) {
+            existing.earnAvailable = balanceNum;
+          }
+          // Update price if we have a better value
+          if (priceInfo.price > 0 && existing.price === 0) {
+            existing.price = priceInfo.price;
+            existing.change = priceInfo.change24h;
+          }
+        }
+      });
+
+      setAssets(Array.from(balanceMap.values()));
+    } catch (err: any) {
+      console.error('Error fetching wallet data:', err);
+      setError(err.message || 'Failed to load wallet data');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Calculate totals
   const spotTotal = assets.reduce((sum, asset) => {
@@ -173,7 +296,7 @@ export const WalletScreen: React.FC = () => {
   }, 0);
 
   const totalBalance = spotTotal + fundingTotal;
-  const btcEquivalent = totalBalance / 43576;
+  const btcEquivalent = btcPrice > 0 ? totalBalance / btcPrice : 0;
 
   // Filter assets based on active wallet and search
   const filteredAssets = assets.filter(asset => {
@@ -201,16 +324,43 @@ export const WalletScreen: React.FC = () => {
     setCurrentPage(1);
   }, [searchQuery, hideZeroBalances, activeWallet]);
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!transferAsset || !transferAmount) return;
-    // Simulate transfer
-    setTransferSuccess(true);
-    setTimeout(() => {
-      setShowTransferModal(false);
-      setTransferSuccess(false);
-      setTransferAmount('');
-      setTransferAsset(null);
-    }, 2000);
+
+    setIsTransferring(true);
+    setTransferError(null);
+
+    try {
+      const fromWallet: ServiceWalletType = transferDirection === 'spot-to-funding' ? 'spot' : 'funding';
+      const toWallet: ServiceWalletType = transferDirection === 'spot-to-funding' ? 'funding' : 'spot';
+
+      const result = await balanceService.transfer({
+        fromWallet,
+        toWallet,
+        chain: transferAsset.chain,
+        token: transferAsset.symbol,
+        amount: transferAmount,
+      });
+
+      if (result.success) {
+        setTransferSuccess(true);
+        // Refresh balances
+        setTimeout(async () => {
+          await fetchData(true);
+          setShowTransferModal(false);
+          setTransferSuccess(false);
+          setTransferAmount('');
+          setTransferAsset(null);
+        }, 2000);
+      } else {
+        setTransferError(result.error || 'Transfer failed');
+      }
+    } catch (err: any) {
+      console.error('Transfer error:', err);
+      setTransferError(err.message || 'Transfer failed');
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   const getMaxTransferAmount = () => {
@@ -222,31 +372,27 @@ export const WalletScreen: React.FC = () => {
 
   return (
     <ResponsiveLayout activeNav="wallet" title="Wallet">
-      {/* Premium Liquid Glass Background - Dark mode only */}
-      {isDark && (
-        <>
-          <LiquidGlassBackground
-            intensity="low"
-            showOrbs={true}
-            showRings={false}
-            showCubes={false}
-          />
-          <LiquidOrb
-            size={170}
-            color="gold"
-            style={{ position: 'fixed', top: '8%', right: '-5%', zIndex: 0 }}
-            delay={0}
-            duration={12}
-          />
-          <LiquidOrb
-            size={140}
-            color="green"
-            style={{ position: 'fixed', bottom: '15%', left: '-4%', zIndex: 0 }}
-            delay={3}
-            duration={14}
-          />
-        </>
-      )}
+      {/* Premium Liquid Glass Background */}
+      <LiquidGlassBackground
+        intensity="low"
+        showOrbs={true}
+        showRings={false}
+        showCubes={false}
+      />
+      <LiquidOrb
+        size={170}
+        color="gold"
+        style={{ position: 'fixed', top: '8%', right: '-5%', zIndex: 0 }}
+        delay={0}
+        duration={12}
+      />
+      <LiquidOrb
+        size={140}
+        color="green"
+        style={{ position: 'fixed', bottom: '15%', left: '-4%', zIndex: 0 }}
+        delay={3}
+        duration={14}
+      />
 
       {/* Page Header */}
       <motion.div
@@ -265,11 +411,12 @@ export const WalletScreen: React.FC = () => {
           <h1 style={{
             fontSize: isMobile ? '24px' : '32px',
             fontWeight: 800,
-            color: isDark ? colors.text.primary : '#000000',
+            color: isDark ? colors.text.primary : '#ffffff',
             marginBottom: '8px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
+            textShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.3)',
           }}>
             <motion.div
               animate={{ rotate: [0, 10, 0] }}
@@ -290,14 +437,42 @@ export const WalletScreen: React.FC = () => {
           </h1>
           <p style={{
             fontSize: isMobile ? '14px' : '15px',
-            color: isDark ? colors.text.tertiary : '#374151',
+            color: isDark ? colors.text.tertiary : '#ffffff',
             fontWeight: 600,
+            textShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.5)',
           }}>
             Manage your Spot & Funding wallets
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => fetchData(true)}
+            disabled={isRefreshing}
+            style={{
+              padding: isMobile ? '8px' : '10px 14px',
+              background: colors.background.card,
+              border: `1px solid ${colors.glass.border}`,
+              borderRadius: '10px',
+              cursor: isRefreshing ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: colors.text.secondary,
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
+          >
+            <motion.div
+              animate={isRefreshing ? { rotate: 360 } : {}}
+              transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: 'linear' }}
+            >
+              <RefreshCw size={18} />
+            </motion.div>
+            {!isMobile && 'Refresh'}
+          </motion.button>
           <Button
             variant="secondary"
             size={isMobile ? 'sm' : 'md'}
@@ -325,7 +500,83 @@ export const WalletScreen: React.FC = () => {
         </div>
       </motion.div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+          }}
+        >
+          <GlassCard padding="lg" style={{ textAlign: 'center' }}>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              style={{ marginBottom: '16px' }}
+            >
+              <Loader2 size={40} color={colors.primary[400]} />
+            </motion.div>
+            <p style={{ color: colors.text.secondary, fontSize: '15px' }}>
+              Loading your wallet...
+            </p>
+          </GlassCard>
+        </motion.div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ marginBottom: '24px' }}
+        >
+          <GlassCard padding="lg">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              padding: '16px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: '12px',
+            }}>
+              <AlertCircle size={24} color={colors.status.error} />
+              <div style={{ flex: 1 }}>
+                <h4 style={{
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  color: colors.text.primary,
+                  marginBottom: '4px',
+                }}>
+                  Failed to load wallet data
+                </h4>
+                <p style={{
+                  fontSize: '13px',
+                  color: colors.text.tertiary,
+                }}>
+                  {error}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => fetchData()}
+                leftIcon={<RefreshCw size={16} />}
+              >
+                Retry
+              </Button>
+            </div>
+          </GlassCard>
+        </motion.div>
+      )}
+
       {/* Total Balance Card */}
+      {!isLoading && (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -405,13 +656,21 @@ export const WalletScreen: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            {!isMobile && (
+            {!isMobile && assets.length > 0 && (
               <div style={{ display: 'flex', gap: '10px' }}>
                 <motion.button
                   whileHover={{ scale: 1.02, boxShadow: `0 4px 20px ${colors.primary[400]}30` }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    setTransferAsset(assets[2]); // Default to USDT
+                    // Find asset with balance, preferring funding wallet first
+                    const fundingAsset = assets.find(a => a.fundingAvailable > 0);
+                    const spotAsset = assets.find(a => a.spotAvailable > 0);
+                    const selectedAsset = fundingAsset || spotAsset || assets.find(a => a.symbol === 'USDT') || assets[0];
+                    setTransferAsset(selectedAsset);
+                    // Set direction based on where balance is
+                    setTransferDirection(fundingAsset ? 'funding-to-spot' : 'spot-to-funding');
+                    setShowAssetPicker(false);
+                    setTransferAmount('');
                     setShowTransferModal(true);
                   }}
                   style={{
@@ -494,23 +753,32 @@ export const WalletScreen: React.FC = () => {
               icon={<Gift size={20} />}
               isActive={activeWallet === 'earn'}
               onClick={() => setActiveWallet('earn')}
-              balance={hideBalances ? '••••' : '$0.00'}
+              balance={hideBalances ? '••••' : `$${earnTotal.toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
               colors={colors}
               isDark={isDark}
             />
           </div>
         </GlassCard>
       </motion.div>
+      )}
 
       {/* Mobile Transfer Button */}
-      {isMobile && (
+      {isMobile && !isLoading && assets.length > 0 && (
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => {
-            setTransferAsset(assets[2]);
+            // Find asset with balance, preferring funding wallet first
+            const fundingAsset = assets.find(a => a.fundingAvailable > 0);
+            const spotAsset = assets.find(a => a.spotAvailable > 0);
+            const selectedAsset = fundingAsset || spotAsset || assets.find(a => a.symbol === 'USDT') || assets[0];
+            setTransferAsset(selectedAsset);
+            // Set direction based on where balance is
+            setTransferDirection(fundingAsset ? 'funding-to-spot' : 'spot-to-funding');
+            setShowAssetPicker(false);
+            setTransferAmount('');
             setShowTransferModal(true);
           }}
           style={{
@@ -536,6 +804,7 @@ export const WalletScreen: React.FC = () => {
       )}
 
       {/* Assets Table */}
+      {!isLoading && (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -626,9 +895,10 @@ export const WalletScreen: React.FC = () => {
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: activeWallet === 'overview'
-                  ? '2fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr 120px'
-                  : '2fr 1.5fr 1.5fr 1.5fr 120px',
-                padding: '14px 20px',
+                  ? '2fr 1fr 1fr 1fr 1fr 1.5fr 90px'
+                  : '2fr 1fr 1fr 1.5fr 90px',
+                gap: '24px',
+                padding: '14px 24px',
                 background: colors.background.card,
                 borderBottom: `1px solid ${colors.glass.border}`,
                 fontSize: '12px',
@@ -640,8 +910,8 @@ export const WalletScreen: React.FC = () => {
                 <span>Asset</span>
                 {activeWallet === 'overview' ? (
                   <>
-                    <span style={{ textAlign: 'right' }}>Spot Available</span>
-                    <span style={{ textAlign: 'right' }}>Spot In Order</span>
+                    <span style={{ textAlign: 'right' }}>Available</span>
+                    <span style={{ textAlign: 'right' }}>In Order</span>
                     <span style={{ textAlign: 'right' }}>Funding</span>
                     <span style={{ textAlign: 'right' }}>Total</span>
                     <span style={{ textAlign: 'right' }}>USD Value</span>
@@ -679,9 +949,10 @@ export const WalletScreen: React.FC = () => {
                   style={{
                     display: isMobile ? 'block' : 'grid',
                     gridTemplateColumns: activeWallet === 'overview'
-                      ? '2fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr 120px'
-                      : '2fr 1.5fr 1.5fr 1.5fr 120px',
-                    padding: isMobile ? '14px' : '16px 20px',
+                      ? '2fr 1fr 1fr 1fr 1fr 1.5fr 90px'
+                      : '2fr 1fr 1fr 1.5fr 90px',
+                    gap: '24px',
+                    padding: isMobile ? '14px' : '16px 24px',
                     borderBottom: index < paginatedAssets.length - 1 ? `1px solid ${colors.glass.border}` : 'none',
                     cursor: 'pointer',
                     transition: 'background 0.2s ease',
@@ -729,7 +1000,7 @@ export const WalletScreen: React.FC = () => {
                           gap: '2px',
                         }}>
                           {asset.change >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                          {asset.change >= 0 ? '+' : ''}{asset.change}%
+                          {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
                         </div>
                       </div>
                     )}
@@ -795,7 +1066,7 @@ export const WalletScreen: React.FC = () => {
                               gap: '2px',
                             }}>
                               {asset.change >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                              {asset.change >= 0 ? '+' : ''}{asset.change}%
+                              {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
                             </div>
                           </div>
                         </>
@@ -862,7 +1133,7 @@ export const WalletScreen: React.FC = () => {
                             gap: '4px',
                           }}>
                             {asset.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                            {asset.change >= 0 ? '+' : ''}{asset.change}%
+                            {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
                           </div>
                         </>
                       )}
@@ -879,6 +1150,10 @@ export const WalletScreen: React.FC = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             setTransferAsset(asset);
+                            // Set direction based on where this asset's balance is
+                            setTransferDirection(asset.fundingAvailable > 0 ? 'funding-to-spot' : 'spot-to-funding');
+                            setShowAssetPicker(false);
+                            setTransferAmount('');
                             setShowTransferModal(true);
                           }}
                           style={{
@@ -929,6 +1204,10 @@ export const WalletScreen: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setTransferAsset(asset);
+                          // Set direction based on where this asset's balance is
+                          setTransferDirection(asset.fundingAvailable > 0 ? 'funding-to-spot' : 'spot-to-funding');
+                          setShowAssetPicker(false);
+                          setTransferAmount('');
                           setShowTransferModal(true);
                         }}
                         style={{
@@ -1101,6 +1380,7 @@ export const WalletScreen: React.FC = () => {
           )}
         </GlassCard>
       </motion.div>
+      )}
 
       {/* Transfer Modal */}
       <AnimatePresence>
@@ -1313,7 +1593,7 @@ export const WalletScreen: React.FC = () => {
                   </div>
 
                   {/* Asset Selection */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div style={{ marginBottom: '20px', position: 'relative' }}>
                     <label style={{
                       display: 'block',
                       fontSize: '12px',
@@ -1325,15 +1605,21 @@ export const WalletScreen: React.FC = () => {
                     }}>
                       Asset
                     </label>
-                    <div style={{
-                      padding: '14px 16px',
-                      background: colors.background.card,
-                      border: `1px solid ${colors.glass.border}`,
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}>
+                    <motion.div
+                      whileHover={{ borderColor: colors.primary[400] }}
+                      onClick={() => setShowAssetPicker(!showAssetPicker)}
+                      style={{
+                        padding: '14px 16px',
+                        background: colors.background.card,
+                        border: `1px solid ${showAssetPicker ? colors.primary[400] : colors.glass.border}`,
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        transition: 'border-color 0.2s ease',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <CryptoIcon symbol={transferAsset.symbol} size={32} />
                         <div>
@@ -1345,8 +1631,105 @@ export const WalletScreen: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <ChevronRight size={18} color={colors.text.tertiary} />
-                    </div>
+                      <motion.div
+                        animate={{ rotate: showAssetPicker ? 90 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronRight size={18} color={colors.text.tertiary} />
+                      </motion.div>
+                    </motion.div>
+
+                    {/* Asset Picker Dropdown */}
+                    <AnimatePresence>
+                      {showAssetPicker && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10, height: 0 }}
+                          animate={{ opacity: 1, y: 0, height: 'auto' }}
+                          exit={{ opacity: 0, y: -10, height: 0 }}
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: '8px',
+                            background: isDark ? 'rgba(15, 25, 20, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                            border: `1px solid ${colors.glass.border}`,
+                            borderRadius: '12px',
+                            maxHeight: '250px',
+                            overflowY: 'auto',
+                            zIndex: 100,
+                            boxShadow: `0 10px 40px rgba(0, 0, 0, 0.3)`,
+                          }}
+                        >
+                          {assets
+                            .filter(a => {
+                              // Show assets with balance in the source wallet
+                              const sourceBalance = transferDirection === 'spot-to-funding'
+                                ? a.spotAvailable
+                                : a.fundingAvailable;
+                              return sourceBalance > 0 || a.symbol === transferAsset.symbol;
+                            })
+                            .map((asset) => {
+                              const sourceBalance = transferDirection === 'spot-to-funding'
+                                ? asset.spotAvailable
+                                : asset.fundingAvailable;
+                              return (
+                                <motion.div
+                                  key={`${asset.chain}-${asset.symbol}`}
+                                  whileHover={{ background: `${colors.primary[400]}10` }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTransferAsset(asset);
+                                    setTransferAmount('');
+                                    setShowAssetPicker(false);
+                                  }}
+                                  style={{
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer',
+                                    borderBottom: `1px solid ${colors.glass.border}`,
+                                    background: asset.symbol === transferAsset.symbol ? `${colors.primary[400]}15` : 'transparent',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <CryptoIcon symbol={asset.symbol} size={28} />
+                                    <div>
+                                      <span style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary }}>
+                                        {asset.symbol}
+                                      </span>
+                                      <span style={{ fontSize: '11px', color: colors.text.tertiary, marginLeft: '6px' }}>
+                                        {asset.name}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div style={{ textAlign: 'right' }}>
+                                    <span style={{
+                                      fontSize: '13px',
+                                      fontWeight: 600,
+                                      color: sourceBalance > 0 ? colors.text.primary : colors.text.tertiary,
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                    }}>
+                                      {sourceBalance.toLocaleString()}
+                                    </span>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          {assets.filter(a => {
+                            const sourceBalance = transferDirection === 'spot-to-funding'
+                              ? a.spotAvailable
+                              : a.fundingAvailable;
+                            return sourceBalance > 0 || a.symbol === transferAsset.symbol;
+                          }).length === 0 && (
+                            <div style={{ padding: '20px', textAlign: 'center', color: colors.text.tertiary }}>
+                              No assets with balance in {transferDirection === 'spot-to-funding' ? 'Spot' : 'Funding'} wallet
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Amount Input */}
@@ -1417,19 +1800,38 @@ export const WalletScreen: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Transfer Error */}
+                  {transferError && (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '10px',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }}>
+                      <AlertCircle size={18} color={colors.status.error} />
+                      <span style={{ fontSize: '13px', color: colors.status.error }}>
+                        {transferError}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Transfer Button */}
                   <motion.button
                     whileHover={{ scale: 1.02, boxShadow: `0 4px 20px ${colors.primary[400]}40` }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleTransfer}
-                    disabled={!transferAmount || parseFloat(transferAmount) <= 0 || parseFloat(transferAmount) > getMaxTransferAmount()}
+                    disabled={isTransferring || !transferAmount || parseFloat(transferAmount) <= 0 || parseFloat(transferAmount) > getMaxTransferAmount()}
                     style={{
                       width: '100%',
                       padding: '16px',
                       background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})`,
                       border: 'none',
                       borderRadius: '12px',
-                      cursor: 'pointer',
+                      cursor: isTransferring ? 'not-allowed' : 'pointer',
                       color: '#0a0e14',
                       fontSize: '15px',
                       fontWeight: 700,
@@ -1437,11 +1839,25 @@ export const WalletScreen: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      opacity: (!transferAmount || parseFloat(transferAmount) <= 0 || parseFloat(transferAmount) > getMaxTransferAmount()) ? 0.5 : 1,
+                      opacity: (isTransferring || !transferAmount || parseFloat(transferAmount) <= 0 || parseFloat(transferAmount) > getMaxTransferAmount()) ? 0.5 : 1,
                     }}
                   >
-                    <ArrowRightLeft size={18} />
-                    Confirm Transfer
+                    {isTransferring ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        >
+                          <Loader2 size={18} />
+                        </motion.div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRightLeft size={18} />
+                        Confirm Transfer
+                      </>
+                    )}
                   </motion.button>
                 </>
               )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -24,11 +24,15 @@ import {
   QrCode,
   CheckCircle,
   XCircle,
+  Loader2,
 } from 'lucide-react';
-import { CryptoIcon, ResponsiveLayout, GlassCard, Button } from '../../components';
+import { CryptoIcon, ResponsiveLayout, GlassCard, Button, VerificationBanner } from '../../components';
 import { usePresentationMode } from '../../components/PresentationMode';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { LiquidGlassBackground } from '../../components/Glass3D';
+import { balanceService, priceService, portfolioService } from '../../services';
+import type { Balance } from '../../services/balanceService';
+import { useAuth } from '../../context/AuthContext';
 
 // Premium liquid shimmer effect for cards - enhanced for both modes
 const LiquidShimmer: React.FC<{ isDark?: boolean }> = ({ isDark = true }) => {
@@ -61,7 +65,7 @@ const LiquidShimmer: React.FC<{ isDark?: boolean }> = ({ isDark = true }) => {
 };
 
 // Premium liquid wave for card backgrounds - enhanced for light mode
-const LiquidWave: React.FC<{ delay?: number; color?: string; isDark?: boolean }> = ({ delay = 0, color = 'rgba(0, 210, 106, 0.06)', isDark = true }) => {
+const LiquidWave: React.FC<{ delay?: number; color?: string; isDark?: boolean }> = ({ delay = 0, color = 'rgba(2, 192, 118, 0.06)', isDark = true }) => {
   const lightColor = color.includes('118') ? 'rgba(16, 185, 129, 0.04)' : 'rgba(14, 165, 233, 0.03)';
 
   return (
@@ -237,12 +241,122 @@ export const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
   const { isMobile } = usePresentationMode();
   const { mode, colors } = useThemeMode();
+  const { isAuthenticated, user } = useAuth();
   const [hideBalance, setHideBalance] = useState(false);
 
-  // Quick Stats Data - inside component to use theme colors
+  // Real data state
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [btcEquivalent, setBtcEquivalent] = useState<string>('0.00000000');
+  const [totalAssets, setTotalAssets] = useState<number>(0);
+  const [dailyPnl, setDailyPnl] = useState<{ value: number; percentage: number }>({ value: 0, percentage: 0 });
+  const [isLoadingPortfolio, setIsLoadingPortfolio] = useState(true);
+  const [liveMarkets, setLiveMarkets] = useState<typeof marketsData>([]);
+  const [isLoadingMarkets, setIsLoadingMarkets] = useState(true);
+
+  // Fetch portfolio data
+  const fetchPortfolioData = useCallback(async () => {
+    if (!isAuthenticated) {
+      setIsLoadingPortfolio(false);
+      return;
+    }
+
+    setIsLoadingPortfolio(true);
+    try {
+      const [balances, prices] = await Promise.all([
+        balanceService.getAllBalances(),
+        priceService.getAllPrices(),
+      ]);
+
+      // Calculate total balance in USD
+      let total = 0;
+      let assetsCount = 0;
+
+      balances.forEach((balance: Balance) => {
+        const symbol = balance.currency.toUpperCase();
+        const available = parseFloat(balance.available) + parseFloat(balance.locked || '0');
+        if (available > 0) {
+          assetsCount++;
+          const price = prices[symbol]?.usd || 0;
+          total += available * price;
+        }
+      });
+
+      setTotalBalance(total);
+      setTotalAssets(assetsCount);
+
+      // Calculate BTC equivalent
+      const btcPrice = prices['BTC']?.usd || 43000;
+      const btcEquiv = total / btcPrice;
+      setBtcEquivalent(btcEquiv.toFixed(8));
+
+      // Try to get portfolio performance (PnL)
+      try {
+        const { portfolio } = await portfolioService.getOverview();
+        if (portfolio?.change24h !== undefined) {
+          setDailyPnl({
+            value: parseFloat(portfolio.change24h) || 0,
+            percentage: portfolio.change24hPercent || 0,
+          });
+        }
+      } catch {
+        // PnL not available, use defaults
+      }
+    } catch (err) {
+      console.error('Error fetching portfolio:', err);
+    } finally {
+      setIsLoadingPortfolio(false);
+    }
+  }, [isAuthenticated]);
+
+  // Fetch live market data from backend price service
+  const fetchLiveMarkets = useCallback(async () => {
+    setIsLoadingMarkets(true);
+    try {
+      const prices = await priceService.getAllPrices();
+      const backendMarkets = Object.entries(prices).map(([symbol, data]) => {
+        const marketInfo = marketsData.find(m => m.symbol === symbol) || { name: symbol };
+        return {
+          symbol,
+          name: marketInfo.name,
+          pair: `${symbol}/USDT`,
+          price: data.usd,
+          change24h: data.change24h,
+          volume: formatVolume(data.volume24h || 0),
+          high24h: data.high24h || data.usd * 1.02,
+          low24h: data.low24h || data.usd * 0.98,
+        };
+      });
+      setLiveMarkets(backendMarkets.length > 0 ? backendMarkets : marketsData);
+    } catch (err) {
+      console.error('Error fetching prices:', err);
+      setLiveMarkets(marketsData);
+    } finally {
+      setIsLoadingMarkets(false);
+    }
+  }, []);
+
+  // Format volume helper
+  const formatVolume = (volume: number): string => {
+    if (volume >= 1e9) return `${(volume / 1e9).toFixed(1)}B`;
+    if (volume >= 1e6) return `${(volume / 1e6).toFixed(0)}M`;
+    if (volume >= 1e3) return `${(volume / 1e3).toFixed(0)}K`;
+    return volume.toFixed(0);
+  };
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchPortfolioData();
+    fetchLiveMarkets();
+
+    // Refresh markets every 30 seconds
+    const marketInterval = setInterval(fetchLiveMarkets, 30000);
+    return () => clearInterval(marketInterval);
+  }, [fetchPortfolioData, fetchLiveMarkets]);
+
+  // Quick Stats Data - using real data
   const quickStats = [
-    { label: 'Total Assets', value: '12', icon: <Wallet size={18} />, color: colors.primary[400] },
-    { label: "Today's PNL", value: '$0.00', icon: <TrendingUp size={18} />, color: colors.trading.buy, subValue: '+0.00%' },
+    { label: 'Total Assets', value: isLoadingPortfolio ? '...' : totalAssets.toString(), icon: <Wallet size={18} />, color: colors.primary[400] },
+    { label: "Today's PNL", value: isLoadingPortfolio ? '...' : `$${dailyPnl.value.toFixed(2)}`, icon: dailyPnl.value >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />, color: dailyPnl.value >= 0 ? colors.trading.buy : colors.trading.sell, subValue: `${dailyPnl.percentage >= 0 ? '+' : ''}${dailyPnl.percentage.toFixed(2)}%` },
     { label: 'Open Orders', value: '0', icon: <RefreshCw size={18} />, color: colors.secondary[400] },
   ];
   const [searchQuery, setSearchQuery] = useState('');
@@ -284,25 +398,28 @@ export const DashboardScreen: React.FC = () => {
 
   const isDark = mode === 'dark';
 
-  // Theme-aware liquid colors - Pure white for light mode
+  // Theme-aware liquid colors - Premium frosted glass for light mode
   const liquidColors = {
-    primary: isDark ? 'rgba(0, 210, 106, 0.08)' : 'transparent',
-    secondary: isDark ? 'rgba(0, 210, 106, 0.06)' : 'transparent',
-    gold: isDark ? 'rgba(240, 185, 11, 0.05)' : 'transparent',
-    shimmer: isDark ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
-    // Light mode card backgrounds - plain white with black border
+    primary: isDark ? 'rgba(2, 192, 118, 0.08)' : 'rgba(16, 185, 129, 0.06)',
+    secondary: isDark ? 'rgba(0, 212, 170, 0.06)' : 'rgba(14, 165, 233, 0.05)',
+    gold: isDark ? 'rgba(240, 185, 11, 0.05)' : 'rgba(245, 158, 11, 0.05)',
+    shimmer: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(16, 185, 129, 0.08)',
+    // Light mode card backgrounds
     cardBg: isDark
       ? colors.background.card
-      : '#ffffff',
+      : 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,255,252,0.9) 100%)',
     cardBorder: isDark
       ? colors.glass.border
-      : '#000000',
+      : 'rgba(16, 185, 129, 0.12)',
     cardShadow: isDark
       ? 'none'
-      : '0 1px 3px rgba(0,0,0,0.05)',
+      : '0 4px 20px rgba(16, 185, 129, 0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
   };
 
-  const filteredMarkets = marketsData.filter(
+  // Use live markets if available, fallback to mock data
+  const currentMarkets = liveMarkets.length > 0 ? liveMarkets : marketsData;
+
+  const filteredMarkets = currentMarkets.filter(
     (market) =>
       market.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       market.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -317,7 +434,7 @@ export const DashboardScreen: React.FC = () => {
   });
 
   // Show only first 10 on dashboard preview (or all if searching)
-  const displayMarkets = searchQuery ? sortedMarkets : sortedMarkets.slice(0, 5);
+  const displayMarkets = searchQuery ? sortedMarkets : sortedMarkets.slice(0, 10);
 
   const handleCopy = () => {
     navigator.clipboard.writeText('0x1234...5678');
@@ -327,7 +444,7 @@ export const DashboardScreen: React.FC = () => {
 
   return (
     <ResponsiveLayout activeNav="dashboard" title="Dashboard">
-      {/* Premium Liquid Glass Background with 3D floating elements - Dark mode */}
+      {/* Premium Liquid Glass Background with 3D floating elements - Dark mode only */}
       {isDark && (
         <LiquidGlassBackground
           intensity="medium"
@@ -335,17 +452,6 @@ export const DashboardScreen: React.FC = () => {
           showRings={true}
           showCubes={false}
         />
-      )}
-
-      {/* Plain white Background - Light mode */}
-      {!isDark && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: '#ffffff',
-          zIndex: 0,
-          pointerEvents: 'none',
-        }} />
       )}
 
       {/* Welcome Hero Banner with CrymadX Logo - Compact */}
@@ -392,6 +498,18 @@ export const DashboardScreen: React.FC = () => {
           </div>
         </GlassCard>
       </motion.div>
+
+      {/* Verification Warning Banner - Shows if KYC or 2FA not complete */}
+      {isAuthenticated && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, type: 'spring', stiffness: 100 }}
+          style={{ position: 'relative', zIndex: 1 }}
+        >
+          <VerificationBanner />
+        </motion.div>
+      )}
 
       {/* Portfolio Overview Card - Compact */}
       <motion.div
@@ -491,18 +609,18 @@ export const DashboardScreen: React.FC = () => {
                     fontFamily: "'JetBrains Mono', monospace",
                     color: colors.text.primary,
                   }}>
-                    {hideBalance ? '••••••••' : '$0.00'}
+                    {hideBalance ? '••••••••' : isLoadingPortfolio ? '...' : `$${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </span>
                   <span style={{
                     fontSize: '11px',
                     fontWeight: 600,
-                    color: colors.trading.buy,
+                    color: dailyPnl.percentage >= 0 ? colors.trading.buy : colors.trading.sell,
                     display: 'flex',
                     alignItems: 'center',
                     gap: '3px',
                   }}>
-                    <TrendingUp size={10} />
-                    +0.00%
+                    {dailyPnl.percentage >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                    {dailyPnl.percentage >= 0 ? '+' : ''}{dailyPnl.percentage.toFixed(2)}%
                   </span>
                 </div>
                 <p style={{
@@ -511,11 +629,11 @@ export const DashboardScreen: React.FC = () => {
                   marginTop: '3px',
                   fontFamily: "'JetBrains Mono', monospace",
                 }}>
-                  {hideBalance ? '••••••••••' : '≈ 0.00000000 BTC'}
+                  {hideBalance ? '••••••••••' : `≈ ${btcEquivalent} BTC`}
                 </p>
               </div>
 
-              {/* Quick Stats - Clean white boxes for light mode */}
+              {/* Quick Stats - Compact with premium light mode */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
@@ -523,6 +641,8 @@ export const DashboardScreen: React.FC = () => {
                 flex: isMobile ? 'auto' : '1',
               }}>
                 {quickStats.map((stat, i) => {
+                  const statColors = ['#10b981', '#0ea5e9', '#8b5cf6'];
+                  const bgColor = statColors[i] || stat.color;
                   return (
                     <motion.div
                       key={i}
@@ -531,23 +651,39 @@ export const DashboardScreen: React.FC = () => {
                         padding: '8px 6px',
                         background: isDark
                           ? colors.background.card
-                          : '#ffffff',
+                          : `linear-gradient(135deg, rgba(255,255,255,0.9) 0%, ${bgColor}08 100%)`,
                         borderRadius: '8px',
                         textAlign: 'center',
                         border: isDark
                           ? 'none'
-                          : '1px solid #000000',
-                        boxShadow: 'none',
+                          : `1px solid ${bgColor}15`,
+                        boxShadow: isDark
+                          ? 'none'
+                          : `0 2px 10px ${bgColor}08, inset 0 1px 0 rgba(255,255,255,0.6)`,
                         position: 'relative',
                         overflow: 'hidden',
                         cursor: 'default',
                       }}
                     >
-                      <div style={{ color: isDark ? stat.color : '#000000', marginBottom: '3px', position: 'relative' }}>{stat.icon}</div>
+                      {/* Decorative dot for light mode */}
+                      {!isDark && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '6px',
+                          right: '6px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: `radial-gradient(circle, ${bgColor}10 0%, transparent 70%)`,
+                          filter: 'blur(4px)',
+                          pointerEvents: 'none',
+                        }} />
+                      )}
+                      <div style={{ color: isDark ? stat.color : bgColor, marginBottom: '3px', position: 'relative' }}>{stat.icon}</div>
                       <p style={{
                         fontSize: '12px',
                         fontWeight: 700,
-                        color: isDark ? colors.text.primary : '#000000',
+                        color: isDark ? colors.text.primary : '#111827',
                         fontFamily: "'JetBrains Mono', monospace",
                         position: 'relative',
                       }}>
@@ -555,7 +691,7 @@ export const DashboardScreen: React.FC = () => {
                       </p>
                       <p style={{
                         fontSize: '8px',
-                        color: isDark ? colors.text.tertiary : '#374151',
+                        color: isDark ? colors.text.tertiary : '#6b7280',
                         marginTop: '1px',
                         fontWeight: 500,
                         position: 'relative',
@@ -600,6 +736,7 @@ export const DashboardScreen: React.FC = () => {
                 whileHover={{
                   scale: 1.02,
                   y: -1,
+                  boxShadow: isDark ? 'none' : '0 4px 15px rgba(239, 68, 68, 0.12)',
                 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/wallet/withdraw')}
@@ -611,25 +748,26 @@ export const DashboardScreen: React.FC = () => {
                   padding: '10px 12px',
                   background: isDark
                     ? colors.background.card
-                    : '#ffffff',
+                    : 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(239,68,68,0.04) 100%)',
                   border: isDark
                     ? `1px solid ${colors.glass.border}`
-                    : '1px solid #000000',
+                    : '1px solid rgba(239, 68, 68, 0.15)',
                   borderRadius: '8px',
-                  color: isDark ? colors.text.primary : '#000000',
+                  color: isDark ? colors.text.primary : '#374151',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: 'none',
+                  boxShadow: isDark ? 'none' : '0 2px 8px rgba(239, 68, 68, 0.06)',
                 }}
               >
-                <ArrowUpRight size={14} color={isDark ? undefined : '#000000'} />
+                <ArrowUpRight size={14} color={isDark ? undefined : '#ef4444'} />
                 Withdraw
               </motion.button>
               <motion.button
                 whileHover={{
                   scale: 1.02,
                   y: -1,
+                  boxShadow: isDark ? 'none' : '0 4px 15px rgba(14, 165, 233, 0.12)',
                 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/wallet/convert')}
@@ -641,25 +779,26 @@ export const DashboardScreen: React.FC = () => {
                   padding: '10px 12px',
                   background: isDark
                     ? colors.background.card
-                    : '#ffffff',
+                    : 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(14,165,233,0.04) 100%)',
                   border: isDark
                     ? `1px solid ${colors.glass.border}`
-                    : '1px solid #000000',
+                    : '1px solid rgba(14, 165, 233, 0.15)',
                   borderRadius: '8px',
-                  color: isDark ? colors.text.primary : '#000000',
+                  color: isDark ? colors.text.primary : '#374151',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: 'none',
+                  boxShadow: isDark ? 'none' : '0 2px 8px rgba(14, 165, 233, 0.06)',
                 }}
               >
-                <Repeat size={14} color={isDark ? undefined : '#000000'} />
+                <Repeat size={14} color={isDark ? undefined : '#0ea5e9'} />
                 Convert
               </motion.button>
               <motion.button
                 whileHover={{
                   scale: 1.02,
                   y: -1,
+                  boxShadow: isDark ? 'none' : '0 4px 15px rgba(139, 92, 246, 0.12)',
                 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/wallet/history')}
@@ -671,19 +810,19 @@ export const DashboardScreen: React.FC = () => {
                   padding: '10px 12px',
                   background: isDark
                     ? colors.background.card
-                    : '#ffffff',
+                    : 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(139,92,246,0.04) 100%)',
                   border: isDark
                     ? `1px solid ${colors.glass.border}`
-                    : '1px solid #000000',
+                    : '1px solid rgba(139, 92, 246, 0.15)',
                   borderRadius: '8px',
-                  color: isDark ? colors.text.primary : '#000000',
+                  color: isDark ? colors.text.primary : '#374151',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: 'none',
+                  boxShadow: isDark ? 'none' : '0 2px 8px rgba(139, 92, 246, 0.06)',
                 }}
               >
-                <History size={14} color={isDark ? undefined : '#000000'} />
+                <History size={14} color={isDark ? undefined : '#8b5cf6'} />
                 History
               </motion.button>
             </div>
@@ -696,33 +835,28 @@ export const DashboardScreen: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, type: 'spring', stiffness: 80 }}
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          marginBottom: '24px',
-        }}
+        style={{ position: 'relative', zIndex: 1 }}
       >
-        {/* Outer border wrapper for visibility */}
-        <div style={{
-          border: isDark ? `2px solid ${colors.glass.border}` : '2px solid #000000',
-          borderRadius: '16px',
-          padding: '2px',
-          background: isDark ? 'transparent' : '#ffffff',
-        }}>
-          <GlassCard variant="elevated" padding="none">
-            {/* Clean background - no liquid effects */}
-            <div style={{ padding: isMobile ? '12px' : '14px' }}>
+        <GlassCard variant="elevated" padding="none">
+          {/* Liquid effect for markets card - enhanced for both modes */}
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 'inherit', pointerEvents: 'none' }}>
+            <LiquidWave delay={1} color={liquidColors.secondary} isDark={isDark} />
+            <LiquidShimmer isDark={isDark} />
+            {/* Light mode decorative blobs */}
+            {!isDark && <LightModeDecor variant="blue" />}
+          </div>
+          <div style={{ padding: isMobile ? '14px' : '16px' }}>
             {/* Markets Header - Compact */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '10px',
+              marginBottom: '12px',
               flexWrap: 'wrap',
-              gap: '8px',
+              gap: '10px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <h2 style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: isMobile ? '14px' : '15px', fontWeight: 700, color: colors.text.primary }}>
                   Markets
                 </h2>
                 {/* Market Tabs - Compact */}
@@ -735,10 +869,10 @@ export const DashboardScreen: React.FC = () => {
                       onClick={() => setActiveMarketTab(tab)}
                       style={{
                         padding: '4px 8px',
-                        background: activeMarketTab === tab ? (isDark ? colors.primary[400] : '#000000') : 'transparent',
-                        border: activeMarketTab === tab ? 'none' : `1px solid ${isDark ? colors.glass.border : '#000000'}`,
+                        background: activeMarketTab === tab ? colors.primary[400] : 'transparent',
+                        border: activeMarketTab === tab ? 'none' : `1px solid ${isDark ? colors.glass.border : 'rgba(16, 185, 129, 0.2)'}`,
                         borderRadius: '5px',
-                        color: activeMarketTab === tab ? '#ffffff' : (isDark ? colors.text.secondary : '#000000'),
+                        color: activeMarketTab === tab ? colors.background.primary : colors.text.secondary,
                         fontSize: '10px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -764,8 +898,8 @@ export const DashboardScreen: React.FC = () => {
                     padding: '6px 10px',
                     background: isDark
                       ? (showSearchDropdown ? colors.background.secondary : colors.background.card)
-                      : '#ffffff',
-                    border: `1px solid ${showSearchDropdown ? (isDark ? colors.primary[400] : '#000000') : (isDark ? colors.glass.border : '#000000')}`,
+                      : (showSearchDropdown ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.9)'),
+                    border: `1px solid ${showSearchDropdown ? colors.primary[400] : (isDark ? colors.glass.border : 'rgba(16, 185, 129, 0.2)')}`,
                     borderRadius: showSearchDropdown ? '6px 6px 0 0' : '6px',
                     transition: 'all 0.2s ease',
                   }}>
@@ -817,21 +951,21 @@ export const DashboardScreen: React.FC = () => {
                           top: '100%',
                           left: 0,
                           right: 0,
-                          background: isDark ? 'rgba(10, 25, 15, 0.98)' : '#ffffff',
-                          backdropFilter: isDark ? 'blur(20px)' : 'none',
-                          border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
+                          background: isDark ? 'rgba(10, 25, 15, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                          backdropFilter: 'blur(20px)',
+                          border: `1px solid ${colors.glass.border}`,
                           borderTop: 'none',
                           borderRadius: '0 0 12px 12px',
                           maxHeight: '300px',
                           overflowY: 'auto',
                           zIndex: 100,
-                          boxShadow: isDark ? '0 10px 40px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
                         }}
                       >
                         {/* Quick Categories */}
                         {!searchQuery && (
-                          <div style={{ padding: '12px', borderBottom: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}` }}>
-                            <p style={{ fontSize: '11px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <div style={{ padding: '12px', borderBottom: `1px solid ${colors.glass.border}` }}>
+                            <p style={{ fontSize: '11px', color: colors.text.tertiary, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               Popular Searches
                             </p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -846,10 +980,10 @@ export const DashboardScreen: React.FC = () => {
                                   }}
                                   style={{
                                     padding: '4px 10px',
-                                    background: isDark ? `${colors.primary[400]}15` : '#f3f4f6',
-                                    border: `1px solid ${isDark ? `${colors.primary[400]}30` : '#000000'}`,
+                                    background: `${colors.primary[400]}15`,
+                                    border: `1px solid ${colors.primary[400]}30`,
                                     borderRadius: '20px',
-                                    color: isDark ? colors.primary[400] : '#000000',
+                                    color: colors.primary[400],
                                     fontSize: '12px',
                                     fontWeight: 500,
                                     cursor: 'pointer',
@@ -876,7 +1010,7 @@ export const DashboardScreen: React.FC = () => {
                               return (
                                 <motion.div
                                   key={crypto.symbol}
-                                  whileHover={{ background: isDark ? `${colors.primary[400]}10` : '#f9fafb' }}
+                                  whileHover={{ background: `${colors.primary[400]}10` }}
                                   onClick={() => {
                                     navigate(`/trade/${crypto.symbol}-USDT`);
                                     setShowSearchDropdown(false);
@@ -937,7 +1071,7 @@ export const DashboardScreen: React.FC = () => {
 
                         {/* View All Markets Link */}
                         <motion.div
-                          whileHover={{ background: isDark ? `${colors.primary[400]}10` : '#f9fafb' }}
+                          whileHover={{ background: `${colors.primary[400]}10` }}
                           onClick={() => {
                             navigate('/markets');
                             setShowSearchDropdown(false);
@@ -948,9 +1082,9 @@ export const DashboardScreen: React.FC = () => {
                             justifyContent: 'center',
                             gap: '6px',
                             padding: '12px',
-                            borderTop: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}`,
+                            borderTop: `1px solid ${colors.glass.border}`,
                             cursor: 'pointer',
-                            color: isDark ? colors.primary[400] : '#000000',
+                            color: colors.primary[400],
                             fontSize: '13px',
                             fontWeight: 500,
                           }}
@@ -969,13 +1103,13 @@ export const DashboardScreen: React.FC = () => {
             {!isMobile && (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 70px',
-                gap: '8px',
-                padding: '6px 10px',
-                background: isDark ? colors.background.card : '#f3f4f6',
-                borderRadius: '4px',
-                marginBottom: '2px',
-                border: isDark ? 'none' : '1px solid #e5e7eb',
+                gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 80px',
+                gap: '10px',
+                padding: '8px 12px',
+                background: isDark ? colors.background.card : 'rgba(248,255,252,0.8)',
+                borderRadius: '6px',
+                marginBottom: '4px',
+                border: isDark ? 'none' : '1px solid rgba(16, 185, 129, 0.1)',
               }}>
                 <span style={{ fontSize: '10px', fontWeight: 700, color: colors.text.tertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Pair
@@ -1017,30 +1151,30 @@ export const DashboardScreen: React.FC = () => {
                   whileHover={{
                     background: isDark
                       ? colors.background.hover
-                      : '#f9fafb',
+                      : 'rgba(16, 185, 129, 0.06)',
                     scale: 1.003,
                   }}
                   onClick={() => navigate(`/trade/${market.symbol.toLowerCase()}`)}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 1fr 1fr 70px',
-                    gap: isMobile ? '4px' : '8px',
+                    gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 1fr 1fr 80px',
+                    gap: isMobile ? '5px' : '10px',
                     alignItems: 'center',
-                    padding: isMobile ? '8px 6px' : '8px 10px',
-                    borderRadius: '4px',
+                    padding: isMobile ? '10px 8px' : '10px 12px',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     position: 'relative',
                   }}
                 >
                   {/* Pair Info - Compact */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CryptoIcon symbol={market.symbol} size={isMobile ? 24 : 26} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CryptoIcon symbol={market.symbol} size={isMobile ? 28 : 30} />
                     <div>
-                      <p style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000' }}>
+                      <p style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 700, color: colors.text.primary }}>
                         {market.pair}
                       </p>
-                      <p style={{ fontSize: '9px', color: colors.text.tertiary }}>
+                      <p style={{ fontSize: '10px', color: colors.text.tertiary }}>
                         {market.name}
                       </p>
                     </div>
@@ -1073,7 +1207,7 @@ export const DashboardScreen: React.FC = () => {
                       color: market.change24h >= 0 ? colors.trading.buy : colors.trading.sell,
                     }}>
                       {market.change24h >= 0 ? <TrendingUp size={8} /> : <TrendingDown size={8} />}
-                      {market.change24h >= 0 ? '+' : ''}{market.change24h}%
+                      {market.change24h >= 0 ? '+' : ''}{market.change24h.toFixed(2)}%
                     </span>
                     {isMobile && (
                       <p style={{ fontSize: '10px', color: colors.text.tertiary, marginTop: '2px' }}>
@@ -1104,7 +1238,7 @@ export const DashboardScreen: React.FC = () => {
                       fontFamily: "'JetBrains Mono', monospace",
                       textAlign: 'right',
                     }}>
-                      ${market.volume}
+                      {market.volume === '0' || market.volume === '$0' ? 'N/A' : `$${market.volume}`}
                     </p>
                   )}
 
@@ -1136,18 +1270,18 @@ export const DashboardScreen: React.FC = () => {
 
             {/* View More Button - Compact */}
             <motion.button
-              whileHover={{ scale: 1.01, background: isDark ? `${colors.primary[400]}12` : '#f3f4f6' }}
+              whileHover={{ scale: 1.01, background: isDark ? `${colors.primary[400]}12` : 'rgba(16, 185, 129, 0.08)' }}
               whileTap={{ scale: 0.99 }}
               onClick={() => navigate('/markets')}
               style={{
                 width: '100%',
-                marginTop: '8px',
-                padding: '8px 12px',
-                background: isDark ? colors.background.card : '#ffffff',
-                border: `1px solid ${isDark ? colors.glass.border : '#000000'}`,
-                borderRadius: '6px',
-                color: isDark ? colors.primary[400] : '#000000',
-                fontSize: '11px',
+                marginTop: '12px',
+                padding: '10px 16px',
+                background: isDark ? colors.background.card : 'rgba(255,255,255,0.9)',
+                border: `1px solid ${isDark ? colors.glass.border : 'rgba(16, 185, 129, 0.2)'}`,
+                borderRadius: '8px',
+                color: colors.primary[400],
+                fontSize: '12px',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
@@ -1161,8 +1295,7 @@ export const DashboardScreen: React.FC = () => {
               <ChevronRight size={14} />
             </motion.button>
           </div>
-          </GlassCard>
-        </div>
+        </GlassCard>
       </motion.div>
 
       {/* Deposit Modal - Enhanced with Crypto Selection */}

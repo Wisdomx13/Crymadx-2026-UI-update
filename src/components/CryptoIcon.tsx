@@ -5,6 +5,7 @@ interface CryptoIconProps {
   symbol: string;
   size?: number;
   showBadge?: boolean;
+  logoUrl?: string;
 }
 
 // High quality crypto logo URLs from CoinGecko CDN (large resolution for crisp display)
@@ -84,9 +85,10 @@ export const CryptoIcon: React.FC<CryptoIconProps> = ({
   symbol,
   size = 32,
   showBadge = false,
+  logoUrl: externalLogoUrl,
 }) => {
   const symbolUpper = symbol.toUpperCase();
-  const logoUrl = cryptoLogos[symbolUpper];
+  const logoUrl = externalLogoUrl || cryptoLogos[symbolUpper];
   const colorScheme = cryptoColors[symbolUpper] || {
     bg: colors.primary[600],
     text: '#ffffff',

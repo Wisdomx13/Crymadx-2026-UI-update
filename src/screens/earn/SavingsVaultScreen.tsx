@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,43 +13,143 @@ import {
   Clock,
   CheckCircle,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { GlassCard, CryptoIcon, ResponsiveLayout, Button } from '../../components';
 import { usePresentationMode } from '../../components/PresentationMode';
+import { savingsService, balanceService } from '../../services';
+import { useAuth } from '../../context/AuthContext';
 
-// Savings products
-const savingsProducts = [
-  { symbol: 'USDT', name: 'Tether', apr: 5.5, minAmount: 10, balance: '0.00' },
-  { symbol: 'BTC', name: 'Bitcoin', apr: 1.2, minAmount: 0.001, balance: '0.00' },
-  { symbol: 'ETH', name: 'Ethereum', apr: 2.5, minAmount: 0.01, balance: '0.00' },
-  { symbol: 'USDC', name: 'USD Coin', apr: 5.2, minAmount: 10, balance: '0.00' },
-  { symbol: 'BNB', name: 'BNB', apr: 3.8, minAmount: 0.1, balance: '0.00' },
-  { symbol: 'SOL', name: 'Solana', apr: 4.2, minAmount: 0.5, balance: '0.00' },
-  { symbol: 'XRP', name: 'Ripple', apr: 3.0, minAmount: 50, balance: '0.00' },
-  { symbol: 'ADA', name: 'Cardano', apr: 3.5, minAmount: 100, balance: '0.00' },
-];
+interface SavingsProduct {
+  id: string;
+  symbol: string;
+  name: string;
+  apr: number;
+  minAmount: number;
+  lockPeriod: number;
+  type: 'flexible' | 'locked';
+}
+
+interface UserBalance {
+  asset: string;
+  available: string;
+}
 
 export const SavingsVaultScreen: React.FC = () => {
   const navigate = useNavigate();
   const { isMobile } = usePresentationMode();
   const { colors, isDark } = useThemeMode();
+  const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'flexible' | 'locked'>('flexible');
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<typeof savingsProducts[0] | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<SavingsProduct | null>(null);
   const [subscribeAmount, setSubscribeAmount] = useState('');
+  const [products, setProducts] = useState<SavingsProduct[]>([]);
+  const [userBalances, setUserBalances] = useState<Record<string, string>>({});
+  const [totalSavings, setTotalSavings] = useState('0.00');
+  const [totalEarnings, setTotalEarnings] = useState('0.00');
+  const [loading, setLoading] = useState(true);
+  const [subscribing, setSubscribing] = useState(false);
 
-  const handleSubscribe = (product: typeof savingsProducts[0]) => {
+  // Fetch savings products and user data
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch products from backend
+        const productsResponse = await savingsService.getProducts();
+        if (productsResponse.products) {
+          // Map backend products to our format
+          const mappedProducts: SavingsProduct[] = productsResponse.products.map((p: any) => ({
+            id: p.id || p.name,
+            symbol: p.asset || p.symbol || p.name?.split(' ')[0] || 'USDT',
+            name: p.name,
+            apr: p.apy || p.apr || 5,
+            minAmount: p.minDeposit || 10,
+            lockPeriod: p.lockPeriod || 0,
+            type: p.lockPeriod && p.lockPeriod > 0 ? 'locked' : 'flexible',
+          }));
+          setProducts(mappedProducts);
+        }
+
+        // Fetch user deposits if authenticated
+        if (isAuthenticated) {
+          try {
+            const depositsResponse = await savingsService.getDeposits();
+            if (depositsResponse) {
+              setTotalSavings(depositsResponse.totalDeposited || '0.00');
+              setTotalEarnings(depositsResponse.totalInterest || '0.00');
+            }
+
+            // Fetch user balances - getAllBalances returns Balance[] directly
+            const balances = await balanceService.getAllBalances();
+            if (balances && balances.length > 0) {
+              const balanceMap: Record<string, string> = {};
+              balances.forEach((b) => {
+                balanceMap[b.currency.toUpperCase()] = b.available;
+              });
+              setUserBalances(balanceMap);
+            }
+          } catch (err) {
+            console.log('User data fetch error (may not be logged in):', err);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch savings products:', error);
+        // Show empty state - no mock data
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [isAuthenticated]);
+
+  // Filter products by tab
+  const filteredProducts = products.filter(p =>
+    activeTab === 'flexible' ? p.type === 'flexible' || p.lockPeriod === 0 : p.type === 'locked' || p.lockPeriod > 0
+  );
+
+  const handleSubscribe = (product: SavingsProduct) => {
     setSelectedProduct(product);
     setSubscribeAmount('');
     setShowSubscribeModal(true);
   };
 
-  const confirmSubscribe = () => {
-    // Mock subscription
-    setShowSubscribeModal(false);
-    setSelectedProduct(null);
-    setSubscribeAmount('');
+  const confirmSubscribe = async () => {
+    if (!selectedProduct || !subscribeAmount) return;
+
+    setSubscribing(true);
+    try {
+      await savingsService.createDeposit({
+        productId: selectedProduct.id,
+        asset: selectedProduct.symbol,
+        amount: subscribeAmount,
+        autoRenew: false,
+      });
+
+      // Refresh user deposits
+      const depositsResponse = await savingsService.getDeposits();
+      if (depositsResponse) {
+        setTotalSavings(depositsResponse.totalDeposited || '0.00');
+        setTotalEarnings(depositsResponse.totalInterest || '0.00');
+      }
+
+      setShowSubscribeModal(false);
+      setSelectedProduct(null);
+      setSubscribeAmount('');
+    } catch (error) {
+      console.error('Failed to subscribe:', error);
+      alert('Failed to subscribe. Please try again.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const getUserBalance = (symbol: string): string => {
+    return userBalances[symbol] || '0.00';
   };
 
   return (
@@ -136,7 +236,7 @@ export const SavingsVaultScreen: React.FC = () => {
                   color: colors.text.primary,
                   fontFamily: "'JetBrains Mono', monospace",
                 }}>
-                  $0.00
+                  ${totalSavings}
                 </p>
               </div>
               <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
@@ -153,7 +253,7 @@ export const SavingsVaultScreen: React.FC = () => {
                   color: colors.trading.buy,
                   fontFamily: "'JetBrains Mono', monospace",
                 }}>
-                  +$0.00
+                  +${totalEarnings}
                 </p>
               </div>
             </div>
@@ -247,10 +347,30 @@ export const SavingsVaultScreen: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
+          {loading ? (
+            <GlassCard variant="default" padding="lg">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+                <Loader2 size={32} color={colors.primary[400]} style={{ animation: 'spin 1s linear infinite' }} />
+              </div>
+              <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            </GlassCard>
+          ) : filteredProducts.length === 0 ? (
+            <GlassCard variant="default" padding="lg">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
+                <DollarSign size={48} color={colors.text.tertiary} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                <p style={{ fontSize: '16px', fontWeight: 600, color: colors.text.secondary, marginBottom: '8px' }}>
+                  No {activeTab} savings products available
+                </p>
+                <p style={{ fontSize: '13px', color: colors.text.tertiary }}>
+                  Check back later for new savings opportunities
+                </p>
+              </div>
+            </GlassCard>
+          ) : (
           <GlassCard variant="default" padding="none">
-            {savingsProducts.map((product, index) => (
+            {filteredProducts.map((product, index) => (
               <motion.div
-                key={product.symbol}
+                key={product.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 + index * 0.05 }}
@@ -260,7 +380,7 @@ export const SavingsVaultScreen: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: isMobile ? '14px 16px' : '16px 20px',
-                  borderBottom: index < savingsProducts.length - 1 ? `1px solid ${colors.glass.border}` : 'none',
+                  borderBottom: index < filteredProducts.length - 1 ? `1px solid ${colors.glass.border}` : 'none',
                   cursor: 'pointer',
                 }}
               >
@@ -320,6 +440,7 @@ export const SavingsVaultScreen: React.FC = () => {
               </motion.div>
             ))}
           </GlassCard>
+          )}
         </motion.div>
 
         {/* Info Section */}
@@ -478,7 +599,7 @@ export const SavingsVaultScreen: React.FC = () => {
                     color: colors.text.tertiary,
                     marginTop: '6px',
                   }}>
-                    Available: {selectedProduct.balance} {selectedProduct.symbol}
+                    Available: {getUserBalance(selectedProduct.symbol)} {selectedProduct.symbol}
                   </p>
                 </div>
 
@@ -493,7 +614,7 @@ export const SavingsVaultScreen: React.FC = () => {
                       key={pct}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => setSubscribeAmount((parseFloat(selectedProduct.balance || '0') * pct / 100).toString())}
+                      onClick={() => setSubscribeAmount((parseFloat(getUserBalance(selectedProduct.symbol)) * pct / 100).toString())}
                       style={{
                         flex: 1,
                         padding: '8px',
@@ -556,9 +677,9 @@ export const SavingsVaultScreen: React.FC = () => {
                   size="lg"
                   fullWidth
                   onClick={confirmSubscribe}
-                  disabled={!subscribeAmount || parseFloat(subscribeAmount) < selectedProduct.minAmount}
+                  disabled={subscribing || !subscribeAmount || parseFloat(subscribeAmount) < selectedProduct.minAmount}
                 >
-                  Subscribe
+                  {subscribing ? 'Subscribing...' : 'Subscribe'}
                 </Button>
                 <p style={{
                   fontSize: '11px',

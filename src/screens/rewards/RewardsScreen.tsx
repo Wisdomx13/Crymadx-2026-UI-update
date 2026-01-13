@@ -14,35 +14,59 @@ import {
   Flame,
   TrendingUp,
   Users,
+  Loader2,
+  AlertCircle,
+  Diamond,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { Glass3DCard, Glass3DStat } from '../../components/Glass3D';
 import { ResponsiveLayout } from '../../components';
+import { rewardsService, RewardsTask, UserRewardsSummary, RewardsTier, RewardHistoryItem } from '../../services/rewardsService';
+import { tokenManager } from '../../services';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  reward: string;
-  progress: number;
-  total: number;
-  completed: boolean;
-  icon: React.ReactNode;
-}
+// Task icon mapping
+const taskIcons: Record<string, React.ReactNode> = {
+  'login': <CheckCircle size={20} />,
+  'trade': <Zap size={20} />,
+  'deposit': <Target size={20} />,
+  'volume100': <TrendingUp size={20} />,
+  'trades5': <TrendingUp size={20} />,
+  'referral': <Users size={20} />,
+};
 
-interface Tier {
-  name: string;
-  icon: React.ReactNode;
-  minVolume: string;
-  benefits: string[];
-  color: string;
-  current?: boolean;
-}
+// Tier icon mapping
+const tierIcons: Record<string, React.ReactNode> = {
+  'Bronze': <Star size={24} />,
+  'Silver': <Trophy size={24} />,
+  'Gold': <Crown size={24} />,
+  'Platinum': <Flame size={24} />,
+  'Diamond': <Diamond size={24} />,
+};
+
+// Tier color mapping
+const tierColors: Record<string, string> = {
+  'Bronze': '#CD7F32',
+  'Silver': '#C0C0C0',
+  'Gold': '#FFD700',
+  'Platinum': '#E5E4E2',
+  'Diamond': '#B9F2FF',
+};
 
 export const RewardsScreen: React.FC = () => {
   const { colors, isDark } = useThemeMode();
   const [activeTab, setActiveTab] = useState<'tasks' | 'tiers' | 'history'>('tasks');
   const [_isMobile, setIsMobile] = useState(false);
+
+  // API state
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userRewards, setUserRewards] = useState<UserRewardsSummary | null>(null);
+  const [dailyTasks, setDailyTasks] = useState<RewardsTask[]>([]);
+  const [weeklyTasks, setWeeklyTasks] = useState<RewardsTask[]>([]);
+  const [tiers, setTiers] = useState<RewardsTier[]>([]);
+  const [history, setHistory] = useState<RewardHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [claimingTaskId, setClaimingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkScreen = () => setIsMobile(window.innerWidth < 768);
@@ -51,103 +75,90 @@ export const RewardsScreen: React.FC = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Mock user rewards data
-  const userRewards = {
-    totalPoints: 2450,
-    pendingRewards: '$12.50',
-    completedTasks: 8,
-    currentTier: 'Bronze',
-    nextTier: 'Silver',
-    tierProgress: 35,
+  // Fetch rewards data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!tokenManager.isAuthenticated()) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [summaryData, tasksData, tiersData] = await Promise.all([
+          rewardsService.getSummary(),
+          rewardsService.getTasks(),
+          rewardsService.getTiers(),
+        ]);
+
+        setUserRewards(summaryData);
+        setDailyTasks(tasksData.daily || []);
+        setWeeklyTasks(tasksData.weekly || []);
+
+        // Mark current tier
+        const tiersWithCurrent = (tiersData.tiers || []).map(tier => ({
+          ...tier,
+          current: tier.name === summaryData.currentTier,
+        }));
+        setTiers(tiersWithCurrent);
+      } catch (err: any) {
+        console.error('Failed to fetch rewards data:', err);
+        setError(err.message || 'Failed to load rewards');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch history when tab changes
+  useEffect(() => {
+    if (activeTab === 'history' && history.length === 0 && tokenManager.isAuthenticated()) {
+      fetchHistory();
+    }
+  }, [activeTab]);
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await rewardsService.getHistory(1, 20);
+      setHistory(data.history || []);
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
-  const dailyTasks: Task[] = [
-    {
-      id: '1',
-      title: 'Daily Login',
-      description: 'Log in to your account',
-      reward: '10 Points',
-      progress: 1,
-      total: 1,
-      completed: true,
-      icon: <CheckCircle size={20} />,
-    },
-    {
-      id: '2',
-      title: 'Complete a Trade',
-      description: 'Execute any spot trade',
-      reward: '25 Points',
-      progress: 0,
-      total: 1,
-      completed: false,
-      icon: <Zap size={20} />,
-    },
-    {
-      id: '3',
-      title: 'Deposit Funds',
-      description: 'Make any deposit',
-      reward: '50 Points',
-      progress: 0,
-      total: 1,
-      completed: false,
-      icon: <Target size={20} />,
-    },
-  ];
+  const handleClaimTask = async (taskId: string) => {
+    setClaimingTaskId(taskId);
+    try {
+      const result = await rewardsService.claimTask(taskId);
 
-  const weeklyTasks: Task[] = [
-    {
-      id: '4',
-      title: 'Trading Volume',
-      description: 'Trade $1,000 in volume',
-      reward: '200 Points',
-      progress: 450,
-      total: 1000,
-      completed: false,
-      icon: <TrendingUp size={20} />,
-    },
-    {
-      id: '5',
-      title: 'Refer a Friend',
-      description: 'Get a friend to sign up',
-      reward: '500 Points',
-      progress: 0,
-      total: 1,
-      completed: false,
-      icon: <Users size={20} />,
-    },
-  ];
+      // Update task as claimed
+      const updateTasks = (tasks: RewardsTask[]) =>
+        tasks.map(t => t.id === taskId ? { ...t, claimed: true } : t);
 
-  const tiers: Tier[] = [
-    {
-      name: 'Bronze',
-      icon: <Star size={24} />,
-      minVolume: '$0',
-      benefits: ['0.1% Trading Fee', 'Basic Support', 'Daily Tasks'],
-      color: '#CD7F32',
-      current: true,
-    },
-    {
-      name: 'Silver',
-      icon: <Trophy size={24} />,
-      minVolume: '$10,000',
-      benefits: ['0.08% Trading Fee', 'Priority Support', 'Bonus Rewards'],
-      color: '#C0C0C0',
-    },
-    {
-      name: 'Gold',
-      icon: <Crown size={24} />,
-      minVolume: '$50,000',
-      benefits: ['0.05% Trading Fee', 'VIP Support', 'Exclusive Events'],
-      color: '#FFD700',
-    },
-    {
-      name: 'Platinum',
-      icon: <Flame size={24} />,
-      minVolume: '$250,000',
-      benefits: ['0.02% Trading Fee', 'Dedicated Manager', 'Custom Benefits'],
-      color: '#E5E4E2',
-    },
-  ];
+      setDailyTasks(updateTasks(dailyTasks));
+      setWeeklyTasks(updateTasks(weeklyTasks));
+
+      // Update user points
+      if (userRewards) {
+        setUserRewards({
+          ...userRewards,
+          totalPoints: userRewards.totalPoints + result.pointsEarned,
+          completedTasks: userRewards.completedTasks + 1,
+        });
+      }
+    } catch (err: any) {
+      console.error('Failed to claim task:', err);
+    } finally {
+      setClaimingTaskId(null);
+    }
+  };
 
   const tabs = [
     { id: 'tasks', label: 'Tasks', icon: <Target size={16} /> },
@@ -155,183 +166,272 @@ export const RewardsScreen: React.FC = () => {
     { id: 'history', label: 'History', icon: <Clock size={16} /> },
   ];
 
-  const renderTaskCard = (task: Task, index: number) => (
-    <motion.div
-      key={task.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      style={{
-        padding: '20px',
-        background: task.completed
-          ? isDark ? 'rgba(0, 255, 170, 0.05)' : '#f3f4f6'
-          : isDark ? 'rgba(4, 26, 15, 0.5)' : '#ffffff',
-        border: `1px solid ${task.completed ? (isDark ? colors.primary[400] : '#000000') : (isDark ? colors.glass.border : '#d1d5db')}`,
-        borderRadius: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-      }}
-    >
-      <div
+  const renderTaskCard = (task: RewardsTask, index: number) => {
+    const isCompleted = task.completed || task.claimed;
+    const canClaim = task.progress >= task.target && !task.claimed;
+    const isClaiming = claimingTaskId === task.id;
+
+    return (
+      <motion.div
+        key={task.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.1 }}
         style={{
-          width: '48px',
-          height: '48px',
-          borderRadius: '12px',
-          background: task.completed
-            ? isDark ? colors.gradients.primary : '#000000'
-            : isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
+          padding: '20px',
+          background: isCompleted
+            ? isDark ? 'rgba(0, 255, 170, 0.05)' : 'rgba(16, 185, 129, 0.08)'
+            : isDark ? 'rgba(4, 26, 15, 0.5)' : '#ffffff',
+          border: `1px solid ${isCompleted ? colors.primary[400] : colors.glass.border}`,
+          borderRadius: '16px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          color: task.completed ? (isDark ? colors.background.primary : '#ffffff') : (isDark ? colors.primary[400] : '#000000'),
-          flexShrink: 0,
+          gap: '16px',
         }}
       >
-        {task.icon}
-      </div>
-
-      <div style={{ flex: 1 }}>
         <div
           style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            background: isCompleted
+              ? colors.gradients.primary
+              : isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.1)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '4px',
+            justifyContent: 'center',
+            color: isCompleted ? colors.background.primary : colors.primary[400],
+            flexShrink: 0,
           }}
         >
-          <h4
-            style={{
-              fontSize: '15px',
-              fontWeight: 600,
-              color: isDark ? colors.text.primary : '#000000',
-            }}
-          >
-            {task.title}
-          </h4>
-          <span
-            style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              color: isDark ? colors.primary[400] : '#000000',
-              fontFamily: "'JetBrains Mono', monospace",
-            }}
-          >
-            {task.reward}
-          </span>
+          {taskIcons[task.id] || <Target size={20} />}
         </div>
-        <p
-          style={{
-            fontSize: '13px',
-            color: isDark ? colors.text.tertiary : '#374151',
-            marginBottom: '8px',
-          }}
-        >
-          {task.description}
-        </p>
 
-        {/* Progress bar */}
-        <div
-          style={{
-            height: '4px',
-            background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#e5e7eb',
-            borderRadius: '2px',
-            overflow: 'hidden',
-          }}
-        >
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${(task.progress / task.total) * 100}%` }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
+        <div style={{ flex: 1 }}>
+          <div
             style={{
-              height: '100%',
-              background: task.completed
-                ? isDark ? colors.primary[400] : '#000000'
-                : isDark ? colors.gradients.primary : '#000000',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '4px',
+            }}
+          >
+            <h4
+              style={{
+                fontSize: '15px',
+                fontWeight: 600,
+                color: colors.text.primary,
+              }}
+            >
+              {task.title}
+            </h4>
+            <span
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: colors.primary[400],
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {task.reward} {task.rewardType === 'points' ? 'Points' : 'USDT'}
+            </span>
+          </div>
+          <p
+            style={{
+              fontSize: '13px',
+              color: colors.text.tertiary,
+              marginBottom: '8px',
+            }}
+          >
+            {task.description}
+          </p>
+
+          {/* Progress bar */}
+          <div
+            style={{
+              height: '4px',
+              background: isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.15)',
               borderRadius: '2px',
-            }}
-          />
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '4px',
-          }}
-        >
-          <span style={{ fontSize: '11px', color: isDark ? colors.text.tertiary : '#6b7280' }}>
-            Progress
-          </span>
-          <span
-            style={{
-              fontSize: '11px',
-              color: isDark ? colors.text.secondary : '#374151',
-              fontFamily: "'JetBrains Mono', monospace",
+              overflow: 'hidden',
             }}
           >
-            {task.progress}/{task.total}
-          </span>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((task.progress / task.target) * 100, 100)}%` }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              style={{
+                height: '100%',
+                background: isCompleted
+                  ? colors.primary[400]
+                  : colors.gradients.primary,
+                borderRadius: '2px',
+              }}
+            />
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '4px',
+            }}
+          >
+            <span style={{ fontSize: '11px', color: colors.text.tertiary }}>
+              Progress
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                color: colors.text.secondary,
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {task.progress}/{task.target}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {task.completed ? (
-        <div
-          style={{
-            padding: '8px 16px',
-            background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
-            borderRadius: '8px',
-            border: isDark ? 'none' : '1px solid #000000',
-            color: isDark ? colors.primary[400] : '#000000',
-            fontSize: '12px',
-            fontWeight: 600,
-          }}
-        >
-          Claimed
+        {task.claimed ? (
+          <div
+            style={{
+              padding: '8px 16px',
+              background: isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              borderRadius: '8px',
+              color: colors.primary[400],
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
+          >
+            Claimed
+          </div>
+        ) : (
+          <motion.button
+            whileHover={{ scale: canClaim ? 1.02 : 1 }}
+            whileTap={{ scale: canClaim ? 0.98 : 1 }}
+            disabled={!canClaim || isClaiming}
+            onClick={() => canClaim && handleClaimTask(task.id)}
+            style={{
+              padding: '8px 16px',
+              background: canClaim
+                ? colors.gradients.primary
+                : isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              border: 'none',
+              borderRadius: '8px',
+              color: canClaim ? colors.background.primary : colors.text.tertiary,
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: canClaim ? 'pointer' : 'not-allowed',
+              opacity: canClaim ? 1 : 0.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            {isClaiming ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Loader2 size={14} />
+                </motion.div>
+                Claiming...
+              </>
+            ) : (
+              'Claim'
+            )}
+          </motion.button>
+        )}
+      </motion.div>
+    );
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <ResponsiveLayout activeNav="rewards" title="Rewards">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '400px',
+          gap: '16px',
+        }}>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          >
+            <Loader2 size={40} color={colors.primary[400]} />
+          </motion.div>
+          <p style={{ color: colors.text.tertiary }}>Loading rewards...</p>
         </div>
-      ) : (
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          disabled={task.progress < task.total}
-          style={{
-            padding: '8px 16px',
-            background:
-              task.progress >= task.total
-                ? isDark ? colors.gradients.primary : '#000000'
-                : isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
-            border: 'none',
-            borderRadius: '8px',
-            color:
-              task.progress >= task.total
-                ? isDark ? colors.background.primary : '#ffffff'
-                : isDark ? colors.text.tertiary : '#9ca3af',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: task.progress >= task.total ? 'pointer' : 'not-allowed',
-            opacity: task.progress >= task.total ? 1 : 0.5,
-          }}
-        >
-          Claim
-        </motion.button>
-      )}
-    </motion.div>
-  );
+      </ResponsiveLayout>
+    );
+  }
+
+  // Not authenticated state
+  if (!tokenManager.isAuthenticated()) {
+    return (
+      <ResponsiveLayout activeNav="rewards" title="Rewards">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '400px',
+          gap: '16px',
+          textAlign: 'center',
+        }}>
+          <Gift size={64} color={colors.text.tertiary} style={{ opacity: 0.5 }} />
+          <h2 style={{ color: colors.text.primary, fontSize: '24px', fontWeight: 700 }}>
+            Login to View Rewards
+          </h2>
+          <p style={{ color: colors.text.tertiary, maxWidth: '400px' }}>
+            Sign in to your account to view and earn rewards, complete tasks, and track your VIP tier progress.
+          </p>
+        </div>
+      </ResponsiveLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <ResponsiveLayout activeNav="rewards" title="Rewards">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '400px',
+          gap: '16px',
+          textAlign: 'center',
+        }}>
+          <AlertCircle size={64} color={colors.status.error} style={{ opacity: 0.5 }} />
+          <h2 style={{ color: colors.text.primary, fontSize: '24px', fontWeight: 700 }}>
+            Failed to Load Rewards
+          </h2>
+          <p style={{ color: colors.text.tertiary, maxWidth: '400px' }}>
+            {error}
+          </p>
+        </div>
+      </ResponsiveLayout>
+    );
+  }
 
   return (
     <ResponsiveLayout activeNav="rewards" title="Rewards">
-      {/* Background effects - Dark mode only */}
-      {isDark && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: colors.gradients.mesh,
-            opacity: 0.6,
-            pointerEvents: 'none',
-            zIndex: -1,
-          }}
-        />
-      )}
+      {/* Background effects */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: colors.gradients.mesh,
+          opacity: 0.6,
+          pointerEvents: 'none',
+          zIndex: -1,
+        }}
+      />
         {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -350,7 +450,7 @@ export const RewardsScreen: React.FC = () => {
                 style={{
                   fontSize: '32px',
                   fontWeight: 700,
-                  color: isDark ? colors.text.primary : '#000000',
+                  color: colors.text.primary,
                 }}
               >
                 Rewards Hub
@@ -369,7 +469,7 @@ export const RewardsScreen: React.FC = () => {
                 New
               </span>
             </div>
-            <p style={{ fontSize: '15px', color: isDark ? colors.text.tertiary : '#374151' }}>
+            <p style={{ fontSize: '15px', color: colors.text.tertiary }}>
               Complete tasks and earn rewards
             </p>
           </div>
@@ -389,23 +489,23 @@ export const RewardsScreen: React.FC = () => {
         >
           <Glass3DStat
             label="Total Points"
-            value={userRewards.totalPoints.toLocaleString()}
+            value={userRewards?.totalPoints?.toLocaleString() || '0'}
             icon={<Sparkles size={20} />}
             trend="up"
           />
           <Glass3DStat
             label="Pending Rewards"
-            value={userRewards.pendingRewards}
+            value={userRewards?.pendingRewards || '$0.00'}
             icon={<Gift size={20} />}
           />
           <Glass3DStat
             label="Tasks Completed"
-            value={userRewards.completedTasks.toString()}
+            value={userRewards?.completedTasks?.toString() || '0'}
             icon={<CheckCircle size={20} />}
           />
           <Glass3DStat
             label="Current Tier"
-            value={userRewards.currentTier}
+            value={userRewards?.currentTier || 'Bronze'}
             icon={<Crown size={20} />}
           />
         </motion.div>
@@ -432,14 +532,14 @@ export const RewardsScreen: React.FC = () => {
                     style={{
                       fontSize: '16px',
                       fontWeight: 600,
-                      color: isDark ? colors.text.primary : '#000000',
+                      color: colors.text.primary,
                       marginBottom: '4px',
                     }}
                   >
                     Tier Progress
                   </h3>
-                  <p style={{ fontSize: '13px', color: isDark ? colors.text.tertiary : '#374151' }}>
-                    {userRewards.tierProgress}% to {userRewards.nextTier}
+                  <p style={{ fontSize: '13px', color: colors.text.tertiary }}>
+                    {userRewards?.tierProgress || 0}% to {userRewards?.nextTier || 'Silver'}
                   </p>
                 </div>
                 <div
@@ -453,20 +553,20 @@ export const RewardsScreen: React.FC = () => {
                     style={{
                       fontSize: '14px',
                       fontWeight: 600,
-                      color: '#CD7F32',
+                      color: tierColors[userRewards?.currentTier || 'Bronze'] || '#CD7F32',
                     }}
                   >
-                    {userRewards.currentTier}
+                    {userRewards?.currentTier || 'Bronze'}
                   </span>
                   <ChevronRight size={16} color={colors.text.tertiary} />
                   <span
                     style={{
                       fontSize: '14px',
                       fontWeight: 600,
-                      color: '#C0C0C0',
+                      color: tierColors[userRewards?.nextTier || 'Silver'] || '#C0C0C0',
                     }}
                   >
-                    {userRewards.nextTier}
+                    {userRewards?.nextTier || 'Silver'}
                   </span>
                 </div>
               </div>
@@ -475,20 +575,20 @@ export const RewardsScreen: React.FC = () => {
               <div
                 style={{
                   height: '8px',
-                  background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#e5e7eb',
+                  background: isDark ? 'rgba(0, 255, 170, 0.1)' : 'rgba(16, 185, 129, 0.15)',
                   borderRadius: '4px',
                   overflow: 'hidden',
                 }}
               >
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${userRewards.tierProgress}%` }}
+                  animate={{ width: `${userRewards?.tierProgress || 0}%` }}
                   transition={{ duration: 1, ease: 'easeOut' }}
                   style={{
                     height: '100%',
-                    background: isDark ? colors.gradients.primary : '#000000',
+                    background: colors.gradients.primary,
                     borderRadius: '4px',
-                    boxShadow: isDark ? colors.shadows.glow : 'none',
+                    boxShadow: colors.shadows.glow,
                   }}
                 />
               </div>
@@ -574,7 +674,17 @@ export const RewardsScreen: React.FC = () => {
                         gap: '12px',
                       }}
                     >
-                      {dailyTasks.map((task, index) => renderTaskCard(task, index))}
+                      {dailyTasks.length > 0 ? (
+                        dailyTasks.map((task, index) => renderTaskCard(task, index))
+                      ) : (
+                        <div style={{
+                          padding: '40px',
+                          textAlign: 'center',
+                          color: colors.text.tertiary,
+                        }}>
+                          No daily tasks available
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -601,8 +711,18 @@ export const RewardsScreen: React.FC = () => {
                         gap: '12px',
                       }}
                     >
-                      {weeklyTasks.map((task, index) =>
-                        renderTaskCard(task, index + dailyTasks.length)
+                      {weeklyTasks.length > 0 ? (
+                        weeklyTasks.map((task, index) =>
+                          renderTaskCard(task, index + dailyTasks.length)
+                        )
+                      ) : (
+                        <div style={{
+                          padding: '40px',
+                          textAlign: 'center',
+                          color: colors.text.tertiary,
+                        }}>
+                          No weekly tasks available
+                        </div>
                       )}
                     </div>
                   </div>
@@ -614,23 +734,23 @@ export const RewardsScreen: React.FC = () => {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gridTemplateColumns: `repeat(${Math.min(tiers.length, 5)}, 1fr)`,
                     gap: '16px',
                   }}
                 >
                   {tiers.map((tier, index) => (
                     <motion.div
-                      key={tier.name}
+                      key={tier.id || tier.name}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       style={{
                         padding: '24px',
                         background: tier.current
-                          ? isDark ? 'rgba(0, 255, 170, 0.05)' : '#f3f4f6'
+                          ? isDark ? 'rgba(0, 255, 170, 0.05)' : 'rgba(16, 185, 129, 0.08)'
                           : isDark ? 'rgba(4, 26, 15, 0.5)' : '#ffffff',
                         border: `1px solid ${
-                          tier.current ? (isDark ? colors.primary[400] : '#000000') : (isDark ? colors.glass.border : '#d1d5db')
+                          tier.current ? colors.primary[400] : colors.glass.border
                         }`,
                         borderRadius: '16px',
                         textAlign: 'center',
@@ -645,11 +765,11 @@ export const RewardsScreen: React.FC = () => {
                             left: '50%',
                             transform: 'translateX(-50%)',
                             padding: '4px 12px',
-                            background: isDark ? colors.gradients.primary : '#000000',
+                            background: colors.gradients.primary,
                             borderRadius: '12px',
                             fontSize: '10px',
                             fontWeight: 700,
-                            color: isDark ? colors.background.primary : '#ffffff',
+                            color: colors.background.primary,
                             textTransform: 'uppercase',
                           }}
                         >
@@ -662,7 +782,7 @@ export const RewardsScreen: React.FC = () => {
                           width: '56px',
                           height: '56px',
                           borderRadius: '50%',
-                          background: `linear-gradient(135deg, ${tier.color}, ${tier.color}88)`,
+                          background: `linear-gradient(135deg, ${tier.color || tierColors[tier.name] || '#CD7F32'}, ${tier.color || tierColors[tier.name] || '#CD7F32'}88)`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -670,14 +790,14 @@ export const RewardsScreen: React.FC = () => {
                           color: colors.background.primary,
                         }}
                       >
-                        {tier.icon}
+                        {tierIcons[tier.name] || <Star size={24} />}
                       </div>
 
                       <h4
                         style={{
                           fontSize: '18px',
                           fontWeight: 700,
-                          color: tier.color,
+                          color: tier.color || tierColors[tier.name] || '#CD7F32',
                           marginBottom: '4px',
                         }}
                       >
@@ -686,12 +806,24 @@ export const RewardsScreen: React.FC = () => {
                       <p
                         style={{
                           fontSize: '12px',
-                          color: isDark ? colors.text.tertiary : '#6b7280',
-                          marginBottom: '16px',
+                          color: colors.text.tertiary,
+                          marginBottom: '8px',
                         }}
                       >
                         Min. Volume: {tier.minVolume}
                       </p>
+                      {tier.tradingFee && (
+                        <p
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: colors.primary[400],
+                            marginBottom: '12px',
+                          }}
+                        >
+                          {tier.tradingFee} Fee
+                        </p>
+                      )}
 
                       <div
                         style={{
@@ -708,10 +840,10 @@ export const RewardsScreen: React.FC = () => {
                               alignItems: 'center',
                               gap: '8px',
                               fontSize: '12px',
-                              color: isDark ? colors.text.secondary : '#374151',
+                              color: colors.text.secondary,
                             }}
                           >
-                            <CheckCircle size={12} color={isDark ? colors.primary[400] : '#000000'} />
+                            <CheckCircle size={12} color={colors.primary[400]} />
                             {benefit}
                           </div>
                         ))}
@@ -723,50 +855,120 @@ export const RewardsScreen: React.FC = () => {
 
               {/* History Tab */}
               {activeTab === 'history' && (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '60px 40px',
-                    textAlign: 'center',
-                  }}
-                >
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '50%',
-                      background: 'rgba(0, 255, 170, 0.05)',
+                <div>
+                  {historyLoading ? (
+                    <div style={{
                       display: 'flex',
-                      alignItems: 'center',
                       justifyContent: 'center',
-                      marginBottom: '24px',
-                    }}
-                  >
-                    <Clock size={40} color={colors.text.tertiary} />
-                  </motion.div>
-                  <h3
-                    style={{
-                      fontSize: '18px',
-                      fontWeight: 600,
-                      color: colors.text.primary,
-                      marginBottom: '8px',
-                    }}
-                  >
-                    No reward history yet
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: '14px',
-                      color: colors.text.tertiary,
-                      maxWidth: '400px',
-                    }}
-                  >
-                    Complete tasks and claim rewards to see your history here.
-                  </p>
+                      padding: '60px',
+                    }}>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      >
+                        <Loader2 size={32} color={colors.primary[400]} />
+                      </motion.div>
+                    </div>
+                  ) : history.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {history.map((item, index) => (
+                        <motion.div
+                          key={item.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          style={{
+                            padding: '16px 20px',
+                            background: isDark ? 'rgba(4, 26, 15, 0.5)' : '#ffffff',
+                            border: `1px solid ${colors.glass.border}`,
+                            borderRadius: '12px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <h4 style={{
+                              fontSize: '14px',
+                              fontWeight: 600,
+                              color: colors.text.primary,
+                              marginBottom: '4px',
+                            }}>
+                              {item.title}
+                            </h4>
+                            <p style={{
+                              fontSize: '12px',
+                              color: colors.text.tertiary,
+                            }}>
+                              {item.description}
+                            </p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <p style={{
+                              fontSize: '14px',
+                              fontWeight: 600,
+                              color: colors.primary[400],
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}>
+                              +{item.amount} {item.amountType === 'points' ? 'pts' : 'USDT'}
+                            </p>
+                            <p style={{
+                              fontSize: '11px',
+                              color: colors.text.tertiary,
+                            }}>
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '60px 40px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <motion.div
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '50%',
+                          background: 'rgba(0, 255, 170, 0.05)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginBottom: '24px',
+                        }}
+                      >
+                        <Clock size={40} color={colors.text.tertiary} />
+                      </motion.div>
+                      <h3
+                        style={{
+                          fontSize: '18px',
+                          fontWeight: 600,
+                          color: colors.text.primary,
+                          marginBottom: '8px',
+                        }}
+                      >
+                        No reward history yet
+                      </h3>
+                      <p
+                        style={{
+                          fontSize: '14px',
+                          color: colors.text.tertiary,
+                          maxWidth: '400px',
+                        }}
+                      >
+                        Complete tasks and claim rewards to see your history here.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

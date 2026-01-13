@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   User,
   Mail,
@@ -34,11 +35,13 @@ import {
   ChevronDown,
   Save,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { GlassCard, Button, ResponsiveLayout } from '../../components';
 import { usePresentationMode } from '../../components/PresentationMode';
 import { useAuth } from '../../context/AuthContext';
+import { userService, authService } from '../../services';
 
 // Avatar options - Modern realistic cartoon human characters
 const avatarOptions = [
@@ -75,28 +78,42 @@ const countries = [
   'South Africa', 'Nigeria', 'Kenya', 'Egypt', 'Morocco', 'Israel', 'Russia', 'Ukraine',
 ];
 
-// Mock login history
-const loginHistory = [
-  { id: 1, device: 'Chrome on Windows', ip: '192.168.1.***', location: 'New York, US', time: '2024-01-15 14:32:45', current: true },
-  { id: 2, device: 'Safari on iPhone', ip: '172.16.0.***', location: 'New York, US', time: '2024-01-14 09:15:22', current: false },
-  { id: 3, device: 'Firefox on MacOS', ip: '10.0.0.***', location: 'Los Angeles, US', time: '2024-01-12 18:45:00', current: false },
-  { id: 4, device: 'Chrome on Android', ip: '192.168.2.***', location: 'Chicago, US', time: '2024-01-10 11:20:33', current: false },
-];
+// Types for settings
+interface LoginHistoryItem {
+  id: string | number;
+  device: string;
+  ip: string;
+  location: string;
+  time: string;
+  current: boolean;
+}
 
-// Mock API keys
-const mockApiKeys = [
-  { id: 1, name: 'Trading Bot', key: 'crm_api_****7a8b', permissions: ['Read', 'Trade'], created: '2024-01-10', lastUsed: '2024-01-15' },
-  { id: 2, name: 'Portfolio Tracker', key: 'crm_api_****3c4d', permissions: ['Read'], created: '2024-01-05', lastUsed: '2024-01-14' },
-];
+interface ApiKey {
+  id: string | number;
+  name: string;
+  key: string;
+  permissions: string[];
+  created: string;
+  lastUsed?: string;
+}
 
-// Mock payment methods
-const mockPaymentMethods = [
-  { id: 1, type: 'card', name: 'Visa ending in 4242', icon: '💳', default: true },
-  { id: 2, type: 'bank', name: 'Chase Bank ****7890', icon: '🏦', default: false },
-];
+interface PaymentMethod {
+  id: string | number;
+  type: string;
+  name: string;
+  icon: string;
+  default: boolean;
+}
 
-// Mock notifications settings
-const notificationSettings = [
+interface NotificationSetting {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+}
+
+// Default notification settings
+const defaultNotificationSettings: NotificationSetting[] = [
   { id: 'price_alerts', label: 'Price Alerts', description: 'Get notified when assets reach your target price', enabled: true },
   { id: 'trade_confirm', label: 'Trade Confirmations', description: 'Receive notifications for completed trades', enabled: true },
   { id: 'security', label: 'Security Alerts', description: 'Important security notifications', enabled: true },
@@ -104,22 +121,117 @@ const notificationSettings = [
   { id: 'promo', label: 'Promotions', description: 'Special offers and promotions', enabled: false },
 ];
 
+// Local storage keys
+const NOTIFICATIONS_STORAGE_KEY = 'crymadx_notification_settings';
+const PREFERENCES_STORAGE_KEY = 'crymadx_user_preferences';
+const API_KEYS_STORAGE_KEY = 'crymadx_api_keys';
+
+// Helper functions for local storage
+const getStoredNotifications = (): NotificationSetting[] => {
+  try {
+    const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : defaultNotificationSettings;
+  } catch {
+    return defaultNotificationSettings;
+  }
+};
+
+const storeNotifications = (settings: NotificationSetting[]): void => {
+  localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(settings));
+};
+
+interface StoredPreferences {
+  language: string;
+  currency: string;
+  timezone: string;
+}
+
+const getStoredPreferences = (): StoredPreferences => {
+  try {
+    const stored = localStorage.getItem(PREFERENCES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : { language: 'English', currency: 'USD', timezone: 'UTC-5 (Eastern Time)' };
+  } catch {
+    return { language: 'English', currency: 'USD', timezone: 'UTC-5 (Eastern Time)' };
+  }
+};
+
+const storePreferences = (prefs: StoredPreferences): void => {
+  localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(prefs));
+};
+
+const getStoredApiKeys = (): ApiKey[] => {
+  try {
+    const stored = localStorage.getItem(API_KEYS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const storeApiKeys = (keys: ApiKey[]): void => {
+  localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(keys));
+};
+
+const generateApiKey = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let key = 'crm_api_';
+  for (let i = 0; i < 32; i++) {
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+};
+
+const maskApiKey = (key: string): string => {
+  if (key.length <= 12) return key;
+  return key.substring(0, 8) + '****' + key.substring(key.length - 4);
+};
+
 export const ProfileScreen: React.FC = () => {
+  const navigate = useNavigate();
   const { isMobile } = usePresentationMode();
   const { colors, mode } = useThemeMode();
   const isDark = mode === 'dark';
-  const { updateAvatar, userAvatar } = useAuth();
+  const { updateAvatar, userAvatar, user: authUser, logout, refreshUser } = useAuth();
 
   const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // User data states (editable)
-  const [userName, setUserName] = useState('Donald Epstein');
-  const [userEmail, setUserEmail] = useState('don***@email.com');
-  const [userPhone, setUserPhone] = useState('+1 (555) 123-7890');
-  const [userCountry, setUserCountry] = useState('United States');
+  const [userName, setUserName] = useState(authUser?.fullName || '');
+  const [userEmail, setUserEmail] = useState(authUser?.email || '');
+  const [userPhone, setUserPhone] = useState('');
+  const [userCountry, setUserCountry] = useState('');
   // Find the currently selected avatar from the options, or use the first one
   const initialAvatar = avatarOptions.find(a => a.url === userAvatar) || avatarOptions[0];
   const [selectedAvatar, setSelectedAvatar] = useState(initialAvatar);
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      try {
+        const profileData = await userService.getProfile();
+        if (profileData.profile) {
+          setUserName(profileData.profile.fullName || '');
+          setUserEmail(profileData.profile.email || '');
+          setUserCountry(profileData.profile.timezone || 'United States');
+        }
+      } catch (err: any) {
+        console.log('Using auth context user data');
+        // Fallback to auth context data
+        if (authUser) {
+          setUserName(authUser.fullName || '');
+          setUserEmail(authUser.email || '');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [authUser]);
 
   // Modal states
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -129,11 +241,11 @@ export const ProfileScreen: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showLoginHistory, setShowLoginHistory] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
-  const [showKycModal, setShowKycModal] = useState(false);
-  const [show2faModal, setShow2faModal] = useState(false);
-  const [kycStep, setKycStep] = useState(1);
-  const [twoFaStep, setTwoFaStep] = useState(1);
-  const [verificationCode, setVerificationCode] = useState('');
+
+  // Verification modal states
+  const [showKYCModal, setShowKYCModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showAntiPhishingModal, setShowAntiPhishingModal] = useState(false);
 
   // Edit form states
   const [editName, setEditName] = useState(userName);
@@ -142,33 +254,134 @@ export const ProfileScreen: React.FC = () => {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
   // API Key states
-  const [apiKeys, setApiKeys] = useState(mockApiKeys);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [showNewApiForm, setShowNewApiForm] = useState(false);
   const [newApiName, setNewApiName] = useState('');
   const [newApiPermissions, setNewApiPermissions] = useState<string[]>(['Read']);
+  const [creatingApiKey, setCreatingApiKey] = useState(false);
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+
+  // Login history state
+  const [loginHistory, setLoginHistory] = useState<LoginHistoryItem[]>([]);
+  const [loadingLoginHistory, setLoadingLoginHistory] = useState(false);
 
   // Notification states
-  const [notifications, setNotifications] = useState(notificationSettings);
+  const [notifications, setNotifications] = useState<NotificationSetting[]>(getStoredNotifications);
 
   // Payment states
-  const [paymentMethods, setPaymentMethods] = useState(mockPaymentMethods);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
-  // Preferences states
-  const [language, setLanguage] = useState('English');
-  const [currency, setCurrency] = useState('USD');
-  const [timezone, setTimezone] = useState('UTC-5 (Eastern Time)');
+  // Preferences states - initialize from storage
+  const storedPrefs = getStoredPreferences();
+  const [language, setLanguage] = useState(storedPrefs.language);
+  const [currency, setCurrency] = useState(storedPrefs.currency);
+  const [timezone, setTimezone] = useState(storedPrefs.timezone);
   const [darkMode, setDarkMode] = useState(true);
 
+  // Load API keys from storage on mount
+  useEffect(() => {
+    setApiKeys(getStoredApiKeys());
+  }, []);
+
+  // Fetch login history when modal opens
+  useEffect(() => {
+    if (showLoginHistory && loginHistory.length === 0) {
+      fetchLoginHistory();
+    }
+  }, [showLoginHistory]);
+
+  const fetchLoginHistory = async () => {
+    setLoadingLoginHistory(true);
+    try {
+      const response = await userService.getLoginHistory({ limit: 20 });
+      if (response.history) {
+        const mappedHistory: LoginHistoryItem[] = response.history.map((h: any, index: number) => ({
+          id: h.id || index,
+          device: h.userAgent || 'Unknown Device',
+          ip: h.ipAddress ? h.ipAddress.replace(/\d+$/, '***') : '***.***.***',
+          location: 'Unknown',
+          time: h.timestamp ? new Date(h.timestamp).toLocaleString() : '',
+          current: index === 0,
+        }));
+        setLoginHistory(mappedHistory);
+      }
+    } catch (err) {
+      console.log('Using default login history');
+      // Fallback mock data if backend doesn't have history
+      setLoginHistory([
+        { id: 1, device: 'Current Session', ip: '***.***.***', location: 'Unknown', time: new Date().toLocaleString(), current: true },
+      ]);
+    } finally {
+      setLoadingLoginHistory(false);
+    }
+  };
+
+  // Handle API key creation
+  const handleCreateApiKey = async () => {
+    if (!newApiName.trim()) return;
+
+    setCreatingApiKey(true);
+    try {
+      // Generate key locally since backend doesn't have this endpoint
+      const newKey = generateApiKey();
+      const newApiKey: ApiKey = {
+        id: Date.now().toString(),
+        name: newApiName.trim(),
+        key: newKey,
+        permissions: newApiPermissions,
+        created: new Date().toISOString().split('T')[0],
+      };
+
+      const updatedKeys = [...apiKeys, newApiKey];
+      setApiKeys(updatedKeys);
+      storeApiKeys(updatedKeys);
+
+      // Show the full key once (for copying)
+      setNewlyCreatedKey(newKey);
+
+      // Reset form
+      setNewApiName('');
+      setNewApiPermissions(['Read']);
+      setShowNewApiForm(false);
+    } catch (err) {
+      console.error('Failed to create API key:', err);
+    } finally {
+      setCreatingApiKey(false);
+    }
+  };
+
+  // Handle API key deletion
+  const handleDeleteApiKey = (keyId: string | number) => {
+    const updatedKeys = apiKeys.filter(k => k.id !== keyId);
+    setApiKeys(updatedKeys);
+    storeApiKeys(updatedKeys);
+  };
+
+  // Handle notification toggle
+  const handleToggleNotification = (id: string) => {
+    const updatedNotifications = notifications.map(n =>
+      n.id === id ? { ...n, enabled: !n.enabled } : n
+    );
+    setNotifications(updatedNotifications);
+    storeNotifications(updatedNotifications);
+  };
+
+  // Handle preferences save
+  const handleSavePreferences = () => {
+    storePreferences({ language, currency, timezone });
+    setShowPreferences(false);
+  };
+
   const user = {
-    uid: 'CRM-8274651',
+    uid: authUser?.id ? `CRM-${authUser.id.slice(0, 7).toUpperCase()}` : 'CRM-0000000',
     accountType: 'Standard Account',
     vipLevel: 0,
-    status: 'Pending Verification',
-    kycVerified: false,
-    twoFactorEnabled: false,
-    antiPhishingSet: false,
-    verificationProgress: 33,
-    joinDate: 'Dec 2024',
+    status: authUser?.kycLevel && authUser.kycLevel > 0 ? 'Verified' : 'Pending Verification',
+    kycVerified: authUser?.kycLevel ? authUser.kycLevel > 0 : false,
+    twoFactorEnabled: authUser?.is2FAEnabled || false,
+    antiPhishingSet: authUser?.antiPhishingSet || false,
+    verificationProgress: authUser?.is2FAEnabled ? 66 : (authUser?.kycLevel ? 33 : 0),
+    joinDate: authUser?.createdAt ? new Date(authUser.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Dec 2024',
   };
 
   const verificationItems = [
@@ -180,7 +393,6 @@ export const ProfileScreen: React.FC = () => {
       status: user.kycVerified ? 'Verified' : 'Not Verified',
       verified: user.kycVerified,
       action: 'Start Verification',
-      onClick: () => setShowKycModal(true),
     },
     {
       id: '2fa',
@@ -190,7 +402,15 @@ export const ProfileScreen: React.FC = () => {
       status: user.twoFactorEnabled ? 'Enabled' : 'Not Enabled',
       verified: user.twoFactorEnabled,
       action: 'Enable 2FA',
-      onClick: () => setShow2faModal(true),
+    },
+    {
+      id: 'anti-phishing',
+      icon: <AlertTriangle size={20} />,
+      title: 'Anti-Phishing Code',
+      subtitle: 'Protect yourself from phishing attacks',
+      status: user.antiPhishingSet ? 'Set' : 'Not Set',
+      verified: user.antiPhishingSet,
+      action: 'Set Code',
     },
   ];
 
@@ -208,35 +428,57 @@ export const ProfileScreen: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSaveProfile = () => {
-    setUserName(editName);
-    setUserPhone(editPhone);
-    setUserCountry(editCountry);
-    setShowEditProfile(false);
-  };
-
-  const handleCreateApiKey = () => {
-    if (newApiName) {
-      const newKey = {
-        id: apiKeys.length + 1,
-        name: newApiName,
-        key: `crm_api_****${Math.random().toString(36).substr(2, 4)}`,
-        permissions: newApiPermissions,
-        created: new Date().toISOString().split('T')[0],
-        lastUsed: 'Never',
-      };
-      setApiKeys([...apiKeys, newKey]);
-      setNewApiName('');
-      setNewApiPermissions(['Read']);
-      setShowNewApiForm(false);
+  // Handle verification button clicks
+  const handleVerificationAction = (id: string) => {
+    switch (id) {
+      case 'kyc':
+        setShowKYCModal(true);
+        break;
+      case '2fa':
+        setShow2FAModal(true);
+        break;
+      case 'anti-phishing':
+        setShowAntiPhishingModal(true);
+        break;
     }
   };
 
-  const toggleNotification = (id: string) => {
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, enabled: !n.enabled } : n
-    ));
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      await userService.updateProfile({
+        fullName: editName,
+        // phone: editPhone, // Add when backend supports it
+        timezone: editCountry,
+      });
+
+      setUserName(editName);
+      setUserPhone(editPhone);
+      setUserCountry(editCountry);
+      setShowEditProfile(false);
+
+      // Refresh user data
+      if (refreshUser) {
+        await refreshUser();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+      navigate('/login');
+    }
+  };
+
 
   // Modal Component
   const Modal: React.FC<{ show: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidth?: string }> =
@@ -468,13 +710,36 @@ export const ProfileScreen: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                color: isDark ? colors.text.tertiary : '#374151',
-                fontSize: '14px',
-                fontWeight: 500,
+                color: colors.text.tertiary,
+                fontSize: '13px',
+                marginBottom: '12px',
               }}>
                 <Mail size={14} />
                 {userEmail}
               </div>
+
+              {/* UID */}
+              <motion.button
+                whileHover={{ background: `${colors.primary[400]}15` }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCopyUID}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 14px',
+                  background: `${colors.primary[400]}08`,
+                  border: `1px solid ${colors.glass.border}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  color: colors.text.secondary,
+                  fontSize: '12px',
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                UID: {user.uid}
+                {copied ? <Check size={14} color={colors.status.success} /> : <Copy size={14} />}
+              </motion.button>
             </div>
 
             {/* Account Info */}
@@ -766,14 +1031,14 @@ export const ProfileScreen: React.FC = () => {
                       <motion.button
                         whileHover={{ scale: 1.02, boxShadow: `0 2px 12px ${colors.primary[400]}30` }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={item.onClick}
+                        onClick={() => handleVerificationAction(item.id)}
                         style={{
                           padding: '8px 16px',
-                          background: isDark ? `linear-gradient(135deg, ${colors.primary[400]}20, ${colors.secondary[400]}15)` : '#000000',
-                          border: `1px solid ${isDark ? colors.primary[400] : '#000000'}40`,
+                          background: `linear-gradient(135deg, ${colors.primary[400]}20, ${colors.secondary[400]}15)`,
+                          border: `1px solid ${colors.primary[400]}40`,
                           borderRadius: '8px',
                           cursor: 'pointer',
-                          color: isDark ? colors.primary[400] : '#ffffff',
+                          color: colors.primary[400],
                           fontSize: '12px',
                           fontWeight: 600,
                         }}
@@ -851,6 +1116,7 @@ export const ProfileScreen: React.FC = () => {
               <motion.button
                 whileHover={{ background: `${colors.status.error}15` }}
                 whileTap={{ scale: 0.98 }}
+                onClick={handleLogout}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1078,9 +1344,69 @@ export const ProfileScreen: React.FC = () => {
       </Modal>
 
       {/* API Management Modal */}
-      <Modal show={showApiModal} onClose={() => setShowApiModal(false)} title="API Management" maxWidth="600px">
+      <Modal show={showApiModal} onClose={() => { setShowApiModal(false); setNewlyCreatedKey(null); }} title="API Management" maxWidth="600px">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Newly created key alert */}
+          {newlyCreatedKey && (
+            <div style={{
+              padding: '16px',
+              background: `${colors.status.warning}15`,
+              border: `1px solid ${colors.status.warning}40`,
+              borderRadius: '12px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <AlertTriangle size={16} color={colors.status.warning} />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: colors.status.warning }}>
+                  Save your API key now - it won't be shown again!
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <code style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  background: colors.background.primary,
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  color: colors.text.primary,
+                  wordBreak: 'break-all',
+                }}>
+                  {newlyCreatedKey}
+                </code>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(newlyCreatedKey);
+                  }}
+                  style={{
+                    padding: '8px',
+                    background: colors.primary[400],
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: '#0a0e14',
+                  }}
+                >
+                  <Copy size={16} />
+                </motion.button>
+              </div>
+            </div>
+          )}
+
           {/* Existing API Keys */}
+          {apiKeys.length === 0 && !showNewApiForm && (
+            <div style={{
+              padding: '40px',
+              textAlign: 'center',
+              color: colors.text.tertiary,
+            }}>
+              <Key size={40} style={{ opacity: 0.5, marginBottom: '12px' }} />
+              <p style={{ fontSize: '14px' }}>No API keys yet</p>
+              <p style={{ fontSize: '12px', marginTop: '4px' }}>Create an API key to access the trading API</p>
+            </div>
+          )}
+
           {apiKeys.map((key) => (
             <div
               key={key.id}
@@ -1094,11 +1420,11 @@ export const ProfileScreen: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <div>
                   <h4 style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary }}>{key.name}</h4>
-                  <span style={{ fontSize: '12px', color: colors.text.tertiary, fontFamily: 'monospace' }}>{key.key}</span>
+                  <span style={{ fontSize: '12px', color: colors.text.tertiary, fontFamily: 'monospace' }}>{maskApiKey(key.key)}</span>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.05, color: colors.status.error }}
-                  onClick={() => setApiKeys(apiKeys.filter(k => k.id !== key.id))}
+                  onClick={() => handleDeleteApiKey(key.id)}
                   style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: colors.text.tertiary }}
                 >
                   <Trash2 size={16} />
@@ -1121,7 +1447,7 @@ export const ProfileScreen: React.FC = () => {
                 ))}
               </div>
               <div style={{ marginTop: '8px', fontSize: '11px', color: colors.text.tertiary }}>
-                Created: {key.created} • Last used: {key.lastUsed}
+                Created: {key.created}{key.lastUsed ? ` • Last used: ${key.lastUsed}` : ''}
               </div>
             </div>
           ))}
@@ -1178,8 +1504,10 @@ export const ProfileScreen: React.FC = () => {
                 ))}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <Button variant="primary" size="sm" onClick={handleCreateApiKey}>Create Key</Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowNewApiForm(false)}>Cancel</Button>
+                <Button variant="primary" size="sm" onClick={handleCreateApiKey} disabled={creatingApiKey || !newApiName.trim()}>
+                  {creatingApiKey ? 'Creating...' : 'Create Key'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowNewApiForm(false)} disabled={creatingApiKey}>Cancel</Button>
               </div>
             </div>
           ) : (
@@ -1234,7 +1562,7 @@ export const ProfileScreen: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => toggleNotification(notif.id)}
+                onClick={() => handleToggleNotification(notif.id)}
                 style={{
                   width: '48px',
                   height: '26px',
@@ -1269,6 +1597,13 @@ export const ProfileScreen: React.FC = () => {
       {/* Payment Methods Modal */}
       <Modal show={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Payment Methods">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {paymentMethods.length === 0 && (
+            <div style={{ padding: '40px', textAlign: 'center', color: colors.text.tertiary }}>
+              <CreditCard size={40} style={{ opacity: 0.5, marginBottom: '12px' }} />
+              <p style={{ fontSize: '14px' }}>No payment methods added</p>
+              <p style={{ fontSize: '12px', marginTop: '4px' }}>Add a payment method for faster withdrawals</p>
+            </div>
+          )}
           {paymentMethods.map((method) => (
             <div
               key={method.id}
@@ -1327,7 +1662,19 @@ export const ProfileScreen: React.FC = () => {
       {/* Login History Modal */}
       <Modal show={showLoginHistory} onClose={() => setShowLoginHistory(false)} title="Login History" maxWidth="600px">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {loginHistory.map((session) => (
+          {loadingLoginHistory && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '8px' }}>
+              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: colors.primary[400] }} />
+              <span style={{ color: colors.text.tertiary }}>Loading login history...</span>
+            </div>
+          )}
+          {!loadingLoginHistory && loginHistory.length === 0 && (
+            <div style={{ padding: '40px', textAlign: 'center', color: colors.text.tertiary }}>
+              <History size={40} style={{ opacity: 0.5, marginBottom: '12px' }} />
+              <p style={{ fontSize: '14px' }}>No login history available</p>
+            </div>
+          )}
+          {!loadingLoginHistory && loginHistory.map((session) => (
             <div
               key={session.id}
               style={{
@@ -1516,7 +1863,7 @@ export const ProfileScreen: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setShowPreferences(false)}
+            onClick={handleSavePreferences}
             style={{
               width: '100%',
               padding: '14px',
@@ -1540,411 +1887,270 @@ export const ProfileScreen: React.FC = () => {
       </Modal>
 
       {/* KYC Verification Modal */}
-      <Modal show={showKycModal} onClose={() => { setShowKycModal(false); setKycStep(1); }} title="Identity Verification" maxWidth="500px">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Progress Steps */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-            {[1, 2, 3].map((step) => (
-              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: kycStep >= step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: kycStep >= step ? (isDark ? '#0a0e14' : '#ffffff') : colors.text.tertiary,
-                  fontSize: '14px',
-                  fontWeight: 700,
-                }}>
-                  {kycStep > step ? <Check size={16} /> : step}
-                </div>
-                {step < 3 && (
-                  <div style={{
-                    width: '40px',
-                    height: '3px',
-                    background: kycStep > step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
-                    borderRadius: '2px',
-                  }} />
-                )}
+      <Modal show={showKYCModal} onClose={() => setShowKYCModal(false)} title="Identity Verification" maxWidth="500px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px' }}>
+          <div style={{
+            padding: '20px',
+            background: `linear-gradient(135deg, ${colors.primary[400]}10, ${colors.secondary[400]}08)`,
+            borderRadius: '16px',
+            border: `1px solid ${colors.primary[400]}20`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: `${colors.primary[400]}20`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <FileCheck size={24} color={colors.primary[400]} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '16px', fontWeight: 600, color: colors.text.primary, margin: 0 }}>
+                  Complete KYC Verification
+                </h4>
+                <p style={{ fontSize: '13px', color: colors.text.tertiary, margin: 0 }}>
+                  Unlock higher trading limits
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h5 style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary, margin: 0 }}>
+              Requirements:
+            </h5>
+            {[
+              'Valid government-issued ID (Passport, Driver\'s License, or National ID)',
+              'Proof of address (Utility bill or bank statement, less than 3 months old)',
+              'Clear selfie photo for identity verification'
+            ].map((req, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <CheckCircle size={16} color={colors.primary[400]} style={{ marginTop: '2px', flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', color: colors.text.secondary }}>{req}</span>
               </div>
             ))}
           </div>
 
-          {/* Step Content */}
-          {kycStep === 1 && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '20px',
-                background: isDark ? `${colors.primary[400]}15` : '#f3f4f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-              }}>
-                <FileCheck size={40} color={isDark ? colors.primary[400] : '#000000'} />
-              </div>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
-                Personal Information
-              </h4>
-              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '24px' }}>
-                Enter your legal name as it appears on your ID
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
-                <input placeholder="Legal First Name" style={{ width: '100%', padding: '14px 16px', background: isDark ? colors.background.card : '#f9fafb', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`, borderRadius: '10px', color: isDark ? colors.text.primary : '#000000', fontSize: '14px', outline: 'none' }} />
-                <input placeholder="Legal Last Name" style={{ width: '100%', padding: '14px 16px', background: isDark ? colors.background.card : '#f9fafb', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`, borderRadius: '10px', color: isDark ? colors.text.primary : '#000000', fontSize: '14px', outline: 'none' }} />
-                <input placeholder="Date of Birth (MM/DD/YYYY)" style={{ width: '100%', padding: '14px 16px', background: isDark ? colors.background.card : '#f9fafb', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`, borderRadius: '10px', color: isDark ? colors.text.primary : '#000000', fontSize: '14px', outline: 'none' }} />
-              </div>
+          <div style={{
+            padding: '14px 16px',
+            background: `${colors.status.warning}10`,
+            border: `1px solid ${colors.status.warning}30`,
+            borderRadius: '12px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={16} color={colors.status.warning} />
+              <span style={{ fontSize: '12px', color: colors.status.warning }}>
+                Verification typically takes 1-3 business days
+              </span>
             </div>
-          )}
-
-          {kycStep === 2 && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '20px',
-                background: isDark ? `${colors.primary[400]}15` : '#f3f4f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-              }}>
-                <Camera size={40} color={isDark ? colors.primary[400] : '#000000'} />
-              </div>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
-                Upload ID Document
-              </h4>
-              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '24px' }}>
-                Upload a clear photo of your government-issued ID
-              </p>
-              <div style={{
-                padding: '40px',
-                border: `2px dashed ${isDark ? colors.glass.border : '#d1d5db'}`,
-                borderRadius: '12px',
-                background: isDark ? `${colors.primary[400]}05` : '#f9fafb',
-                cursor: 'pointer',
-              }}>
-                <Camera size={32} color={isDark ? colors.text.tertiary : '#6b7280'} style={{ margin: '0 auto 12px', display: 'block' }} />
-                <p style={{ fontSize: '14px', fontWeight: 600, color: isDark ? colors.text.primary : '#000000', marginBottom: '4px' }}>
-                  Click to upload or drag and drop
-                </p>
-                <p style={{ fontSize: '12px', color: isDark ? colors.text.tertiary : '#6b7280' }}>
-                  PNG, JPG up to 10MB
-                </p>
-              </div>
-            </div>
-          )}
-
-          {kycStep === 3 && (
-            <div style={{ textAlign: 'center' }}>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  background: `${colors.status.success}20`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 20px',
-                }}
-              >
-                <Check size={40} color={colors.status.success} />
-              </motion.div>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
-                Verification Submitted!
-              </h4>
-              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '16px' }}>
-                Your documents have been submitted for review. This usually takes 1-3 business days.
-              </p>
-              <div style={{
-                padding: '16px',
-                background: isDark ? `${colors.status.warning}10` : '#fef3c7',
-                border: `1px solid ${colors.status.warning}30`,
-                borderRadius: '10px',
-              }}>
-                <p style={{ fontSize: '13px', color: colors.status.warning, fontWeight: 500 }}>
-                  You will receive an email notification once your verification is complete.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {kycStep > 1 && kycStep < 3 && (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setKycStep(kycStep - 1)}
-                style={{
-                  flex: 1,
-                  padding: '14px',
-                  background: 'transparent',
-                  border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
-                  borderRadius: '12px',
-                  color: isDark ? colors.text.primary : '#000000',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Back
-              </motion.button>
-            )}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (kycStep < 3) setKycStep(kycStep + 1);
-                else { setShowKycModal(false); setKycStep(1); }
-              }}
-              style={{
-                flex: 1,
-                padding: '14px',
-                background: isDark ? `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})` : '#000000',
-                border: 'none',
-                borderRadius: '12px',
-                color: isDark ? '#0a0e14' : '#ffffff',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              {kycStep === 3 ? 'Done' : 'Continue'}
-            </motion.button>
           </div>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setShowKYCModal(false);
+              navigate('/kyc');
+            }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})`,
+              border: 'none',
+              borderRadius: '12px',
+              color: '#0a0e14',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <FileCheck size={18} />
+            Start Verification Process
+          </motion.button>
         </div>
       </Modal>
 
       {/* 2FA Setup Modal */}
-      <Modal show={show2faModal} onClose={() => { setShow2faModal(false); setTwoFaStep(1); setVerificationCode(''); }} title="Enable Two-Factor Authentication" maxWidth="450px">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Progress Steps */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-            {[1, 2, 3].map((step) => (
-              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <Modal show={show2FAModal} onClose={() => setShow2FAModal(false)} title="Two-Factor Authentication" maxWidth="500px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px' }}>
+          <div style={{
+            padding: '20px',
+            background: `linear-gradient(135deg, ${colors.primary[400]}10, ${colors.secondary[400]}08)`,
+            borderRadius: '16px',
+            border: `1px solid ${colors.primary[400]}20`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: `${colors.primary[400]}20`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <Lock size={24} color={colors.primary[400]} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '16px', fontWeight: 600, color: colors.text.primary, margin: 0 }}>
+                  Enable 2FA Security
+                </h4>
+                <p style={{ fontSize: '13px', color: colors.text.tertiary, margin: 0 }}>
+                  Add an extra layer of protection
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h5 style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary, margin: 0 }}>
+              How it works:
+            </h5>
+            {[
+              'Download an authenticator app (Google Authenticator, Authy)',
+              'Scan the QR code with your authenticator app',
+              'Enter the 6-digit code to verify setup',
+              'Save your backup codes in a safe place'
+            ].map((step, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                 <div style={{
-                  width: '32px',
-                  height: '32px',
+                  width: '20px',
+                  height: '20px',
                   borderRadius: '50%',
-                  background: twoFaStep >= step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
+                  background: `${colors.primary[400]}20`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: twoFaStep >= step ? (isDark ? '#0a0e14' : '#ffffff') : colors.text.tertiary,
-                  fontSize: '14px',
-                  fontWeight: 700,
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: colors.primary[400],
+                  flexShrink: 0,
                 }}>
-                  {twoFaStep > step ? <Check size={16} /> : step}
+                  {i + 1}
                 </div>
-                {step < 3 && (
-                  <div style={{
-                    width: '40px',
-                    height: '3px',
-                    background: twoFaStep > step ? (isDark ? colors.primary[400] : '#000000') : colors.glass.border,
-                    borderRadius: '2px',
-                  }} />
-                )}
+                <span style={{ fontSize: '13px', color: colors.text.secondary }}>{step}</span>
               </div>
             ))}
           </div>
 
-          {/* Step Content */}
-          {twoFaStep === 1 && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '20px',
-                background: isDark ? `${colors.primary[400]}15` : '#f3f4f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-              }}>
-                <Smartphone size={40} color={isDark ? colors.primary[400] : '#000000'} />
-              </div>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
-                Download Authenticator App
-              </h4>
-              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '20px' }}>
-                Download Google Authenticator or Authy on your mobile device
-              </p>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                <div style={{ padding: '12px 20px', background: isDark ? colors.background.card : '#f3f4f6', borderRadius: '10px', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}` }}>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.primary : '#000000' }}>Google Authenticator</p>
-                </div>
-                <div style={{ padding: '12px 20px', background: isDark ? colors.background.card : '#f3f4f6', borderRadius: '10px', border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}` }}>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.primary : '#000000' }}>Authy</p>
-                </div>
-              </div>
-            </div>
-          )}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setShow2FAModal(false);
+              navigate('/security/2fa');
+            }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})`,
+              border: 'none',
+              borderRadius: '12px',
+              color: '#0a0e14',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <Lock size={18} />
+            Set Up 2FA Now
+          </motion.button>
+        </div>
+      </Modal>
 
-          {twoFaStep === 2 && (
-            <div style={{ textAlign: 'center' }}>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
-                Scan QR Code
-              </h4>
-              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '20px' }}>
-                Scan this QR code with your authenticator app
-              </p>
-              {/* Mock QR Code */}
+      {/* Anti-Phishing Code Modal */}
+      <Modal show={showAntiPhishingModal} onClose={() => setShowAntiPhishingModal(false)} title="Anti-Phishing Code" maxWidth="500px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px' }}>
+          <div style={{
+            padding: '20px',
+            background: `linear-gradient(135deg, ${colors.primary[400]}10, ${colors.secondary[400]}08)`,
+            borderRadius: '16px',
+            border: `1px solid ${colors.primary[400]}20`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
               <div style={{
-                width: '180px',
-                height: '180px',
-                background: '#ffffff',
+                width: '48px',
+                height: '48px',
                 borderRadius: '12px',
-                margin: '0 auto 20px',
+                background: `${colors.status.warning}20`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '16px',
               }}>
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  background: `repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50% / 12px 12px`,
-                  borderRadius: '8px',
-                }} />
+                <AlertTriangle size={24} color={colors.status.warning} />
               </div>
-              <p style={{ fontSize: '12px', color: isDark ? colors.text.tertiary : '#6b7280', marginBottom: '12px' }}>
-                Or enter this code manually:
-              </p>
-              <div style={{
-                padding: '12px 16px',
-                background: isDark ? colors.background.card : '#f3f4f6',
-                borderRadius: '8px',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '14px',
-                fontWeight: 600,
-                color: isDark ? colors.primary[400] : '#000000',
-                letterSpacing: '0.1em',
-              }}>
-                CRYM-4DX2-FA8K-9Y2Z
-              </div>
-            </div>
-          )}
-
-          {twoFaStep === 3 && (
-            <div style={{ textAlign: 'center' }}>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  background: `${colors.status.success}20`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 20px',
-                }}
-              >
-                <Check size={40} color={colors.status.success} />
-              </motion.div>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '8px' }}>
-                2FA Enabled Successfully!
-              </h4>
-              <p style={{ fontSize: '14px', color: isDark ? colors.text.tertiary : '#374151', marginBottom: '16px' }}>
-                Your account is now protected with two-factor authentication.
-              </p>
-              <div style={{
-                padding: '16px',
-                background: isDark ? `${colors.status.success}10` : '#d1fae5',
-                border: `1px solid ${colors.status.success}30`,
-                borderRadius: '10px',
-              }}>
-                <p style={{ fontSize: '13px', color: colors.status.success, fontWeight: 500 }}>
-                  You will need to enter a 6-digit code from your authenticator app when logging in.
+              <div>
+                <h4 style={{ fontSize: '16px', fontWeight: 600, color: colors.text.primary, margin: 0 }}>
+                  Set Anti-Phishing Code
+                </h4>
+                <p style={{ fontSize: '13px', color: colors.text.tertiary, margin: 0 }}>
+                  Verify authentic CrymadX emails
                 </p>
               </div>
             </div>
-          )}
-
-          {/* Verification Code Input for Step 2 */}
-          {twoFaStep === 2 && (
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#374151', marginBottom: '8px', display: 'block' }}>
-                Enter 6-digit verification code
-              </label>
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="000000"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  background: isDark ? colors.background.card : '#f9fafb',
-                  border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
-                  borderRadius: '10px',
-                  color: isDark ? colors.text.primary : '#000000',
-                  fontSize: '24px',
-                  fontWeight: 700,
-                  textAlign: 'center',
-                  letterSpacing: '0.3em',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  outline: 'none',
-                }}
-              />
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {twoFaStep > 1 && twoFaStep < 3 && (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setTwoFaStep(twoFaStep - 1)}
-                style={{
-                  flex: 1,
-                  padding: '14px',
-                  background: 'transparent',
-                  border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
-                  borderRadius: '12px',
-                  color: isDark ? colors.text.primary : '#000000',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Back
-              </motion.button>
-            )}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (twoFaStep < 3) setTwoFaStep(twoFaStep + 1);
-                else { setShow2faModal(false); setTwoFaStep(1); setVerificationCode(''); }
-              }}
-              disabled={twoFaStep === 2 && verificationCode.length < 6}
-              style={{
-                flex: 1,
-                padding: '14px',
-                background: (twoFaStep === 2 && verificationCode.length < 6) ? colors.glass.border : (isDark ? `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})` : '#000000'),
-                border: 'none',
-                borderRadius: '12px',
-                color: (twoFaStep === 2 && verificationCode.length < 6) ? colors.text.tertiary : (isDark ? '#0a0e14' : '#ffffff'),
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: (twoFaStep === 2 && verificationCode.length < 6) ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {twoFaStep === 3 ? 'Done' : twoFaStep === 2 ? 'Verify & Enable' : 'Continue'}
-            </motion.button>
           </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h5 style={{ fontSize: '14px', fontWeight: 600, color: colors.text.primary, margin: 0 }}>
+              What is an Anti-Phishing Code?
+            </h5>
+            <p style={{ fontSize: '13px', color: colors.text.secondary, lineHeight: 1.6 }}>
+              Your anti-phishing code is a unique word or phrase that will appear in all official
+              CrymadX emails. If an email doesn't contain your code, it may be a phishing attempt.
+            </p>
+          </div>
+
+          <div style={{
+            padding: '14px 16px',
+            background: `${colors.status.success}10`,
+            border: `1px solid ${colors.status.success}30`,
+            borderRadius: '12px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Shield size={16} color={colors.status.success} />
+              <span style={{ fontSize: '12px', color: colors.status.success }}>
+                Choose a memorable code only you would know
+              </span>
+            </div>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setShowAntiPhishingModal(false);
+              navigate('/security/anti-phishing');
+            }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})`,
+              border: 'none',
+              borderRadius: '12px',
+              color: '#0a0e14',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <AlertTriangle size={18} />
+            Create Anti-Phishing Code
+          </motion.button>
         </div>
       </Modal>
     </ResponsiveLayout>

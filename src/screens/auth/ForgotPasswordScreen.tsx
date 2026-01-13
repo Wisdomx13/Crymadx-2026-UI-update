@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Mail, ArrowRight, ChevronLeft, Shield, CheckCircle, Lock, KeyRound } from 'lucide-react';
+import { Mail, ArrowRight, ChevronLeft, Shield, CheckCircle, Lock } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
-import { Button, Input, GlassCard } from '../../components';
+import { Button, Input, GlassCard, GlowingSnowBackground } from '../../components';
+import { authService } from '../../services';
 
 // Floating particles for auth pages
 const AuthParticles: React.FC<{ primaryColor: string }> = ({ primaryColor }) => {
@@ -50,20 +51,16 @@ const AuthParticles: React.FC<{ primaryColor: string }> = ({ primaryColor }) => 
   );
 };
 
-type Step = 'email' | 'code' | 'newPassword' | 'success';
+// Backend uses token-based reset via email link, not 6-digit codes
+type Step = 'email' | 'success';
 
 export const ForgotPasswordScreen: React.FC = () => {
   const navigate = useNavigate();
   const { colors, isDark } = useThemeMode();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [timer, setTimer] = useState(60);
-  const [canResend, setCanResend] = useState(false);
 
   useEffect(() => {
     const checkScreen = () => setIsMobile(window.innerWidth < 768);
@@ -72,61 +69,21 @@ export const ForgotPasswordScreen: React.FC = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Countdown timer for resend code
-  useEffect(() => {
-    if (step === 'code' && timer > 0) {
-      const interval = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            setCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [step, timer]);
-
-  const handleSendCode = async (e: React.FormEvent) => {
+  const handleSendResetLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    setStep('code');
-    setTimer(60);
-    setCanResend(false);
-  };
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (code.length !== 6) return;
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    setStep('newPassword');
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword || newPassword.length < 8) return;
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    setStep('success');
-  };
-
-  const handleResendCode = async () => {
-    if (!canResend) return;
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    setTimer(60);
-    setCanResend(false);
+    try {
+      // Call backend API to send reset link via email
+      await authService.forgotPassword(email);
+      // Always show success to prevent email enumeration
+      setStep('success');
+    } catch {
+      // Don't reveal if email exists - always show success for security
+      setStep('success');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderStep = () => {
@@ -152,11 +109,11 @@ export const ForgotPasswordScreen: React.FC = () => {
                 fontSize: isMobile ? '13px' : '15px',
                 color: colors.text.tertiary,
               }}>
-                Enter your email address and we'll send you a verification code
+                Enter your email address and we'll send you a password reset link
               </p>
             </div>
 
-            <form onSubmit={handleSendCode}>
+            <form onSubmit={handleSendResetLink}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '20px' }}>
                 <Input
                   label="Email Address"
@@ -177,154 +134,7 @@ export const ForgotPasswordScreen: React.FC = () => {
                   rightIcon={<ArrowRight size={18} />}
                   disabled={!email}
                 >
-                  Send Verification Code
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        );
-
-      case 'code':
-        return (
-          <motion.div
-            key="code"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-          >
-            <div style={{ marginBottom: isMobile ? '24px' : '32px' }}>
-              <h2 style={{
-                fontSize: isMobile ? '24px' : '28px',
-                fontWeight: 700,
-                color: colors.text.primary,
-                marginBottom: '8px',
-              }}>
-                Enter Verification Code
-              </h2>
-              <p style={{
-                fontSize: isMobile ? '13px' : '15px',
-                color: colors.text.tertiary,
-              }}>
-                We sent a 6-digit code to <span style={{ color: colors.primary[400] }}>{email}</span>
-              </p>
-            </div>
-
-            <form onSubmit={handleVerifyCode}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '20px' }}>
-                <Input
-                  label="Verification Code"
-                  type="text"
-                  placeholder="000000"
-                  leftIcon={<Shield size={18} />}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  size={isMobile ? 'md' : 'lg'}
-                />
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: '14px', color: colors.text.tertiary }}>
-                    Didn't receive code?
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleResendCode}
-                    disabled={!canResend}
-                    style={{
-                      fontSize: '14px',
-                      color: canResend ? colors.primary[400] : colors.text.tertiary,
-                      background: 'none',
-                      border: 'none',
-                      cursor: canResend ? 'pointer' : 'default',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {canResend ? 'Resend Code' : `Resend in ${timer}s`}
-                  </button>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  loading={isLoading}
-                  rightIcon={<ArrowRight size={18} />}
-                  disabled={code.length !== 6}
-                >
-                  Verify Code
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        );
-
-      case 'newPassword':
-        return (
-          <motion.div
-            key="newPassword"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-          >
-            <div style={{ marginBottom: isMobile ? '24px' : '32px' }}>
-              <h2 style={{
-                fontSize: isMobile ? '24px' : '28px',
-                fontWeight: 700,
-                color: colors.text.primary,
-                marginBottom: '8px',
-              }}>
-                Create New Password
-              </h2>
-              <p style={{
-                fontSize: isMobile ? '13px' : '15px',
-                color: colors.text.tertiary,
-              }}>
-                Your new password must be at least 8 characters
-              </p>
-            </div>
-
-            <form onSubmit={handleResetPassword}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '20px' }}>
-                <Input
-                  label="New Password"
-                  type="password"
-                  placeholder="Enter new password"
-                  leftIcon={<Lock size={18} />}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  size={isMobile ? 'md' : 'lg'}
-                />
-
-                <Input
-                  label="Confirm Password"
-                  type="password"
-                  placeholder="Confirm new password"
-                  leftIcon={<KeyRound size={18} />}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  size={isMobile ? 'md' : 'lg'}
-                />
-
-                {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                  <p style={{ fontSize: '12px', color: colors.status.error }}>
-                    Passwords do not match
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  loading={isLoading}
-                  rightIcon={<ArrowRight size={18} />}
-                  disabled={!newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8}
-                >
-                  Reset Password
+                  Send Reset Link
                 </Button>
               </div>
             </form>
@@ -347,14 +157,14 @@ export const ForgotPasswordScreen: React.FC = () => {
                 width: '80px',
                 height: '80px',
                 borderRadius: '50%',
-                background: `${colors.status.success}20`,
+                background: `${colors.primary[400]}20`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 24px',
               }}
             >
-              <CheckCircle size={40} color={colors.status.success} />
+              <Mail size={40} color={colors.primary[400]} />
             </motion.div>
 
             <h2 style={{
@@ -363,14 +173,21 @@ export const ForgotPasswordScreen: React.FC = () => {
               color: colors.text.primary,
               marginBottom: '8px',
             }}>
-              Password Reset Successfully!
+              Check Your Email
             </h2>
             <p style={{
               fontSize: isMobile ? '13px' : '15px',
               color: colors.text.tertiary,
+              marginBottom: '16px',
+            }}>
+              If an account exists with <span style={{ color: colors.primary[400] }}>{email}</span>, you will receive a password reset link.
+            </p>
+            <p style={{
+              fontSize: isMobile ? '12px' : '13px',
+              color: colors.text.tertiary,
               marginBottom: '32px',
             }}>
-              Your password has been updated. You can now log in with your new password.
+              Click the link in your email to reset your password. The link will expire in 1 hour.
             </p>
 
             <Button
@@ -382,6 +199,20 @@ export const ForgotPasswordScreen: React.FC = () => {
             >
               Back to Login
             </Button>
+
+            <button
+              onClick={() => setStep('email')}
+              style={{
+                marginTop: '16px',
+                color: colors.text.secondary,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              Didn't receive an email? Try again
+            </button>
           </motion.div>
         );
     }
@@ -405,7 +236,7 @@ export const ForgotPasswordScreen: React.FC = () => {
               inset: 0,
               background: `
                 radial-gradient(ellipse 80% 60% at 10% 20%, rgba(26, 143, 255, 0.18) 0%, transparent 50%),
-                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(0, 210, 106, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(0, 212, 170, 0.12) 0%, transparent 50%),
                 radial-gradient(ellipse 40% 30% at 50% 50%, rgba(26, 143, 255, 0.08) 0%, transparent 50%)
               `,
             }} />
@@ -440,18 +271,18 @@ export const ForgotPasswordScreen: React.FC = () => {
                 width: isMobile ? '200px' : '400px',
                 height: isMobile ? '200px' : '400px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(0, 210, 106, 0.15) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(0, 212, 170, 0.15) 0%, transparent 70%)',
                 filter: 'blur(50px)',
               }}
             />
             <AuthParticles primaryColor={colors.primary[400]} />
           </>
         ) : (
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: '#ffffff',
-          }} />
+          <GlowingSnowBackground
+            show={true}
+            backgroundImage="/main-bg.jpg"
+            intensity="high"
+          />
         )}
       </div>
 
@@ -471,7 +302,7 @@ export const ForgotPasswordScreen: React.FC = () => {
         }}>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={() => step === 'email' ? navigate('/login') : setStep(step === 'code' ? 'email' : step === 'newPassword' ? 'code' : 'email')}
+            onClick={() => step === 'email' ? navigate('/login') : setStep('email')}
             style={{
               padding: '8px',
               background: 'rgba(26, 143, 255, 0.1)',
@@ -624,29 +455,6 @@ export const ForgotPasswordScreen: React.FC = () => {
           glow
           style={{ width: '100%', maxWidth: '440px' }}
         >
-          {/* Progress Steps */}
-          {step !== 'success' && (
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginBottom: '24px',
-            }}>
-              {['email', 'code', 'newPassword'].map((s, i) => (
-                <div
-                  key={s}
-                  style={{
-                    flex: 1,
-                    height: '4px',
-                    borderRadius: '2px',
-                    background: ['email', 'code', 'newPassword'].indexOf(step) >= i
-                      ? colors.primary[400]
-                      : colors.glass.border,
-                    transition: 'background 0.3s ease',
-                  }}
-                />
-              ))}
-            </div>
-          )}
 
           <AnimatePresence mode="wait">
             {renderStep()}

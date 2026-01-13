@@ -25,3 +25,10 @@ export { Footer } from './Footer';
 
 // Presentation Mode
 export { PresentationMode, usePresentationMode } from './PresentationMode';
+
+// Additional Components from Old UI
+export { VerificationBanner } from './VerificationBanner';
+export { NFTBuyCard } from './NFTBuyCard';
+export { NFTPurchaseModal } from './NFTPurchaseModal';
+export { ChainFilter } from './ChainFilter';
+export { PurchaseHistory } from './PurchaseHistory';

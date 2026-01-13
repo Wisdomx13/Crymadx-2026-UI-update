@@ -14,10 +14,13 @@ import {
   UserPlus,
   Award,
   Wallet,
+  Loader2,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { Glass3DCard, Glass3DStat } from '../../components/Glass3D';
 import { ResponsiveLayout } from '../../components';
+import { referralService } from '../../services';
+import { useAuth } from '../../context/AuthContext';
 
 interface Referral {
   id: string;
@@ -27,11 +30,33 @@ interface Referral {
   earnings: string;
 }
 
+interface ReferralData {
+  code: string;
+  link: string;
+  totalReferrals: number;
+  activeReferrals: number;
+  totalEarnings: string;
+  pendingEarnings: string;
+  commissionRate: string;
+}
+
 export const ReferralScreen: React.FC = () => {
-  const { colors, isDark } = useThemeMode();
+  const { colors } = useThemeMode();
+  const { isAuthenticated } = useAuth();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'referrals' | 'payouts'>('overview');
   const [_isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [referralData, setReferralData] = useState<ReferralData>({
+    code: '',
+    link: '',
+    totalReferrals: 0,
+    activeReferrals: 0,
+    totalEarnings: '$0.00',
+    pendingEarnings: '$0.00',
+    commissionRate: '20%',
+  });
+  const [referrals, setReferrals] = useState<Referral[]>([]);
 
   useEffect(() => {
     const checkScreen = () => setIsMobile(window.innerWidth < 768);
@@ -40,24 +65,61 @@ export const ReferralScreen: React.FC = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Mock referral data
-  const referralData = {
-    code: 'CRYMADX2024',
-    link: 'https://crymadx.io/ref/CRYMADX2024',
-    totalReferrals: 12,
-    activeReferrals: 8,
-    totalEarnings: '$245.50',
-    pendingEarnings: '$32.00',
-    commissionRate: '20%',
-  };
+  // Fetch referral data from backend
+  useEffect(() => {
+    const fetchReferralData = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
 
-  const referrals: Referral[] = [
-    { id: '1', username: 'user***1234', date: '2024-01-15', status: 'active', earnings: '$45.20' },
-    { id: '2', username: 'trader***567', date: '2024-01-12', status: 'active', earnings: '$32.80' },
-    { id: '3', username: 'crypto***890', date: '2024-01-10', status: 'pending', earnings: '$0.00' },
-    { id: '4', username: 'invest***234', date: '2024-01-08', status: 'active', earnings: '$28.50' },
-    { id: '5', username: 'whale***678', date: '2024-01-05', status: 'inactive', earnings: '$15.00' },
-  ];
+      setLoading(true);
+      try {
+        // Fetch referral code
+        const codeResponse = await referralService.getReferralCode();
+        const code = codeResponse.referralCode || '';
+        const link = codeResponse.referralLink || referralService.generateReferralLink(code);
+
+        // Fetch referrals list
+        const referralsResponse = await referralService.getReferrals();
+        const fetchedReferrals = referralsResponse.referrals || [];
+
+        // Map to our format
+        const mappedReferrals: Referral[] = fetchedReferrals.map((r: any) => ({
+          id: r.id,
+          username: r.email?.replace(/(.{3}).*(@.*)/, '$1***$2') || 'user***',
+          date: r.joinedAt ? new Date(r.joinedAt).toISOString().split('T')[0] : '',
+          status: r.status || 'pending',
+          earnings: `$${parseFloat(r.totalRewards || '0').toFixed(2)}`,
+        }));
+        setReferrals(mappedReferrals);
+
+        // Fetch rewards
+        const rewardsResponse = await referralService.getRewards();
+        const rewards = rewardsResponse.rewards;
+
+        // Calculate active referrals
+        const activeCount = mappedReferrals.filter(r => r.status === 'active').length;
+
+        setReferralData({
+          code,
+          link,
+          totalReferrals: referralsResponse.total || mappedReferrals.length,
+          activeReferrals: activeCount,
+          totalEarnings: `$${parseFloat(rewards?.total || '0').toFixed(2)}`,
+          pendingEarnings: `$${parseFloat(rewards?.pending || '0').toFixed(2)}`,
+          commissionRate: '20%', // Default commission rate
+        });
+      } catch (error) {
+        console.error('Failed to fetch referral data:', error);
+        // Keep default values on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReferralData();
+  }, [isAuthenticated]);
 
   const steps = [
     {
@@ -96,19 +158,17 @@ export const ReferralScreen: React.FC = () => {
 
   return (
     <ResponsiveLayout activeNav="referral" title="Referral">
-      {/* Background effects - Dark mode only */}
-      {isDark && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: colors.gradients.mesh,
-            opacity: 0.6,
-            pointerEvents: 'none',
-            zIndex: -1,
-          }}
-        />
-      )}
+      {/* Background effects */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: colors.gradients.mesh,
+          opacity: 0.6,
+          pointerEvents: 'none',
+          zIndex: -1,
+        }}
+      />
         {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -122,38 +182,38 @@ export const ReferralScreen: React.FC = () => {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <Users size={32} color={isDark ? colors.primary[400] : '#000000'} />
+              <Users size={32} color={colors.primary[400]} />
               <h1
                 style={{
                   fontSize: '32px',
                   fontWeight: 700,
-                  color: '#000000',
+                  color: colors.text.primary,
                 }}
               >
                 Referral Program
               </h1>
             </div>
-            <p style={{ fontSize: '16px', fontWeight: 500, color: isDark ? colors.text.tertiary : '#000000' }}>
+            <p style={{ fontSize: '15px', color: colors.text.tertiary }}>
               Invite friends and earn {referralData.commissionRate} commission
             </p>
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.02, boxShadow: isDark ? colors.shadows.glowLg : 'none' }}
+            whileHover={{ scale: 1.02, boxShadow: colors.shadows.glowLg }}
             whileTap={{ scale: 0.98 }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               padding: '12px 24px',
-              background: isDark ? colors.gradients.primary : '#000000',
+              background: colors.gradients.primary,
               border: 'none',
               borderRadius: '12px',
-              color: isDark ? colors.background.primary : '#ffffff',
+              color: colors.background.primary,
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: isDark ? colors.shadows.glow : 'none',
+              boxShadow: colors.shadows.glow,
             }}
           >
             <Share2 size={18} />
@@ -207,9 +267,9 @@ export const ReferralScreen: React.FC = () => {
             <div style={{ padding: '24px' }}>
               <h3
                 style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#000000',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: colors.text.primary,
                   marginBottom: '16px',
                 }}
               >
@@ -227,8 +287,8 @@ export const ReferralScreen: React.FC = () => {
                   style={{
                     flex: 1,
                     padding: '14px 16px',
-                    background: isDark ? 'rgba(0, 255, 170, 0.05)' : '#f9fafb',
-                    border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
+                    background: 'rgba(0, 255, 170, 0.05)',
+                    border: `1px solid ${colors.glass.border}`,
                     borderRadius: '12px',
                     display: 'flex',
                     alignItems: 'center',
@@ -237,9 +297,8 @@ export const ReferralScreen: React.FC = () => {
                 >
                   <span
                     style={{
-                      fontSize: '15px',
-                      fontWeight: 500,
-                      color: isDark ? colors.text.secondary : '#000000',
+                      fontSize: '14px',
+                      color: colors.text.secondary,
                       fontFamily: "'JetBrains Mono', monospace",
                     }}
                   >
@@ -254,10 +313,10 @@ export const ReferralScreen: React.FC = () => {
                       alignItems: 'center',
                       gap: '6px',
                       padding: '8px 16px',
-                      background: copied ? (isDark ? colors.status.success : '#000000') : (isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6'),
-                      border: `1px solid ${copied ? (isDark ? colors.status.success : '#000000') : (isDark ? colors.glass.border : '#d1d5db')}`,
+                      background: copied ? colors.status.success : 'rgba(0, 255, 170, 0.1)',
+                      border: `1px solid ${copied ? colors.status.success : colors.glass.border}`,
                       borderRadius: '8px',
-                      color: copied ? (isDark ? colors.background.primary : '#ffffff') : (isDark ? colors.primary[400] : '#000000'),
+                      color: copied ? colors.background.primary : colors.primary[400],
                       fontSize: '13px',
                       fontWeight: 500,
                       cursor: 'pointer',
@@ -278,14 +337,14 @@ export const ReferralScreen: React.FC = () => {
                   marginBottom: '20px',
                 }}
               >
-                <span style={{ fontSize: '15px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#000000' }}>
+                <span style={{ fontSize: '14px', color: colors.text.tertiary }}>
                   Referral Code:
                 </span>
                 <div
                   style={{
                     padding: '8px 16px',
-                    background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
-                    border: `1px solid ${isDark ? colors.primary[400] : '#000000'}`,
+                    background: 'rgba(0, 255, 170, 0.1)',
+                    border: `1px solid ${colors.primary[400]}`,
                     borderRadius: '8px',
                   }}
                 >
@@ -293,7 +352,7 @@ export const ReferralScreen: React.FC = () => {
                     style={{
                       fontSize: '16px',
                       fontWeight: 700,
-                      color: isDark ? colors.primary[400] : '#000000',
+                      color: colors.primary[400],
                       fontFamily: "'JetBrains Mono', monospace",
                       letterSpacing: '0.1em',
                     }}
@@ -308,9 +367,9 @@ export const ReferralScreen: React.FC = () => {
                   style={{
                     padding: '8px',
                     background: 'transparent',
-                    border: `1px solid ${isDark ? colors.glass.border : '#d1d5db'}`,
+                    border: `1px solid ${colors.glass.border}`,
                     borderRadius: '8px',
-                    color: isDark ? colors.text.secondary : '#374151',
+                    color: colors.text.secondary,
                     cursor: 'pointer',
                     display: 'flex',
                   }}
@@ -375,9 +434,9 @@ export const ReferralScreen: React.FC = () => {
         >
           <h3
             style={{
-              fontSize: '22px',
-              fontWeight: 700,
-              color: '#000000',
+              fontSize: '18px',
+              fontWeight: 600,
+              color: colors.text.primary,
               marginBottom: '20px',
             }}
           >
@@ -414,13 +473,13 @@ export const ReferralScreen: React.FC = () => {
                         width: '24px',
                         height: '24px',
                         borderRadius: '50%',
-                        background: isDark ? 'rgba(0, 255, 170, 0.15)' : '#f3f4f6',
+                        background: 'rgba(0, 255, 170, 0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '12px',
                         fontWeight: 700,
-                        color: isDark ? colors.primary[400] : '#000000',
+                        color: colors.primary[400],
                       }}
                     >
                       {index + 1}
@@ -431,21 +490,21 @@ export const ReferralScreen: React.FC = () => {
                         width: '56px',
                         height: '56px',
                         borderRadius: '16px',
-                        background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
+                        background: 'rgba(0, 255, 170, 0.1)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         margin: '0 auto 16px',
-                        color: isDark ? colors.primary[400] : '#000000',
+                        color: colors.primary[400],
                       }}
                     >
                       {step.icon}
                     </div>
                     <h4
                       style={{
-                        fontSize: '16px',
-                        fontWeight: 700,
-                        color: '#000000',
+                        fontSize: '15px',
+                        fontWeight: 600,
+                        color: colors.text.primary,
                         marginBottom: '8px',
                       }}
                     >
@@ -453,9 +512,8 @@ export const ReferralScreen: React.FC = () => {
                     </h4>
                     <p
                       style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: isDark ? colors.text.tertiary : '#374151',
+                        fontSize: '13px',
+                        color: colors.text.tertiary,
                         lineHeight: 1.5,
                       }}
                     >
@@ -470,7 +528,7 @@ export const ReferralScreen: React.FC = () => {
                           right: '-20px',
                           top: '50%',
                           transform: 'translateY(-50%)',
-                          color: isDark ? colors.text.tertiary : '#9ca3af',
+                          color: colors.text.tertiary,
                           zIndex: 10,
                         }}
                       >
@@ -507,23 +565,23 @@ export const ReferralScreen: React.FC = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setActiveTab(tab.id as typeof activeTab)}
                     style={{
-                      padding: '12px 24px',
+                      padding: '10px 20px',
                       background:
                         activeTab === tab.id
-                          ? (isDark ? 'rgba(0, 255, 170, 0.15)' : '#000000')
+                          ? 'rgba(0, 255, 170, 0.15)'
                           : 'transparent',
                       border: `1px solid ${
                         activeTab === tab.id
-                          ? (isDark ? colors.primary[400] : '#000000')
-                          : (isDark ? colors.glass.border : '#d1d5db')
+                          ? colors.primary[400]
+                          : colors.glass.border
                       }`,
                       borderRadius: '10px',
                       color:
                         activeTab === tab.id
-                          ? (isDark ? colors.primary[400] : '#ffffff')
-                          : (isDark ? colors.text.tertiary : '#000000'),
+                          ? colors.primary[400]
+                          : colors.text.tertiary,
                       fontSize: '14px',
-                      fontWeight: 600,
+                      fontWeight: activeTab === tab.id ? 600 : 500,
                       cursor: 'pointer',
                     }}
                   >
@@ -532,304 +590,146 @@ export const ReferralScreen: React.FC = () => {
                 ))}
               </div>
 
-              {/* Overview Tab Content */}
-              {activeTab === 'overview' && (
-                <>
-                  {/* Table Header */}
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
-                      padding: '12px 16px',
-                      borderBottom: `2px solid ${isDark ? colors.glass.border : '#000000'}`,
-                      marginBottom: '8px',
-                    }}
-                  >
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#000000', textTransform: 'uppercase' }}>
-                      User
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#000000', textTransform: 'uppercase' }}>
-                      Joined
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#000000', textTransform: 'uppercase' }}>
-                      Status
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: isDark ? colors.text.tertiary : '#000000', textTransform: 'uppercase', textAlign: 'right' }}>
-                      Earnings
-                    </span>
-                  </div>
+              {/* Table Header */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
+                  padding: '12px 16px',
+                  borderBottom: `1px solid ${colors.glass.border}`,
+                  marginBottom: '8px',
+                }}
+              >
+                <span style={{ fontSize: '12px', fontWeight: 600, color: colors.text.tertiary, textTransform: 'uppercase' }}>
+                  User
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: colors.text.tertiary, textTransform: 'uppercase' }}>
+                  Joined
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: colors.text.tertiary, textTransform: 'uppercase' }}>
+                  Status
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: colors.text.tertiary, textTransform: 'uppercase', textAlign: 'right' }}>
+                  Earnings
+                </span>
+              </div>
 
-                  {/* Table Rows */}
-                  {referrals.map((referral, index) => (
-                    <motion.div
-                      key={referral.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ background: isDark ? 'rgba(0, 255, 170, 0.03)' : '#f9fafb' }}
+              {/* Table Rows */}
+              {referrals.map((referral, index) => (
+                <motion.div
+                  key={referral.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ background: 'rgba(0, 255, 170, 0.03)' }}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
-                        padding: '16px',
-                        borderRadius: '8px',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'rgba(0, 255, 170, 0.1)',
+                        display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
+                        color: colors.primary[400],
+                        fontSize: '14px',
+                        fontWeight: 600,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '10px',
-                            background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: isDark ? colors.primary[400] : '#000000',
-                            fontSize: '15px',
-                            fontWeight: 700,
-                          }}
-                        >
-                          {referral.username.charAt(0).toUpperCase()}
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '15px',
-                            fontWeight: 600,
-                            color: isDark ? colors.text.primary : '#000000',
-                            fontFamily: "'JetBrains Mono', monospace",
-                          }}
-                        >
-                          {referral.username}
-                        </span>
-                      </div>
-
-                      <span
-                        style={{
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          color: isDark ? colors.text.secondary : '#000000',
-                        }}
-                      >
-                        {referral.date}
-                      </span>
-
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          background:
-                            referral.status === 'active'
-                              ? 'rgba(0, 255, 170, 0.1)'
-                              : referral.status === 'pending'
-                              ? 'rgba(255, 193, 7, 0.1)'
-                              : 'rgba(255, 51, 102, 0.1)',
-                          width: 'fit-content',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            background:
-                              referral.status === 'active'
-                                ? colors.status.success
-                                : referral.status === 'pending'
-                                ? colors.status.warning
-                                : colors.status.error,
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color:
-                              referral.status === 'active'
-                                ? colors.status.success
-                                : referral.status === 'pending'
-                                ? colors.status.warning
-                                : colors.status.error,
-                            textTransform: 'capitalize',
-                          }}
-                        >
-                          {referral.status}
-                        </span>
-                      </div>
-
-                      <span
-                        style={{
-                          fontSize: '15px',
-                          fontWeight: 700,
-                          color: isDark ? colors.text.primary : '#000000',
-                          fontFamily: "'JetBrains Mono', monospace",
-                          textAlign: 'right',
-                        }}
-                      >
-                        {referral.earnings}
-                      </span>
-                    </motion.div>
-                  ))}
-                </>
-              )}
-
-              {/* My Referrals Tab Content */}
-              {activeTab === 'referrals' && (
-                <>
-                  {/* Summary Stats */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                    <div style={{ padding: '20px', background: isDark ? 'rgba(0, 255, 170, 0.05)' : '#f9fafb', borderRadius: '12px', border: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}` }}>
-                      <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#6b7280', marginBottom: '8px' }}>Total Referrals</p>
-                      <p style={{ fontSize: '28px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000' }}>{referralData.totalReferrals}</p>
+                      {referral.username.charAt(0).toUpperCase()}
                     </div>
-                    <div style={{ padding: '20px', background: isDark ? 'rgba(0, 255, 170, 0.05)' : '#f9fafb', borderRadius: '12px', border: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}` }}>
-                      <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#6b7280', marginBottom: '8px' }}>Active</p>
-                      <p style={{ fontSize: '28px', fontWeight: 700, color: colors.status.success }}>{referralData.activeReferrals}</p>
-                    </div>
-                    <div style={{ padding: '20px', background: isDark ? 'rgba(0, 255, 170, 0.05)' : '#f9fafb', borderRadius: '12px', border: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}` }}>
-                      <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#6b7280', marginBottom: '8px' }}>Pending</p>
-                      <p style={{ fontSize: '28px', fontWeight: 700, color: colors.status.warning }}>{referralData.totalReferrals - referralData.activeReferrals}</p>
-                    </div>
+                    <span
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: colors.text.primary,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {referral.username}
+                    </span>
                   </div>
 
-                  {/* Referral List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {referrals.map((referral, index) => (
-                      <motion.div
-                        key={referral.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        style={{
-                          padding: '16px 20px',
-                          background: isDark ? 'rgba(0, 255, 170, 0.03)' : '#ffffff',
-                          border: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}`,
-                          borderRadius: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                          <div style={{
-                            width: '44px',
-                            height: '44px',
-                            borderRadius: '12px',
-                            background: isDark ? 'rgba(0, 255, 170, 0.1)' : '#f3f4f6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '18px',
-                            fontWeight: 700,
-                            color: isDark ? colors.primary[400] : '#000000',
-                          }}>
-                            {referral.username.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p style={{ fontSize: '15px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '4px' }}>{referral.username}</p>
-                            <p style={{ fontSize: '13px', fontWeight: 500, color: isDark ? colors.text.tertiary : '#6b7280' }}>Joined {referral.date}</p>
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ fontSize: '16px', fontWeight: 700, color: isDark ? colors.primary[400] : '#000000', marginBottom: '4px' }}>{referral.earnings}</p>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            background: referral.status === 'active' ? 'rgba(0, 255, 170, 0.1)' : referral.status === 'pending' ? 'rgba(255, 193, 7, 0.1)' : 'rgba(255, 51, 102, 0.1)',
-                            color: referral.status === 'active' ? colors.status.success : referral.status === 'pending' ? colors.status.warning : colors.status.error,
-                            textTransform: 'capitalize',
-                          }}>{referral.status}</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Payouts Tab Content */}
-              {activeTab === 'payouts' && (
-                <>
-                  {/* Payout Summary */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                    <div style={{ padding: '24px', background: isDark ? 'rgba(0, 255, 170, 0.05)' : '#f9fafb', borderRadius: '12px', border: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}` }}>
-                      <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#6b7280', marginBottom: '8px' }}>Total Earned</p>
-                      <p style={{ fontSize: '32px', fontWeight: 700, color: isDark ? colors.primary[400] : '#000000' }}>{referralData.totalEarnings}</p>
-                    </div>
-                    <div style={{ padding: '24px', background: isDark ? 'rgba(0, 255, 170, 0.05)' : '#f9fafb', borderRadius: '12px', border: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}` }}>
-                      <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? colors.text.tertiary : '#6b7280', marginBottom: '8px' }}>Pending Payout</p>
-                      <p style={{ fontSize: '32px', fontWeight: 700, color: colors.status.warning }}>{referralData.pendingEarnings}</p>
-                    </div>
-                  </div>
-
-                  {/* Payout History */}
-                  <h4 style={{ fontSize: '16px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '16px' }}>Payout History</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      { id: 1, amount: '$120.50', date: '2024-01-10', status: 'completed', method: 'USDT (TRC20)' },
-                      { id: 2, amount: '$85.00', date: '2024-01-03', status: 'completed', method: 'USDT (TRC20)' },
-                      { id: 3, amount: '$32.00', date: '2024-01-15', status: 'pending', method: 'USDT (TRC20)' },
-                    ].map((payout, index) => (
-                      <motion.div
-                        key={payout.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        style={{
-                          padding: '16px 20px',
-                          background: isDark ? 'rgba(0, 255, 170, 0.03)' : '#ffffff',
-                          border: `1px solid ${isDark ? colors.glass.border : '#e5e7eb'}`,
-                          borderRadius: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div>
-                          <p style={{ fontSize: '16px', fontWeight: 700, color: isDark ? colors.text.primary : '#000000', marginBottom: '4px' }}>{payout.amount}</p>
-                          <p style={{ fontSize: '13px', fontWeight: 500, color: isDark ? colors.text.tertiary : '#6b7280' }}>{payout.date} - {payout.method}</p>
-                        </div>
-                        <span style={{
-                          padding: '6px 14px',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          background: payout.status === 'completed' ? 'rgba(0, 255, 170, 0.1)' : 'rgba(255, 193, 7, 0.1)',
-                          color: payout.status === 'completed' ? colors.status.success : colors.status.warning,
-                          textTransform: 'capitalize',
-                        }}>{payout.status}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* Withdraw Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <span
                     style={{
-                      width: '100%',
-                      marginTop: '24px',
-                      padding: '16px',
-                      background: isDark ? colors.gradients.primary : '#000000',
-                      border: 'none',
-                      borderRadius: '12px',
-                      color: isDark ? colors.background.primary : '#ffffff',
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
+                      fontSize: '13px',
+                      color: colors.text.secondary,
                     }}
                   >
-                    Withdraw Earnings
-                  </motion.button>
-                </>
-              )}
+                    {referral.date}
+                  </span>
+
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      background:
+                        referral.status === 'active'
+                          ? 'rgba(0, 255, 170, 0.1)'
+                          : referral.status === 'pending'
+                          ? 'rgba(255, 193, 7, 0.1)'
+                          : 'rgba(255, 51, 102, 0.1)',
+                      width: 'fit-content',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background:
+                          referral.status === 'active'
+                            ? colors.status.success
+                            : referral.status === 'pending'
+                            ? colors.status.warning
+                            : colors.status.error,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color:
+                          referral.status === 'active'
+                            ? colors.status.success
+                            : referral.status === 'pending'
+                            ? colors.status.warning
+                            : colors.status.error,
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {referral.status}
+                    </span>
+                  </div>
+
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: colors.primary[400],
+                      fontFamily: "'JetBrains Mono', monospace",
+                      textAlign: 'right',
+                    }}
+                  >
+                    {referral.earnings}
+                  </span>
+                </motion.div>
+              ))}
 
               {/* Empty State if no referrals */}
-              {activeTab === 'overview' && referrals.length === 0 && (
+              {referrals.length === 0 && (
                 <div
                   style={{
                     display: 'flex',
@@ -858,8 +758,8 @@ export const ReferralScreen: React.FC = () => {
                   <h3
                     style={{
                       fontSize: '18px',
-                      fontWeight: 700,
-                      color: isDark ? colors.text.primary : '#000000',
+                      fontWeight: 600,
+                      color: colors.text.primary,
                       marginBottom: '8px',
                     }}
                   >
@@ -868,8 +768,7 @@ export const ReferralScreen: React.FC = () => {
                   <p
                     style={{
                       fontSize: '14px',
-                      fontWeight: 500,
-                      color: isDark ? colors.text.tertiary : '#6b7280',
+                      color: colors.text.tertiary,
                       maxWidth: '400px',
                     }}
                   >

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,10 +14,13 @@ import {
   Copy,
   Check,
   Download,
+  Loader2,
 } from 'lucide-react';
 import { ResponsiveLayout } from '../../components/ResponsiveLayout';
 import { CryptoIcon } from '../../components/CryptoIcon';
 import { useThemeMode } from '../../theme/ThemeContext';
+import { balanceService } from '../../services';
+import { useAuth } from '../../context/AuthContext';
 
 type TransactionType = 'all' | 'deposit' | 'withdraw' | 'convert';
 type TransactionStatus = 'completed' | 'pending' | 'failed';
@@ -38,108 +41,10 @@ interface Transaction {
   address?: string;
 }
 
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    type: 'deposit',
-    asset: 'BTC',
-    amount: 0.5,
-    status: 'completed',
-    date: '2024-01-15',
-    time: '14:32:45',
-    txHash: '0x1234...abcd',
-    network: 'Bitcoin',
-    address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-  },
-  {
-    id: '2',
-    type: 'withdraw',
-    asset: 'ETH',
-    amount: 2.5,
-    status: 'completed',
-    date: '2024-01-14',
-    time: '09:15:22',
-    txHash: '0x5678...efgh',
-    network: 'Ethereum',
-    fee: 0.002,
-    address: '0x742d35Cc6634C0532925a3b844Bc9e7595f',
-  },
-  {
-    id: '3',
-    type: 'convert',
-    asset: 'USDT',
-    assetTo: 'BTC',
-    amount: 5000,
-    amountTo: 0.12,
-    status: 'completed',
-    date: '2024-01-13',
-    time: '18:45:00',
-  },
-  {
-    id: '4',
-    type: 'deposit',
-    asset: 'SOL',
-    amount: 50,
-    status: 'pending',
-    date: '2024-01-13',
-    time: '16:20:33',
-    txHash: '0x9abc...ijkl',
-    network: 'Solana',
-    address: '7Vbmv1jt4vyuqBZcpYeQ96',
-  },
-  {
-    id: '5',
-    type: 'withdraw',
-    asset: 'BNB',
-    amount: 10,
-    status: 'failed',
-    date: '2024-01-12',
-    time: '11:05:18',
-    network: 'BSC',
-    fee: 0.001,
-    address: 'bnb1grpf0955h0ykzq3ar5nmum7y6gdfl6lxfn46h2',
-  },
-  {
-    id: '6',
-    type: 'convert',
-    asset: 'ETH',
-    assetTo: 'USDC',
-    amount: 1.5,
-    amountTo: 3750,
-    status: 'completed',
-    date: '2024-01-11',
-    time: '20:30:00',
-  },
-  {
-    id: '7',
-    type: 'deposit',
-    asset: 'USDC',
-    amount: 10000,
-    status: 'completed',
-    date: '2024-01-10',
-    time: '08:00:00',
-    txHash: '0xdef0...mnop',
-    network: 'Ethereum',
-    address: '0x742d35Cc6634C0532925a3b844Bc9e7595f',
-  },
-  {
-    id: '8',
-    type: 'withdraw',
-    asset: 'XRP',
-    amount: 500,
-    status: 'completed',
-    date: '2024-01-09',
-    time: '15:45:12',
-    txHash: '0xqrst...uvwx',
-    network: 'XRP Ledger',
-    fee: 0.25,
-    address: 'rN7n3473SaZBCG4dFL83w7a1RXtXtbk2D9',
-  },
-];
-
 export const HistoryScreen: React.FC = () => {
   const navigate = useNavigate();
   const { colors, mode } = useThemeMode();
+  const { isAuthenticated } = useAuth();
   const isDark = mode === 'dark';
 
   const [filter, setFilter] = useState<TransactionType>('all');
@@ -147,8 +52,53 @@ export const HistoryScreen: React.FC = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredTransactions = mockTransactions.filter(tx => {
+  // Fetch transactions from backend
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const response = await balanceService.getTransactions();
+        if (response.transactions) {
+          const mappedTransactions: Transaction[] = response.transactions.map((tx: any) => {
+            const createdAt = new Date(tx.createdAt || tx.timestamp || Date.now());
+            return {
+              id: tx.id || tx.txId,
+              type: tx.type?.toLowerCase() || 'deposit',
+              asset: tx.asset || tx.currency || 'USDT',
+              assetTo: tx.toAsset || tx.toCurrency,
+              amount: parseFloat(tx.amount || '0'),
+              amountTo: tx.toAmount ? parseFloat(tx.toAmount) : undefined,
+              status: (tx.status?.toLowerCase() || 'pending') as TransactionStatus,
+              date: createdAt.toISOString().split('T')[0],
+              time: createdAt.toTimeString().split(' ')[0],
+              txHash: tx.txHash || tx.transactionHash,
+              network: tx.network || tx.chain,
+              fee: tx.fee ? parseFloat(tx.fee) : undefined,
+              address: tx.address || tx.toAddress || tx.fromAddress,
+            };
+          });
+          setTransactions(mappedTransactions);
+        }
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
+        // Keep empty array on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [isAuthenticated]);
+
+  const filteredTransactions = transactions.filter(tx => {
     const matchesType = filter === 'all' || tx.type === filter;
     const matchesSearch = tx.asset.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (tx.assetTo && tx.assetTo.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -419,7 +369,16 @@ export const HistoryScreen: React.FC = () => {
           </div>
 
           {/* Transactions */}
-          {filteredTransactions.length > 0 ? (
+          {loading ? (
+            <div style={{
+              padding: '60px 24px',
+              textAlign: 'center',
+            }}>
+              <Loader2 size={40} style={{ color: colors.primary[400], marginBottom: '16px', animation: 'spin 1s linear infinite' }} />
+              <p style={{ fontSize: '14px', color: colors.text.secondary }}>Loading transactions...</p>
+              <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : filteredTransactions.length > 0 ? (
             filteredTransactions.map((tx, index) => (
               <motion.div
                 key={tx.id}
