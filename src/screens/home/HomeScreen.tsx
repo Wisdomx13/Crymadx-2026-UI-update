@@ -1083,7 +1083,8 @@ const GlassPanel: React.FC<{
 // ============================================
 const CryptoMiningRig: React.FC<{ isDark: boolean; isMobile: boolean }> = ({ isDark, isMobile }) => {
   const navigate = useNavigate();
-  const size = isMobile ? 260 : 340;
+  // Use viewport-relative sizing for consistent display across devices
+  const size = isMobile ? 300 : Math.min(580, window.innerHeight * 0.7);
 
   // Coins with different animation types - some enter chest, some bounce, some miss, one goes to Viking
   const coins = [
@@ -2163,12 +2164,14 @@ export const HomeScreen: React.FC = () => {
 
       {/* Hero Section - Premium Cinematic Bull vs Bear Integration */}
       <section style={{
-        minHeight: isMobile ? 'auto' : '480px',
+        height: isMobile ? 'auto' : 'calc(100vh - 140px)',
+        maxHeight: isMobile ? 'none' : '600px',
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
         position: 'relative',
-        paddingTop: isMobile ? '16px' : '20px',
-        paddingBottom: isMobile ? '24px' : '28px',
+        paddingTop: isMobile ? '16px' : '2vh',
+        paddingBottom: isMobile ? '20px' : '2vh',
         overflow: 'hidden',
       }}>
         {/* Dark mode: Pure black background */}
@@ -2201,11 +2204,11 @@ export const HomeScreen: React.FC = () => {
 
         <div style={{
           width: '100%',
-          maxWidth: '1100px',
+          maxWidth: '1400px',
           margin: '0 auto',
-          padding: isMobile ? '0 16px' : '0 32px',
+          padding: isMobile ? '0 20px' : '0 48px',
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1.1fr 0.9fr',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           gap: isMobile ? '24px' : '32px',
           alignItems: 'center',
           position: 'relative',
@@ -2255,10 +2258,10 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05, duration: 0.3 }}
               style={{
-                fontSize: isMobile ? '34px' : '52px',
+                fontSize: isMobile ? '32px' : 'clamp(36px, 4vw, 52px)',
                 fontWeight: 900,
                 lineHeight: 1.1,
-                marginBottom: '14px',
+                marginBottom: '1.5vh',
                 color: isDark ? '#ffffff' : '#000000',
                 textShadow: isDark
                   ? '0 2px 15px rgba(0,0,0,0.8), 0 0 30px rgba(0, 210, 106, 0.3)'
@@ -2284,12 +2287,12 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
               style={{
-                fontSize: isMobile ? '16px' : '18px',
+                fontSize: isMobile ? '15px' : 'clamp(14px, 1.2vw, 17px)',
                 fontWeight: 600,
                 color: isDark ? 'rgba(255,255,255,0.95)' : '#000000',
                 lineHeight: 1.5,
-                marginBottom: '20px',
-                maxWidth: isMobile ? '100%' : '480px',
+                marginBottom: '2vh',
+                maxWidth: isMobile ? '100%' : '500px',
                 textShadow: isDark
                   ? '0 1px 4px rgba(0,0,0,0.6)'
                   : 'none',
@@ -2312,8 +2315,8 @@ export const HomeScreen: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.3 }}
               style={{
-                marginBottom: '20px',
-                maxWidth: isMobile ? '100%' : '440px',
+                marginBottom: '2vh',
+                maxWidth: isMobile ? '100%' : '450px',
               }}
             >
               <div style={{
@@ -2437,7 +2440,8 @@ export const HomeScreen: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'flex-end',
+                marginRight: '-20px',
               }}
             >
               <CryptoMiningRig isDark={isDark} isMobile={false} />
@@ -2448,15 +2452,15 @@ export const HomeScreen: React.FC = () => {
 
       {/* Quick Actions Section - MetaAPI Style Clean List */}
       <section style={{
-        padding: isMobile ? '40px 20px' : '60px 48px',
+        padding: isMobile ? '40px 20px' : '80px 48px',
         position: 'relative',
       }}>
         <div style={{
-          maxWidth: '900px',
+          maxWidth: '1200px',
           margin: '0 auto',
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-          gap: isMobile ? '40px' : '48px 80px',
+          gap: isMobile ? '40px' : '60px 100px',
         }}>
           {quickActions.map((action, i) => (
             <motion.div
@@ -2477,9 +2481,9 @@ export const HomeScreen: React.FC = () => {
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 style={{
-                  width: '64px',
-                  height: '64px',
-                  minWidth: '64px',
+                  width: '80px',
+                  height: '80px',
+                  minWidth: '80px',
                   borderRadius: '50%',
                   background: `${action.color}20`,
                   border: `2px solid ${action.color}40`,
@@ -2489,17 +2493,17 @@ export const HomeScreen: React.FC = () => {
                   color: action.color,
                 }}
               >
-                {React.cloneElement(action.icon, { size: 28 })}
+                {React.cloneElement(action.icon, { size: 36 })}
               </motion.div>
 
               {/* Text Content */}
               <div style={{ flex: 1 }}>
                 {/* Title */}
                 <h3 style={{
-                  fontSize: '18px',
+                  fontSize: '22px',
                   fontWeight: 700,
                   color: isDark ? '#ffffff' : '#000000',
-                  marginBottom: '8px',
+                  marginBottom: '10px',
                   lineHeight: 1.3,
                 }}>
                   {action.label}
@@ -2507,11 +2511,11 @@ export const HomeScreen: React.FC = () => {
 
                 {/* Description */}
                 <p style={{
-                  fontSize: '14px',
+                  fontSize: '16px',
                   fontWeight: 500,
                   color: isDark ? 'rgba(255,255,255,0.6)' : '#333333',
-                  lineHeight: 1.6,
-                  marginBottom: '12px',
+                  lineHeight: 1.7,
+                  marginBottom: '14px',
                 }}>
                   {action.label === 'Buy Crypto' && 'Purchase cryptocurrency instantly with multiple payment methods including cards and bank transfers.'}
                   {action.label === 'Swap' && 'Exchange between cryptocurrencies with zero fees and competitive rates across all pairs.'}
@@ -2525,8 +2529,8 @@ export const HomeScreen: React.FC = () => {
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '14px',
+                    gap: '8px',
+                    fontSize: '16px',
                     fontWeight: 600,
                     color: action.color,
                     cursor: 'pointer',
@@ -2536,7 +2540,7 @@ export const HomeScreen: React.FC = () => {
                   {action.label === 'Swap' && 'Swap tokens'}
                   {action.label === 'Earn' && 'Start earning'}
                   {action.label === 'Stake' && 'Stake now'}
-                  <span style={{ fontSize: '12px' }}>→</span>
+                  <span style={{ fontSize: '14px' }}>→</span>
                 </motion.span>
               </div>
             </motion.div>
@@ -2603,7 +2607,7 @@ export const HomeScreen: React.FC = () => {
         padding: isMobile ? '48px 20px' : '80px 48px',
         position: 'relative',
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -2612,22 +2616,22 @@ export const HomeScreen: React.FC = () => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '20px',
+              marginBottom: '24px',
               flexWrap: 'wrap',
-              gap: '12px',
+              gap: '16px',
             }}
           >
             <div>
               <h2 style={{
-                fontSize: isMobile ? '24px' : '28px',
+                fontSize: isMobile ? '26px' : '32px',
                 fontWeight: 800,
                 color: isDark ? colors.text.primary : '#000000',
-                marginBottom: '4px',
+                marginBottom: '6px',
               }}>
                 Popular Cryptocurrencies
               </h2>
               <p style={{
-                fontSize: '14px',
+                fontSize: '16px',
                 fontWeight: 500,
                 color: isDark ? colors.text.tertiary : '#666',
               }}>
@@ -2684,15 +2688,15 @@ export const HomeScreen: React.FC = () => {
             {!isMobile && (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '2fr 1fr 1fr 100px',
-                padding: '10px 20px',
+                gridTemplateColumns: '2fr 1fr 1fr 120px',
+                padding: '14px 28px',
                 borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #d0d0d0',
                 background: isDark ? 'transparent' : '#f5f4f2',
               }}>
-                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Asset</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Price</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Change</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>Action</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Asset</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Price</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'right' }}>Change</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#666', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>Action</span>
               </div>
             )}
 
@@ -2709,9 +2713,9 @@ export const HomeScreen: React.FC = () => {
                 }}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 100px',
+                  gridTemplateColumns: isMobile ? '1fr auto' : '2fr 1fr 1fr 120px',
                   alignItems: 'center',
-                  padding: isMobile ? '12px 16px' : '12px 20px',
+                  padding: isMobile ? '14px 18px' : '16px 28px',
                   borderBottom: i < cryptoPrices.length - 1
                     ? `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e0e0e0'}`
                     : 'none',
@@ -2721,22 +2725,22 @@ export const HomeScreen: React.FC = () => {
                 onClick={() => navigate(`/trade/${crypto.symbol.toLowerCase()}`)}
               >
                 {/* Asset */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: isDark ? '8px' : '50%',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: isDark ? '10px' : '50%',
                     background: isDark ? 'rgba(255,255,255,0.08)' : '#ffffff',
                     border: isDark ? 'none' : '1px solid #d0d0d0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}>
-                    <CryptoIcon symbol={crypto.symbol} size={22} />
+                    <CryptoIcon symbol={crypto.symbol} size={26} />
                   </div>
                   <div>
                     <span style={{
-                      fontSize: '14px',
+                      fontSize: '16px',
                       fontWeight: 700,
                       color: isDark ? '#ffffff' : '#1a1a1a',
                       display: 'block',
@@ -2745,7 +2749,7 @@ export const HomeScreen: React.FC = () => {
                       {crypto.name}
                     </span>
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '13px',
                       color: isDark ? 'rgba(255,255,255,0.5)' : '#888',
                       fontWeight: 500,
                     }}>
@@ -2757,7 +2761,7 @@ export const HomeScreen: React.FC = () => {
                 {/* Price */}
                 <div style={{ textAlign: isMobile ? 'right' : 'right' }}>
                   <span style={{
-                    fontSize: '14px',
+                    fontSize: '16px',
                     fontWeight: 700,
                     fontFamily: "'JetBrains Mono', monospace",
                     color: isDark ? '#ffffff' : '#1a1a1a',
@@ -3022,10 +3026,11 @@ export const HomeScreen: React.FC = () => {
 
             <p style={{
               fontSize: isMobile ? '14px' : '15px',
-              color: isDark ? 'rgba(255,255,255,0.7)' : '#4b5563',
+              color: isDark ? 'rgba(255,255,255,0.7)' : '#000000',
               marginBottom: '32px',
               lineHeight: 1.7,
               maxWidth: '480px',
+              fontWeight: isDark ? 400 : 500,
             }}>
               Invest in tokenized real estate using traditional currencies. Convert your digital assets back to fiat seamlessly. No crypto expertise required — just regulated, secure transactions.
             </p>
@@ -3074,8 +3079,9 @@ export const HomeScreen: React.FC = () => {
                     </h4>
                     <p style={{
                       fontSize: '13px',
-                      color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280',
+                      color: isDark ? 'rgba(255,255,255,0.6)' : '#000000',
                       lineHeight: 1.5,
+                      fontWeight: isDark ? 400 : 500,
                     }}>
                       {feature.description}
                     </p>
@@ -3154,8 +3160,8 @@ export const HomeScreen: React.FC = () => {
                     {item.label && (
                       <span style={{
                         fontSize: '10px',
-                        fontWeight: 600,
-                        color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280',
+                        fontWeight: 700,
+                        color: isDark ? 'rgba(255,255,255,0.6)' : '#000000',
                         textAlign: 'center',
                         maxWidth: '80px',
                       }}>
@@ -3340,7 +3346,8 @@ export const HomeScreen: React.FC = () => {
                       alignItems: 'center',
                       gap: '4px',
                       fontSize: '10px',
-                      color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280',
+                      fontWeight: isDark ? 400 : 600,
+                      color: isDark ? 'rgba(255,255,255,0.5)' : '#000000',
                     }}>
                       <Globe size={10} />
                       {property.location}
@@ -3353,7 +3360,7 @@ export const HomeScreen: React.FC = () => {
                     justifyContent: 'space-between',
                   }}>
                     <div>
-                      <p style={{ fontSize: '10px', color: isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af', marginBottom: '2px' }}>
+                      <p style={{ fontSize: '10px', fontWeight: isDark ? 400 : 600, color: isDark ? 'rgba(255,255,255,0.4)' : '#000000', marginBottom: '2px' }}>
                         Total Tokens
                       </p>
                       <p style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 700, color: '#00D26A' }}>
@@ -3416,7 +3423,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* Mobile App Download Section - Centered Layout */}
       <section style={{
-        padding: isMobile ? '50px 20px' : '70px 48px',
+        padding: isMobile ? '50px 20px' : '90px 48px',
         position: 'relative',
         overflow: 'hidden',
         background: isDark
@@ -3424,14 +3431,14 @@ export const HomeScreen: React.FC = () => {
           : '#f8fafc',
       }}>
         <div style={{
-          maxWidth: '900px',
+          maxWidth: '1200px',
           margin: '0 auto',
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: isMobile ? '32px' : '60px',
-          padding: isDark ? '0' : '40px',
+          gap: isMobile ? '40px' : '80px',
+          padding: isDark ? '0' : '50px 60px',
           background: isDark ? 'transparent' : '#ffffff',
           borderRadius: isDark ? '0' : '24px',
           border: isDark ? 'none' : '1.5px solid #1a1a1a',
@@ -3442,31 +3449,31 @@ export const HomeScreen: React.FC = () => {
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            style={{ flex: 'none', maxWidth: isMobile ? '100%' : '380px' }}
+            style={{ flex: 'none', maxWidth: isMobile ? '100%' : '480px' }}
           >
             {/* Badge */}
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
+              gap: '8px',
+              padding: '10px 18px',
               background: isDark ? 'rgba(0,210,106,0.15)' : '#dcfce7',
               borderRadius: '100px',
-              marginBottom: '16px',
+              marginBottom: '20px',
               border: `1px solid ${isDark ? 'rgba(0,210,106,0.3)' : '#bbf7d0'}`,
             }}>
-              <Smartphone size={16} color="#00D26A" />
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#00D26A', letterSpacing: '0.5px' }}>
+              <Smartphone size={18} color="#00D26A" />
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#00D26A', letterSpacing: '0.5px' }}>
                 MOBILE APP
               </span>
             </div>
 
             {/* Title */}
             <h2 style={{
-              fontSize: isMobile ? '28px' : '36px',
+              fontSize: isMobile ? '32px' : '44px',
               fontWeight: 800,
               color: isDark ? '#ffffff' : '#000000',
-              marginBottom: '14px',
+              marginBottom: '18px',
               lineHeight: 1.15,
             }}>
               Trade Crypto{' '}
@@ -3479,10 +3486,10 @@ export const HomeScreen: React.FC = () => {
             </h2>
 
             <p style={{
-              fontSize: isMobile ? '14px' : '15px',
+              fontSize: isMobile ? '15px' : '18px',
               color: isDark ? 'rgba(255,255,255,0.7)' : '#374151',
-              marginBottom: '24px',
-              lineHeight: 1.6,
+              marginBottom: '28px',
+              lineHeight: 1.7,
               fontWeight: isDark ? 400 : 500,
             }}>
               Get real-time price alerts, execute instant trades, and manage your portfolio securely on the go.
@@ -3492,28 +3499,28 @@ export const HomeScreen: React.FC = () => {
             <div style={{
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '10px',
-              marginBottom: '24px',
+              gap: '12px',
+              marginBottom: '28px',
             }}>
               {[
-                { icon: <Bell size={14} />, label: 'Price Alerts' },
-                { icon: <Zap size={14} />, label: 'Instant Trades' },
-                { icon: <ShieldCheck size={14} />, label: 'Face ID' },
+                { icon: <Bell size={16} />, label: 'Price Alerts' },
+                { icon: <Zap size={16} />, label: 'Instant Trades' },
+                { icon: <ShieldCheck size={16} />, label: 'Face ID' },
               ].map((feature) => (
                 <div
                   key={feature.label}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 14px',
+                    gap: '8px',
+                    padding: '10px 18px',
                     background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
-                    borderRadius: '10px',
+                    borderRadius: '12px',
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#cbd5e1'}`,
                   }}
                 >
                   <span style={{ color: '#00D26A' }}>{feature.icon}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: isDark ? '#fff' : '#000000' }}>{feature.label}</span>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: isDark ? '#fff' : '#000000' }}>{feature.label}</span>
                 </div>
               ))}
             </div>
