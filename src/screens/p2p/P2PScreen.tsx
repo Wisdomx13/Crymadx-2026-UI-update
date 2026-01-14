@@ -282,13 +282,14 @@ export const P2PScreen: React.FC = () => {
   const handleCancelOrder = async (orderId: string) => {
     if (!confirm('Are you sure you want to cancel this order?')) return;
 
+    setMyOrdersError(null);
     try {
       await p2pService.cancelOrder(orderId);
       // Refresh my orders
       const response = await p2pService.getMyOrders();
       setMyOrders(response.orders || []);
     } catch (err: any) {
-      alert('Failed to cancel order: ' + (err.message || 'Unknown error'));
+      setMyOrdersError('Failed to cancel order: ' + (err.message || 'Unknown error'));
     }
   };
 

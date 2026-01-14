@@ -17,8 +17,11 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { CryptoIcon, ResponsiveLayout, Button } from '../../components';
-import { depositService } from '../../services';
+import { depositService, walletService } from '../../services';
 import { allAssets } from '../../config/assets';
+
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface CryptoOption {
   symbol: string;
@@ -44,6 +47,8 @@ export const DepositScreen: React.FC = () => {
   // API state
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isInitializingWallet, setIsInitializingWallet] = useState(false);
 
   // Token list - use local assets config (200+ tokens)
   const cryptoList: CryptoOption[] = allAssets.map((asset) => ({
@@ -68,16 +73,35 @@ export const DepositScreen: React.FC = () => {
       crypto.symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const fetchDepositAddress = useCallback(async (chainId: string) => {
+  const fetchDepositAddress = useCallback(async (chainId: string, attempt: number = 1) => {
+    const maxRetries = 3;
+    console.log(`[DepositScreen] fetchDepositAddress called with chainId: ${chainId} (attempt ${attempt}/${maxRetries})`);
     setIsLoadingAddress(true);
     setError(null);
+    setRetryCount(attempt - 1);
 
     try {
       const addressInfo = await depositService.getDepositAddress(chainId);
+      console.log('[DepositScreen] Got address info:', addressInfo);
       setDepositAddress(addressInfo.address);
       setMemo(addressInfo.memo);
+      setRetryCount(0);
     } catch (err: any) {
-      console.error('Error fetching deposit address:', err);
+      console.error('[DepositScreen] Error fetching deposit address:', err);
+
+      // Check if it's a "wallet not found" error and we can retry
+      const isWalletNotFound = err.message?.includes('No wallet found') || err.message?.includes('wallet');
+
+      if (isWalletNotFound && attempt < maxRetries) {
+        // Wait with exponential backoff: 2s, 4s, 8s
+        const waitTime = Math.pow(2, attempt) * 1000;
+        console.log(`[DepositScreen] Wallet not found, retrying in ${waitTime / 1000}s...`);
+
+        await delay(waitTime);
+        // Retry
+        return fetchDepositAddress(chainId, attempt + 1);
+      }
+
       setError(err.message || 'Failed to get deposit address');
       setDepositAddress('');
     } finally {
@@ -85,7 +109,36 @@ export const DepositScreen: React.FC = () => {
     }
   }, []);
 
+  // Function to trigger wallet creation and then retry fetching address
+  const handleInitializeWallet = useCallback(async (chainId: string) => {
+    setIsInitializingWallet(true);
+    setError(null);
+
+    try {
+      console.log('[DepositScreen] Attempting to initialize missing wallet...');
+      const result = await walletService.initializeMissingWallets();
+
+      if (result.queued.length > 0) {
+        console.log('[DepositScreen] Wallet creation queued, waiting for creation...');
+        // Wait a bit for wallet creation, then retry
+        await delay(5000);
+        await fetchDepositAddress(chainId);
+      } else if (result.errors.length > 0) {
+        setError(`Wallet initialization failed: ${result.errors[0]}`);
+      } else {
+        // No wallets queued, try fetching again
+        await fetchDepositAddress(chainId);
+      }
+    } catch (err: any) {
+      console.error('[DepositScreen] Failed to initialize wallet:', err);
+      setError(err.message || 'Failed to initialize wallet');
+    } finally {
+      setIsInitializingWallet(false);
+    }
+  }, [fetchDepositAddress]);
+
   const handleSelectCrypto = (crypto: CryptoOption) => {
+    console.log('[DepositScreen] handleSelectCrypto called:', crypto);
     setSelectedCrypto(crypto);
     fetchDepositAddress(crypto.chainId);
   };
@@ -215,7 +268,7 @@ export const DepositScreen: React.FC = () => {
               >
                 {filteredCrypto.map((crypto, index) => (
                   <motion.div
-                    key={`${crypto.symbol}-${crypto.chainId}`}
+                    key={`${crypto.symbol}-${crypto.chainId}-${crypto.network}-${index}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
@@ -339,26 +392,41 @@ export const DepositScreen: React.FC = () => {
               )}
 
               {/* Error State */}
-              {error && !isLoadingAddress && (
+              {error && !isLoadingAddress && !isInitializingWallet && (
                 <div
                   style={{
                     padding: '24px',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    background: error.includes('No wallet found') ? 'rgba(255, 193, 7, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: error.includes('No wallet found') ? '1px solid rgba(255, 193, 7, 0.3)' : '1px solid rgba(239, 68, 68, 0.2)',
                     borderRadius: '16px',
                     marginBottom: '24px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <AlertCircle size={24} color={colors.status.error} />
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                    <AlertCircle size={24} color={error.includes('No wallet found') ? '#FFC107' : colors.status.error} style={{ flexShrink: 0, marginTop: '2px' }} />
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '15px', fontWeight: 600, color: colors.text.primary, marginBottom: '4px' }}>
-                        Failed to get deposit address
+                      <p style={{ fontSize: '15px', fontWeight: 600, color: colors.text.primary, marginBottom: '8px' }}>
+                        {error.includes('No wallet found') ? 'Wallet Not Available Yet' : 'Failed to get deposit address'}
                       </p>
-                      <p style={{ fontSize: '13px', color: colors.text.tertiary }}>
-                        {error}
+                      <p style={{ fontSize: '13px', color: colors.text.secondary, lineHeight: 1.6 }}>
+                        {error.includes('No wallet found')
+                          ? `Your ${selectedCrypto.symbol} wallet is still being created. Click "Create Wallet" to request wallet creation, or "Retry" to check if it's ready.`
+                          : error}
                       </p>
                     </div>
+                  </div>
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                    {error.includes('No wallet found') && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleInitializeWallet(selectedCrypto.chainId)}
+                        leftIcon={<Loader2 size={16} />}
+                      >
+                        Create Wallet
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       size="sm"
@@ -368,6 +436,34 @@ export const DepositScreen: React.FC = () => {
                       Retry
                     </Button>
                   </div>
+                </div>
+              )}
+
+              {/* Initializing Wallet State */}
+              {isInitializingWallet && (
+                <div
+                  style={{
+                    padding: '40px 24px',
+                    background: 'rgba(0, 255, 136, 0.05)',
+                    border: '1px solid rgba(0, 255, 136, 0.2)',
+                    borderRadius: '16px',
+                    marginBottom: '24px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    style={{ display: 'inline-block', marginBottom: '16px' }}
+                  >
+                    <Loader2 size={40} color={colors.primary[400]} />
+                  </motion.div>
+                  <p style={{ fontSize: '15px', fontWeight: 600, color: colors.text.primary, marginBottom: '8px' }}>
+                    Creating Your {selectedCrypto.symbol} Wallet
+                  </p>
+                  <p style={{ fontSize: '13px', color: colors.text.secondary }}>
+                    This may take a few moments. Please wait...
+                  </p>
                 </div>
               )}
 

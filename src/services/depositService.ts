@@ -70,14 +70,51 @@ export const depositService = {
    */
   getDepositAddress: async (chain: string): Promise<DepositAddress> => {
     const chainConfig = chainConfigs[chain.toLowerCase()];
+    console.log('[DepositService] === getDepositAddress START ===');
+    console.log('[DepositService] Chain requested:', chain);
+    console.log('[DepositService] Chain config:', chainConfig);
 
     try {
       // Get all wallets and find the one for this chain
-      const { wallets } = await api.get<{ wallets: Array<{ chain: string; address: string; memo?: string; tag?: string }> }>('/api/user/wallets');
+      console.log('[DepositService] Calling API: /api/user/wallets');
+      const response = await api.get<{ wallets: Record<string, { address: string; walletId?: string; provider?: string; memo?: string; tag?: string }> | Array<{ chain: string; address: string; memo?: string; tag?: string }> }>('/api/user/wallets');
+      console.log('[DepositService] Full API response:', JSON.stringify(response, null, 2));
 
-      const wallet = wallets.find(w => w.chain.toLowerCase() === chain.toLowerCase());
+      const wallets = response?.wallets;
 
-      if (wallet) {
+      // Map chain IDs to wallet keys (EVM chains share the same ETH wallet)
+      const chainToWalletKey: Record<string, string> = {
+        'eth': 'ETH',
+        'matic': 'ETH', // EVM chains share the ETH address
+        'base': 'ETH',
+        'arb': 'ETH',
+        'op': 'ETH',
+        'avax': 'ETH',
+        'bsc': 'BNB',
+        'sol': 'SOL',
+        'btc': 'BTC',
+        'ltc': 'LTC',
+        'doge': 'DOGE',
+        'xrp': 'XRP',
+        'xlm': 'XLM',
+        'trx': 'TRX',
+      };
+
+      let wallet: { address: string; memo?: string; tag?: string } | undefined;
+
+      // Handle both object format (from API docs) and array format (from backend)
+      if (wallets && !Array.isArray(wallets)) {
+        // Object format: { ETH: { address: '...' }, SOL: { address: '...' } }
+        const walletKey = chainToWalletKey[chain.toLowerCase()] || chain.toUpperCase();
+        wallet = wallets[walletKey];
+        console.log('[DepositService] Found wallet (object format) for key', walletKey, ':', wallet);
+      } else if (Array.isArray(wallets)) {
+        // Array format: [{ chain: 'eth', address: '...' }]
+        wallet = wallets.find(w => w.chain.toLowerCase() === chain.toLowerCase());
+        console.log('[DepositService] Found wallet (array format) for chain', chain, ':', wallet);
+      }
+
+      if (wallet?.address) {
         return {
           chain,
           address: wallet.address,
@@ -109,14 +146,9 @@ export const depositService = {
         // Balance endpoint also failed
       }
 
-      // Return placeholder if no address found
-      return {
-        chain,
-        address: 'Address not available - please contact support',
-        network: chainConfig?.network || chain,
-        minDeposit: chainConfig?.minDeposit,
-        confirmations: chainConfig?.confirmations,
-      };
+      // Throw error if no address found - don't return placeholder
+      console.error('[DepositService] Failed to get wallet address:', error?.message || 'Unknown error');
+      throw new Error(`Unable to fetch deposit address for ${chain.toUpperCase()}. Please try again or contact support.`);
     }
   },
 

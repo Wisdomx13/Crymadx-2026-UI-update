@@ -59,22 +59,24 @@ export const TicketsScreen: React.FC = () => {
   const [newTicketMessage, setNewTicketMessage] = useState('');
   const [newTicketPriority, setNewTicketPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
+    setFormError(null);
     if (files) {
       const newFiles = Array.from(files).filter(file => {
         // Limit file size to 10MB
         if (file.size > 10 * 1024 * 1024) {
-          alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+          setFormError(`File "${file.name}" is too large. Maximum size is 10MB.`);
           return false;
         }
         // Check allowed file types
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
         if (!allowedTypes.includes(file.type)) {
-          alert(`File type not allowed for "${file.name}". Allowed: images, PDF, DOC, TXT`);
+          setFormError(`File type not allowed for "${file.name}". Allowed: images, PDF, DOC, TXT`);
           return false;
         }
         return true;
@@ -147,6 +149,7 @@ export const TicketsScreen: React.FC = () => {
     if (!newTicketSubject || !newTicketMessage) return;
 
     setSubmitting(true);
+    setFormError(null);
     try {
       await supportService.createTicket({
         subject: newTicketSubject,
@@ -177,10 +180,11 @@ export const TicketsScreen: React.FC = () => {
       setNewTicketMessage('');
       setNewTicketPriority('medium');
       setAttachments([]);
+      setFormError(null);
       setShowNewTicket(false);
     } catch (error) {
       console.error('Failed to create ticket:', error);
-      alert('Failed to create ticket. Please try again.');
+      setFormError('Failed to create ticket. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -764,6 +768,38 @@ export const TicketsScreen: React.FC = () => {
                   <X size={18} />
                 </motion.button>
               </div>
+
+              {/* Error Banner */}
+              {formError && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 20px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    borderBottom: '1px solid rgba(239, 68, 68, 0.2)',
+                  }}
+                >
+                  <AlertCircle size={16} color={colors.status.error} />
+                  <span style={{ flex: 1, fontSize: '13px', color: colors.status.error }}>
+                    {formError}
+                  </span>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setFormError(null)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '4px',
+                      cursor: 'pointer',
+                      color: colors.status.error,
+                    }}
+                  >
+                    <X size={14} />
+                  </motion.button>
+                </div>
+              )}
 
               {/* Modal Body */}
               <div style={{ padding: '16px 20px' }}>

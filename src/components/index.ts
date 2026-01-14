@@ -32,3 +32,7 @@ export { NFTBuyCard } from './NFTBuyCard';
 export { NFTPurchaseModal } from './NFTPurchaseModal';
 export { ChainFilter } from './ChainFilter';
 export { PurchaseHistory } from './PurchaseHistory';
+
+// Third-Party Widget Integrations
+export { default as ChangeNowWidget } from './ChangeNowWidget';
+export type { ChangeNowWidgetProps } from './ChangeNowWidget';

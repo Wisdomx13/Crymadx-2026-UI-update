@@ -129,11 +129,12 @@ export const PaymentMethodsScreen: React.FC = () => {
   // Save payment method
   const handleSave = async () => {
     if (!formLabel.trim()) {
-      alert('Please enter a label for this payment method');
+      setError('Please enter a label for this payment method');
       return;
     }
 
     setSaving(true);
+    setError(null);
     try {
       const params: CreatePaymentMethodParams = {
         type: formType,
@@ -153,7 +154,7 @@ export const PaymentMethodsScreen: React.FC = () => {
       setPaymentMethods(response?.paymentMethods || []);
       handleCloseModal();
     } catch (err: any) {
-      alert(err?.message || 'Failed to save payment method');
+      setError(err?.message || 'Failed to save payment method');
     } finally {
       setSaving(false);
     }
@@ -164,11 +165,12 @@ export const PaymentMethodsScreen: React.FC = () => {
     if (!confirm('Are you sure you want to delete this payment method?')) return;
 
     setDeleting(methodId);
+    setError(null);
     try {
       await p2pService.deletePaymentMethod(methodId);
       setPaymentMethods(prev => prev.filter(m => m.id !== methodId));
     } catch (err: any) {
-      alert(err?.message || 'Failed to delete payment method');
+      setError(err?.message || 'Failed to delete payment method');
     } finally {
       setDeleting(null);
     }
@@ -176,6 +178,7 @@ export const PaymentMethodsScreen: React.FC = () => {
 
   // Set default
   const handleSetDefault = async (methodId: string) => {
+    setError(null);
     try {
       await p2pService.setDefaultPaymentMethod(methodId);
       // Update local state
@@ -184,7 +187,7 @@ export const PaymentMethodsScreen: React.FC = () => {
         isDefault: m.id === methodId,
       })));
     } catch (err: any) {
-      alert(err?.message || 'Failed to set default');
+      setError(err?.message || 'Failed to set default');
     }
   };
 
@@ -445,6 +448,45 @@ export const PaymentMethodsScreen: React.FC = () => {
           Add Payment Method
         </motion.button>
       </motion.div>
+
+      {/* Error Banner */}
+      <AnimatePresence>
+        {error && !loading && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            <AlertCircle size={18} color={colors.status.error} />
+            <span style={{ flex: 1, fontSize: '13px', color: colors.status.error }}>
+              {error}
+            </span>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setError(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px',
+                cursor: 'pointer',
+                color: colors.status.error,
+              }}
+            >
+              <X size={16} />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Info Banner */}
       <motion.div

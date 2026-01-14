@@ -3,8 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, LogIn, AlertCircle, Loader2 } from 'lucide-react';
 import { useThemeMode } from '../theme/ThemeContext';
-import { authService, tokenManager, AUTH_LOGOUT_EVENT } from '../services';
+import { authService, tokenManager, AUTH_LOGOUT_EVENT, walletService } from '../services';
 import type { User } from '../types/api';
+
+// Helper function to initialize wallets in background (non-blocking)
+const initializeWalletsInBackground = async () => {
+  try {
+    console.log('[Auth] Checking wallet status...');
+    const result = await walletService.ensureAllWalletsCreated();
+
+    if (result.status.missing.length > 0) {
+      console.log(`[Auth] Missing wallets detected: ${result.status.missing.join(', ')}`);
+      if (result.initializationResult?.queued?.length) {
+        console.log(`[Auth] Queued creation for: ${result.initializationResult.queued.join(', ')}`);
+      }
+      if (result.initializationResult?.errors?.length) {
+        console.warn('[Auth] Wallet initialization errors:', result.initializationResult.errors);
+      }
+    } else {
+      console.log('[Auth] All wallets available');
+    }
+  } catch (error) {
+    // Don't block login if wallet check fails
+    console.warn('[Auth] Wallet initialization check failed (non-blocking):', error);
+  }
+};
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -95,6 +118,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(currentUser);
             setIsAuthenticated(true);
             tokenManager.setUser(currentUser);
+
+            // Initialize missing wallets in background (non-blocking)
+            initializeWalletsInBackground();
           } else {
             // Token invalid, clear it
             tokenManager.clearTokens();
@@ -151,6 +177,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.user);
         setIsAuthenticated(true);
         setShowLoginPrompt(false);
+
+        // Initialize missing wallets in background (non-blocking)
+        initializeWalletsInBackground();
+
         return { success: true };
       }
 
@@ -172,6 +202,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(currentUser);
           setIsAuthenticated(true);
           setShowLoginPrompt(false);
+
+          // Initialize missing wallets in background (non-blocking)
+          initializeWalletsInBackground();
+
           return { success: true };
         }
       }

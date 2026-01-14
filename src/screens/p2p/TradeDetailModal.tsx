@@ -40,6 +40,7 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [tradeDetails, setTradeDetails] = useState<P2PTrade | null>(trade);
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(5);
@@ -113,12 +114,13 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
     if (!trade) return;
 
     setActionLoading(true);
+    setActionError(null);
     try {
       const response = await p2pService.confirmPayment(trade.id);
       setTradeDetails(response.trade);
       onTradeUpdate?.(response.trade);
     } catch (err: any) {
-      alert('Failed to confirm payment: ' + (err.message || 'Unknown error'));
+      setActionError('Failed to confirm payment: ' + (err.message || 'Unknown error'));
     } finally {
       setActionLoading(false);
     }
@@ -132,12 +134,13 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
     }
 
     setActionLoading(true);
+    setActionError(null);
     try {
       const response = await p2pService.releaseCrypto(trade.id);
       setTradeDetails(response.trade);
       onTradeUpdate?.(response.trade);
     } catch (err: any) {
-      alert('Failed to release crypto: ' + (err.message || 'Unknown error'));
+      setActionError('Failed to release crypto: ' + (err.message || 'Unknown error'));
     } finally {
       setActionLoading(false);
     }
@@ -151,11 +154,12 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
     }
 
     setActionLoading(true);
+    setActionError(null);
     try {
       await p2pService.cancelTrade(trade.id, 'User cancelled');
       onClose();
     } catch (err: any) {
-      alert('Failed to cancel trade: ' + (err.message || 'Unknown error'));
+      setActionError('Failed to cancel trade: ' + (err.message || 'Unknown error'));
     } finally {
       setActionLoading(false);
     }
@@ -165,6 +169,7 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
     if (!trade || !disputeReason.trim()) return;
 
     setActionLoading(true);
+    setActionError(null);
     try {
       await p2pService.initiateDispute(trade.id, disputeReason.trim());
       setShowDispute(false);
@@ -174,7 +179,7 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
       setTradeDetails(tradeRes.trade);
       onTradeUpdate?.(tradeRes.trade);
     } catch (err: any) {
-      alert('Failed to initiate dispute: ' + (err.message || 'Unknown error'));
+      setActionError('Failed to initiate dispute: ' + (err.message || 'Unknown error'));
     } finally {
       setActionLoading(false);
     }
@@ -321,6 +326,43 @@ export const TradeDetailModal: React.FC<TradeDetailModalProps> = ({
               <X size={18} color={colors.text.secondary} />
             </motion.button>
           </div>
+
+          {/* Error Banner */}
+          <AnimatePresence>
+            {actionError && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 20px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  borderBottom: '1px solid rgba(239, 68, 68, 0.2)',
+                }}
+              >
+                <AlertTriangle size={16} color={colors.status.error} />
+                <span style={{ flex: 1, fontSize: '13px', color: colors.status.error }}>
+                  {actionError}
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActionError(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px',
+                    cursor: 'pointer',
+                    color: colors.status.error,
+                  }}
+                >
+                  <X size={14} />
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Main Content */}
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

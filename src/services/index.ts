@@ -27,6 +27,8 @@ export { rewardsService } from './rewardsService';
 export type { RewardsTask, UserRewardsSummary, RewardsTier, RewardHistoryItem } from './rewardsService';
 export { tokenService } from './tokenService';
 export type { Token, GroupedToken, TokenNetwork, Network, NetworkType } from './tokenService';
+export { walletService } from './walletService';
+export type { Wallet, WalletStatus } from './walletService';
 
 // Re-export types
 export type * from '../types/api';

@@ -14,6 +14,7 @@ import {
   CheckCircle,
   X,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { useThemeMode } from '../../theme/ThemeContext';
 import { GlassCard, CryptoIcon, ResponsiveLayout, Button } from '../../components';
@@ -51,6 +52,7 @@ export const SavingsVaultScreen: React.FC = () => {
   const [totalEarnings, setTotalEarnings] = useState('0.00');
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
 
   // Fetch savings products and user data
   useEffect(() => {
@@ -115,6 +117,7 @@ export const SavingsVaultScreen: React.FC = () => {
   const handleSubscribe = (product: SavingsProduct) => {
     setSelectedProduct(product);
     setSubscribeAmount('');
+    setSubscribeError(null);
     setShowSubscribeModal(true);
   };
 
@@ -122,6 +125,7 @@ export const SavingsVaultScreen: React.FC = () => {
     if (!selectedProduct || !subscribeAmount) return;
 
     setSubscribing(true);
+    setSubscribeError(null);
     try {
       await savingsService.createDeposit({
         productId: selectedProduct.id,
@@ -140,9 +144,10 @@ export const SavingsVaultScreen: React.FC = () => {
       setShowSubscribeModal(false);
       setSelectedProduct(null);
       setSubscribeAmount('');
+      setSubscribeError(null);
     } catch (error) {
       console.error('Failed to subscribe:', error);
-      alert('Failed to subscribe. Please try again.');
+      setSubscribeError('Failed to subscribe. Please try again.');
     } finally {
       setSubscribing(false);
     }
@@ -549,6 +554,40 @@ export const SavingsVaultScreen: React.FC = () => {
                     <X size={18} />
                   </motion.button>
                 </div>
+
+                {/* Error Banner */}
+                {subscribeError && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '12px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      borderRadius: '10px',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    <AlertCircle size={16} color={colors.status.error} />
+                    <span style={{ flex: 1, fontSize: '13px', color: colors.status.error }}>
+                      {subscribeError}
+                    </span>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSubscribeError(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '4px',
+                        cursor: 'pointer',
+                        color: colors.status.error,
+                      }}
+                    >
+                      <X size={14} />
+                    </motion.button>
+                  </div>
+                )}
 
                 {/* Amount Input */}
                 <div style={{ marginBottom: '16px' }}>
